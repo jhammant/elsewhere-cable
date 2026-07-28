@@ -16,6 +16,7 @@ data/generated/
 data/segments/*
 !data/segments/.gitkeep
 data/segments-*/
+artifacts/
 
 # Editors
 .idea/

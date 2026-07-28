@@ -7,6 +7,7 @@ import {
   type PlayoutManifest,
 } from '../../packages/schemas/src/index.js';
 import { maximumPlausibleSpeechDurationMs } from '../../apps/generation-worker/src/providers.js';
+import { containsSpokenStageDirection } from '../../apps/generation-worker/src/dialogue-quality.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -32,6 +33,9 @@ for (const entry of manifest.segments) {
     for (const event of segment.events) {
       if (event.type !== 'speech.play') {
         continue;
+      }
+      if (containsSpokenStageDirection(event.subtitle)) {
+        reasons.push(`${event.speechId} contains a spoken stage direction`);
       }
       const ceiling = maximumPlausibleSpeechDurationMs(event.subtitle);
       if (event.durationMs > ceiling) {
