@@ -8,6 +8,10 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
+    ...tseslint.configs.disableTypeChecked,
+    files: ['**/*.{js,mjs,cjs}'],
+  },
+  {
     files: ['**/*.ts'],
     languageOptions: {
       parserOptions: {

@@ -49,8 +49,9 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build --chown=broadcast:users /app /app
 COPY --chown=broadcast:users infra/endor/entrypoint.sh /usr/local/bin/elsewhere-entrypoint
+COPY --chown=broadcast:users infra/endor/ffmpeg-youtube.mjs /usr/local/bin/elsewhere-youtube-ffmpeg
 
-RUN chmod 0755 /usr/local/bin/elsewhere-entrypoint
+RUN chmod 0755 /usr/local/bin/elsewhere-entrypoint /usr/local/bin/elsewhere-youtube-ffmpeg
 
 USER broadcast
 

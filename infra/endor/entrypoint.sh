@@ -128,7 +128,11 @@ case "${ELSEWHERE_OUTPUT_MODE}" in
       echo "YouTube stream key file is empty" >&2
       exit 78
     fi
-    exec ffmpeg "$@" -f flv "${ELSEWHERE_STREAM_URL%/}/$stream_key"
+    unset stream_key
+    exec node /usr/local/bin/elsewhere-youtube-ffmpeg \
+      "$ELSEWHERE_STREAM_KEY_FILE" \
+      "$ELSEWHERE_STREAM_URL" \
+      "$@"
     ;;
   *)
     echo "ELSEWHERE_OUTPUT_MODE must be record or youtube" >&2

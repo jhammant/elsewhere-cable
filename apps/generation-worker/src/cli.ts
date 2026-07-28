@@ -59,6 +59,7 @@ async function main(): Promise<void> {
     workspaceRoot,
     argument('output') ?? process.env.ELSEWHERE_SEGMENTS_DIR ?? 'data/segments',
   );
+  const historyRoot = argument('history');
 
   if (ifEmpty && (await queueHasSegments(outputRoot))) {
     process.stdout.write(
@@ -93,6 +94,9 @@ async function main(): Promise<void> {
     llm,
     tts,
     fresh: process.argv.includes('--fresh'),
+    ...(historyRoot === undefined
+      ? {}
+      : { historyRoots: [path.resolve(workspaceRoot, historyRoot)] }),
   });
 
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

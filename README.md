@@ -72,13 +72,19 @@ lms load google/gemma-4-26b-a4b \
 pnpm generate:batch -- \
   --count 12 \
   --concurrency 2 \
+  --history data/segments \
+  --output data/segments-quality \
   --base-url http://127.0.0.1:1234/v1 \
-  --model elsewhere-cable-gemma26b-a4b-p2
+  --model elsewhere-cable-gemma26b-a4b-p2 \
+  --tts-base-url http://127.0.0.1:8878/v1 \
+  --tts-model mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16
 ```
 
 The generation process validates the model response, performs a bounded repair retry, rejects basic
 safety/originality violations, generates each speech line, measures its real duration with FFprobe,
 converts it to 48 kHz AAC, and only then appends the package to the playout manifest.
+`--history` checks every existing packaged title, premise and dialogue line without putting the old
+segments into the new playout queue.
 
 Do not run separate batch processes against the same segment directory. Use the built-in
 `--concurrency` option so manifest writes remain serialized.
@@ -178,11 +184,29 @@ infra/scripts/
 - Every loaded package is parsed through the versioned Zod contract before playout.
 - The service will never generate or broadcast real-world news.
 
+## Endor broadcast
+
+Endor now has an independently restartable, localhost-only Docker playout stack. It captures the
+hybrid Canvas 2D / Three.js renderer and PulseAudio mix, uses Radeon VA-API H.264, and can upload one
+720p25 RTMPS stream to YouTube:
+
+```bash
+pnpm endor:sync
+pnpm endor:deploy
+pnpm endor:youtube:key
+pnpm endor:youtube:start
+```
+
+The stream key prompt is hidden and stores the key only in a protected file on Endor. Run
+`pnpm endor:youtube:stop` as the upload kill switch. See
+[the YouTube runbook](docs/streaming-youtube.md) before the first unlisted test.
+
 ## Project status
 
-The local hybrid vertical slice continuously switches among prepared channels with synchronized
-speech and subtitles. It is not yet the full MVP: persistent world continuity, the ten-minute
-generation buffer, watchdog, operator console, unattended headless capture, FFmpeg live composition
-and YouTube streaming remain later gates.
+The hybrid vertical slice now runs unattended on Endor with deterministic channel switching,
+synchronized speech and subtitles, protected fallback behaviour, hardware H.264 encoding and a
+YouTube RTMPS path. It is not yet the full MVP: persistent world continuity, a long-horizon novelty
+index, the production ten-minute replenishing buffer, watchdog and operator console remain later
+gates.
 
 No open-source license has been selected yet.

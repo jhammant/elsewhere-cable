@@ -110,7 +110,7 @@ async function readCreativeHistory(
   manifest: PlayoutManifest,
 ): Promise<CreativeRecord[]> {
   const records: CreativeRecord[] = [];
-  for (const entry of manifest.segments.slice(-250)) {
+  for (const entry of manifest.segments) {
     try {
       const segment = segmentPackageSchema.parse(
         JSON.parse(await readFile(path.join(root, entry.packagePath), 'utf8')),
@@ -139,6 +139,7 @@ interface ProduceOptions {
   llm: LlmProvider | null;
   tts: TtsProvider;
   fresh?: boolean;
+  historyRoots?: readonly string[];
 }
 
 export interface BatchResult {
@@ -320,6 +321,13 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     : await readManifest(options.outputRoot);
   const startingSegmentCount = manifest.segments.length;
   const creativeHistory = await readCreativeHistory(options.outputRoot, manifest);
+  for (const historyRoot of options.historyRoots ?? []) {
+    if (path.resolve(historyRoot) === path.resolve(options.outputRoot)) {
+      continue;
+    }
+    const historyManifest = await readManifest(historyRoot);
+    creativeHistory.push(...(await readCreativeHistory(historyRoot, historyManifest)));
+  }
   let addedDurationMs = 0;
   const produced = new Array<SegmentPackage | undefined>(options.count);
   let nextIndex = 0;

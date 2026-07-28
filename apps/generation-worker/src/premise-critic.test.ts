@@ -24,4 +24,13 @@ describe('premise critic', () => {
     expect(critique.reasons.some((reason) => reason.includes('reaction or action'))).toBe(true);
     expect(critique.reasons.some((reason) => reason.includes('visual payoff'))).toBe(true);
   });
+
+  it('reserves Elsewhere Cable for the network identity', () => {
+    const channelCollision = demoDraft(0);
+    channelCollision.channelName = 'Elsewhere Cable';
+
+    const critique = critiquePremise(channelCollision);
+    expect(critique.accepted).toBe(false);
+    expect(critique.reasons.some((reason) => reason.includes('network identity'))).toBe(true);
+  });
 });

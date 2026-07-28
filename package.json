@@ -32,7 +32,10 @@
     "channel:status": "tsx infra/scripts/channel-status.ts",
     "endor:sync": "sh infra/scripts/sync-endor.sh",
     "endor:deploy": "sh infra/scripts/deploy-endor.sh",
-    "endor:status": "sh infra/scripts/endor-status.sh"
+    "endor:status": "sh infra/scripts/endor-status.sh",
+    "endor:youtube:key": "sh infra/scripts/endor-youtube-key.sh",
+    "endor:youtube:start": "sh infra/scripts/endor-youtube-start.sh",
+    "endor:youtube:stop": "sh infra/scripts/endor-youtube-stop.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

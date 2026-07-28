@@ -39,34 +39,30 @@ memory and dropped-frame count before enabling YouTube.
 In YouTube Studio, create an **unlisted** encoder stream and select its RTMPS URL. YouTube can take
 up to 24 hours to enable live streaming for a channel the first time.
 
-Do not paste the stream key into chat. Place it on Endor through an interactive SSH session:
+Do not paste the stream key into chat, a shell command, an environment variable or source control.
+Store it through the hidden interactive prompt:
 
 ```bash
-ssh endor
-read -rs STREAM_KEY
-printf '%s' "$STREAM_KEY" > /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key
-unset STREAM_KEY
-chmod 640 /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key
+pnpm endor:youtube:key
 ```
 
 ## Start the unlisted broadcast
 
-On Endor:
+From Ghost:
 
 ```bash
-cd /mnt/tank/apps/elsewhere-cable/source/repository
-ELSEWHERE_OUTPUT_MODE=youtube docker compose -f infra/endor/compose.yaml up -d --force-recreate
-docker logs -f --tail 80 elsewhere-cable
+pnpm endor:youtube:start
+pnpm endor:status
 ```
 
 Wait for YouTube Live Control Room to show a healthy preview, then click **Go live**. Keep the first
-test unlisted.
+test unlisted. The runtime log filter replaces the stream key with `[REDACTED]` if FFmpeg includes
+the destination in diagnostics.
 
 ## Stop safely
 
 ```bash
-cd /mnt/tank/apps/elsewhere-cable/source/repository
-docker compose -f infra/endor/compose.yaml stop broadcast
+pnpm endor:youtube:stop
 ```
 
 End the broadcast in YouTube Live Control Room as well.
@@ -85,3 +81,13 @@ RTMPS
 
 The container prefers `h264_vaapi` through `/dev/dri/renderD128` and falls back to
 `libx264 -preset veryfast -tune zerolatency` if VA-API is unavailable.
+
+## Verified Endor result
+
+The 28 July 2026 acceptance recording ran for 2 minutes 21 seconds with:
+
+- Radeon `h264_vaapi` at 1280×720 and 25 fps.
+- AAC stereo at 48 kHz; mean audio level -19.2 dB and peak -1.5 dB.
+- Approximately 2.4–5.9 CPU cores during steady mixed 2D/3D playout.
+- Approximately 865 MiB RAM, within the 3 GiB hard container limit.
+- No dropped output frames after the one-frame capture startup adjustment.

@@ -24,6 +24,9 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   const disconnectedLanguage = /\b(?:random|wacky|nonsense|for no reason|anything can happen)\b/iu;
   const actionLines = draft.dialogue.filter((line) => line.action !== 'IDLE').length;
 
+  if (draft.channelName.trim().toLowerCase() === 'elsewhere cable') {
+    reasons.push('Elsewhere Cable is the network identity and cannot be a channel name');
+  }
   if (premiseWords.length < 7 || premiseWords.length > 38) {
     reasons.push('premise must state one legible comic rule in 7–38 words');
   }
