@@ -84,7 +84,8 @@ The generation process validates the model response, performs a bounded repair r
 safety/originality violations, generates each speech line, measures its real duration with FFprobe,
 converts it to 48 kHz AAC, and only then appends the package to the playout manifest.
 `--history` checks every existing packaged title, premise and dialogue line without putting the old
-segments into the new playout queue.
+segments into the new playout queue. The local Nomic embedding model also rejects semantically
+equivalent premises at a fail-closed similarity gate, even when their wording differs.
 
 Do not run separate batch processes against the same segment directory. Use the built-in
 `--concurrency` option so manifest writes remain serialized.

@@ -4,7 +4,11 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { playoutManifestSchema, segmentPackageSchema } from '@elsewhere-cable/schemas';
 import { demoDraft } from './creative.js';
-import { produceBatch, repairNetworkIdentityCollision } from './production.js';
+import {
+  produceBatch,
+  repairNetworkIdentityCollision,
+  semanticNoveltyIssue,
+} from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
 
 const temporaryDirectories: string[] = [];
@@ -67,6 +71,7 @@ describe('produceBatch', () => {
       demo: false,
       llm,
       tts,
+      embeddingProvider: null,
     });
     const manifest = playoutManifestSchema.parse(
       JSON.parse(await readFile(path.join(outputRoot, 'manifest.json'), 'utf8')),
@@ -85,5 +90,22 @@ describe('produceBatch', () => {
     );
     expect(firstSegment.visualMedium).toBeDefined();
     expect(firstSegment.castArchetype).toBeDefined();
+  });
+
+  it('rejects a semantically repeated premise even when the wording changes', () => {
+    const issue = semanticNoveltyIssue(
+      'Breakfast adds weight to your spirit.',
+      [0.99, 0.01, 0],
+      [
+        {
+          title: 'Heavy Breakfast',
+          premise: 'A cereal makes your soul physically heavy.',
+          dialogue: [],
+        },
+      ],
+      [[1, 0, 0]],
+    );
+
+    expect(issue).toContain('semantically repeats');
   });
 });

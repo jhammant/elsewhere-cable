@@ -9,6 +9,8 @@ llm_base_url=${ELSEWHERE_LLM_BASE_URL:-http://127.0.0.1:1234/v1}
 llm_model=${ELSEWHERE_LLM_MODEL:-google/gemma-4-26b-a4b}
 tts_base_url=${ELSEWHERE_TTS_BASE_URL:-http://127.0.0.1:8878/v1}
 tts_model=${ELSEWHERE_TTS_MODEL:-mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16}
+embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
+embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
@@ -34,7 +36,9 @@ while :; do
     --base-url "$llm_base_url" \
     --model "$llm_model" \
     --tts-base-url "$tts_base_url" \
-    --tts-model "$tts_model"
+    --tts-model "$tts_model" \
+    --embedding-base-url "$embedding_base_url" \
+    --embedding-model "$embedding_model"
 
   ELSEWHERE_LOCAL_SEGMENTS_DIR="$output_root" pnpm endor:sync
 

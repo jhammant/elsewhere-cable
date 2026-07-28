@@ -19,6 +19,62 @@ export interface LlmProvider {
   generateStructured(request: StructuredGenerationRequest): Promise<GeneratedSegmentDraft>;
 }
 
+export interface EmbeddingProvider {
+  readonly id: string;
+  readonly model: string;
+  embed(texts: readonly string[]): Promise<number[][]>;
+}
+
+interface OllamaEmbedResponse {
+  embeddings?: number[][];
+}
+
+export class OllamaEmbeddingProvider implements EmbeddingProvider {
+  readonly id = 'ollama-embedding';
+
+  constructor(
+    readonly model: string,
+    private readonly baseUrl: string,
+  ) {}
+
+  async embed(texts: readonly string[]): Promise<number[][]> {
+    if (texts.length === 0) {
+      return [];
+    }
+    const embeddings: number[][] = [];
+    for (let index = 0; index < texts.length; index += 64) {
+      const batch = texts.slice(index, index + 64);
+      const response = await fetch(`${this.baseUrl.replace(/\/$/u, '')}/api/embed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          input: batch.map((text) => `clustering: ${text}`),
+        }),
+        signal: AbortSignal.timeout(120_000),
+      });
+      if (!response.ok) {
+        throw new Error(`Semantic novelty request failed with HTTP ${response.status}`);
+      }
+      const result = (await response.json()) as OllamaEmbedResponse;
+      if (
+        result.embeddings === undefined ||
+        result.embeddings.length !== batch.length ||
+        result.embeddings.some(
+          (embedding) =>
+            embedding.length === 0 || embedding.some((value) => !Number.isFinite(value)),
+        )
+      ) {
+        throw new Error('Semantic novelty provider returned malformed embeddings');
+      }
+      embeddings.push(...result.embeddings);
+    }
+    return embeddings;
+  }
+}
+
 interface ChatCompletion {
   choices?: Array<{
     finish_reason?: string;

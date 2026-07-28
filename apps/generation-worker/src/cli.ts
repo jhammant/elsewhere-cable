@@ -6,6 +6,7 @@ import { playoutManifestSchema } from '@elsewhere-cable/schemas';
 import { produceBatch } from './production.js';
 import {
   LocalCommandTtsProvider,
+  OllamaEmbeddingProvider,
   OpenAiCompatibleProvider,
   OpenAiCompatibleTtsProvider,
 } from './providers.js';
@@ -86,6 +87,16 @@ async function main(): Promise<void> {
           process.env.ELSEWHERE_TTS_API_KEY,
         );
   const llm = demo ? null : new OpenAiCompatibleProvider(model, baseUrl, apiKey);
+  const embeddingProvider = demo
+    ? null
+    : new OllamaEmbeddingProvider(
+        argument('embedding-model') ??
+          process.env.ELSEWHERE_EMBEDDING_MODEL ??
+          'nomic-embed-text:latest',
+        argument('embedding-base-url') ??
+          process.env.ELSEWHERE_EMBEDDING_BASE_URL ??
+          'http://127.0.0.1:11434',
+      );
   const result = await produceBatch({
     count: countArgument(),
     concurrency: concurrencyArgument(),
@@ -93,6 +104,7 @@ async function main(): Promise<void> {
     demo,
     llm,
     tts,
+    embeddingProvider,
     fresh: process.argv.includes('--fresh'),
     ...(historyRoot === undefined
       ? {}

@@ -9,7 +9,7 @@ import {
   type SegmentEvent,
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
-import type { LlmProvider, TtsProvider } from './providers.js';
+import type { EmbeddingProvider, LlmProvider, TtsProvider } from './providers.js';
 import { demoDraft, systemPrompt, userPrompt } from './creative.js';
 import {
   noveltyIssues,
@@ -150,8 +150,50 @@ interface ProduceOptions {
   demo: boolean;
   llm: LlmProvider | null;
   tts: TtsProvider;
+  embeddingProvider: EmbeddingProvider | null;
   fresh?: boolean;
   historyRoots?: readonly string[];
+}
+
+const semanticSimilarityLimit = 0.7;
+
+function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
+  if (left.length === 0 || left.length !== right.length) {
+    return 0;
+  }
+  let dotProduct = 0;
+  let leftMagnitude = 0;
+  let rightMagnitude = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    const leftValue = left[index] ?? 0;
+    const rightValue = right[index] ?? 0;
+    dotProduct += leftValue * rightValue;
+    leftMagnitude += leftValue * leftValue;
+    rightMagnitude += rightValue * rightValue;
+  }
+  const denominator = Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude);
+  return denominator === 0 ? 0 : dotProduct / denominator;
+}
+
+export function semanticNoveltyIssue(
+  premise: string,
+  embedding: readonly number[],
+  history: readonly CreativeRecord[],
+  historyEmbeddings: readonly (readonly number[])[],
+): string | null {
+  let closestIndex = -1;
+  let closestSimilarity = -1;
+  for (let index = 0; index < historyEmbeddings.length; index += 1) {
+    const similarity = cosineSimilarity(embedding, historyEmbeddings[index] ?? []);
+    if (similarity > closestSimilarity) {
+      closestSimilarity = similarity;
+      closestIndex = index;
+    }
+  }
+  if (closestSimilarity < semanticSimilarityLimit || closestIndex < 0) {
+    return null;
+  }
+  return `premise semantically repeats "${history[closestIndex]?.premise ?? premise}" (${closestSimilarity.toFixed(3)})`;
 }
 
 export interface BatchResult {
@@ -178,20 +220,19 @@ async function buildSegment(
   await mkdir(segmentDirectory, { recursive: true });
 
   const pacing = pacingFor(draft);
-  const speech = await Promise.all(
-    draft.dialogue.map(async (line, index) => {
-      const speechId = `speech_${index.toString().padStart(2, '0')}`;
-      const voiceId = voiceFor(line.speaker, tts);
-      const result = await tts.synthesize({
-        speechId,
-        text: line.text,
-        voiceId,
-        speakingRate: speakingRateFor(pacing, line.speaker),
-        outputDirectory: segmentDirectory,
-      });
-      return { line, speechId, voiceId, result };
-    }),
-  );
+  const speech = [];
+  for (const [index, line] of draft.dialogue.entries()) {
+    const speechId = `speech_${index.toString().padStart(2, '0')}`;
+    const voiceId = voiceFor(line.speaker, tts);
+    const result = await tts.synthesize({
+      speechId,
+      text: line.text,
+      voiceId,
+      speakingRate: speakingRateFor(pacing, line.speaker),
+      outputDirectory: segmentDirectory,
+    });
+    speech.push({ line, speechId, voiceId, result });
+  }
 
   const events: SegmentEvent[] = [
     { atMs: 0, type: 'transition.play', transition: 'STATIC_BURST' },
@@ -340,6 +381,10 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     const historyManifest = await readManifest(historyRoot);
     creativeHistory.push(...(await readCreativeHistory(historyRoot, historyManifest)));
   }
+  const semanticHistory =
+    options.embeddingProvider === null
+      ? []
+      : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
   let addedDurationMs = 0;
   const produced = new Array<SegmentPackage | undefined>(options.count);
   let nextIndex = 0;
@@ -366,10 +411,30 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               }),
         );
         const critique = critiquePremise(candidate);
-        rejectionReasons = [...noveltyIssues(candidate, creativeHistory), ...critique.reasons];
+        const candidateEmbedding =
+          options.embeddingProvider === null
+            ? null
+            : (await options.embeddingProvider.embed([candidate.premise]))[0];
+        const semanticIssue =
+          candidateEmbedding === null || candidateEmbedding === undefined
+            ? null
+            : semanticNoveltyIssue(
+                candidate.premise,
+                candidateEmbedding,
+                creativeHistory,
+                semanticHistory,
+              );
+        rejectionReasons = [
+          ...noveltyIssues(candidate, creativeHistory),
+          ...(semanticIssue === null ? [] : [semanticIssue]),
+          ...critique.reasons,
+        ];
         if (rejectionReasons.length === 0) {
           draft = candidate;
           creativeHistory.push(recordFromDraft(candidate));
+          if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
+            semanticHistory.push(candidateEmbedding);
+          }
           break;
         }
       }
