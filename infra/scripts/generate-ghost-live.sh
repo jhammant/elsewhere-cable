@@ -7,7 +7,7 @@ output_root=${ELSEWHERE_LIVE_SEGMENTS_DIR:-data/segments-live}
 history_root=${ELSEWHERE_CREATIVE_HISTORY_DIR:-data/segments}
 llm_base_url=${ELSEWHERE_LLM_BASE_URL:-http://127.0.0.1:1235/v1}
 llm_model=${ELSEWHERE_LLM_MODEL:-qwen3.5-35b-a3b}
-tts_base_url=${ELSEWHERE_TTS_BASE_URL:-http://127.0.0.1:8878/v1,http://127.0.0.1:8879/v1}
+tts_base_url=${ELSEWHERE_TTS_BASE_URL:-local}
 tts_model=${ELSEWHERE_TTS_MODEL:-mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16}
 embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
 embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
@@ -41,16 +41,21 @@ while :; do
     exit 0
   fi
 
-  if ! pnpm generate:batch -- \
-      --count "$batch_count" \
-      --concurrency 2 \
-      --output "$output_root" \
-      --base-url "$llm_base_url" \
-      --model "$llm_model" \
+  set -- \
+    --count "$batch_count" \
+    --concurrency 2 \
+    --output "$output_root" \
+    --base-url "$llm_base_url" \
+    --model "$llm_model" \
+    --embedding-base-url "$embedding_base_url" \
+    --embedding-model "$embedding_model"
+  if [ "$tts_base_url" != "local" ]; then
+    set -- "$@" \
       --tts-base-url "$tts_base_url" \
-      --tts-model "$tts_model" \
-      --embedding-base-url "$embedding_base_url" \
-      --embedding-model "$embedding_model"; then
+      --tts-model "$tts_model"
+  fi
+
+  if ! pnpm generate:batch -- "$@"; then
     if [ "$mode" = "once" ]; then
       exit 1
     fi

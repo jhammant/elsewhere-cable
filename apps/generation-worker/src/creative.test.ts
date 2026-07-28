@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { systemPrompt, userPrompt } from './creative.js';
+import { demoDraft, scriptPrompt, systemPrompt, userPrompt } from './creative.js';
 
 describe('generation prompts', () => {
   it('moves retries through different mandatory creative coordinates', () => {
@@ -34,5 +34,12 @@ describe('generation prompts', () => {
   it('asks for longer fragments that build useful broadcast duration', () => {
     expect(systemPrompt).toContain('6–12 short dialogue lines');
     expect(systemPrompt).toContain('30–120 second segment');
+  });
+
+  it('keeps stage directions out of spoken dialogue', () => {
+    expect(userPrompt(12, [], [], [])).toContain('Mandatory creative coordinates');
+    expect(scriptPrompt(demoDraft(0))).toContain(
+      'never put stage directions, visual labels, bracketed actions',
+    );
   });
 });

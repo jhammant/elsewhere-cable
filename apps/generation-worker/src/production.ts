@@ -19,6 +19,7 @@ import {
   systemPrompt,
   userPrompt,
 } from './creative.js';
+import { containsSpokenStageDirection } from './dialogue-quality.js';
 import {
   conceptNoveltyIssues,
   dialogueNoveltyIssues,
@@ -94,6 +95,11 @@ export function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
   const violation = forbiddenPatterns.find((pattern) => pattern.test(content));
   if (violation !== undefined) {
     throw new Error(`Local-preview safety check rejected content matching ${violation.source}`);
+  }
+  if (draft.dialogue.some((line) => containsSpokenStageDirection(line.text))) {
+    throw new Error(
+      'Local-preview quality check rejected a spoken stage direction; physical performance belongs in action',
+    );
   }
 }
 

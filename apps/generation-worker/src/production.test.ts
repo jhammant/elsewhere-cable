@@ -34,6 +34,13 @@ describe('produceBatch', () => {
     expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
   });
 
+  it('rejects bracketed stage directions before preparing speech', () => {
+    const draft = demoDraft(0);
+    draft.dialogue[0]!.text = '(Points at the staircase while the camera zooms)';
+
+    expect(() => assertPreviewSafe(draft)).toThrow('spoken stage direction');
+  });
+
   it('derives a channel name when a provider confuses the network identity for a channel', () => {
     const draft = demoDraft(0);
     draft.channelName = 'Elsewhere Cable';

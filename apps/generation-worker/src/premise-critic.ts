@@ -1,4 +1,5 @@
 import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
+import { containsSpokenStageDirection } from './dialogue-quality.js';
 
 export interface PremiseCritique {
   accepted: boolean;
@@ -28,6 +29,9 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   const genericPerilLines = draft.dialogue.filter((line) =>
     genericPerilLanguage.test(line.text),
   ).length;
+  const stageDirectionLines = draft.dialogue.filter((line) =>
+    containsSpokenStageDirection(line.text),
+  ).length;
 
   if (draft.channelName.trim().toLowerCase() === 'elsewhere cable') {
     reasons.push('Elsewhere Cable is the network identity and cannot be a channel name');
@@ -40,6 +44,11 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   }
   if (lineLengths.some((length) => length < 3 || length > 34)) {
     reasons.push('dialogue lines must be performable beats of 3–34 words');
+  }
+  if (stageDirectionLines > 0) {
+    reasons.push(
+      'dialogue text must contain spoken words only; physical performance belongs in action',
+    );
   }
   if (actionLines < Math.ceil(draft.dialogue.length / 2)) {
     reasons.push('at least half the dialogue must have a playable reaction or action');
