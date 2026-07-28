@@ -106,13 +106,18 @@ export function nextUnplayedIndex(
   startIndex: number,
   playedSegmentIds: ReadonlySet<string>,
 ): number | null {
-  const offset = manifest.segments
-    .slice(startIndex)
-    .findIndex((candidate) => !playedSegmentIds.has(candidate.segmentId));
-  return offset === -1 ? null : startIndex + offset;
+  for (let offset = 0; offset < manifest.segments.length; offset += 1) {
+    const index = (startIndex + offset) % manifest.segments.length;
+    const candidate = manifest.segments[index];
+    if (candidate !== undefined && !playedSegmentIds.has(candidate.segmentId)) {
+      return index;
+    }
+  }
+  return null;
 }
 
 export class PlayoutEngine {
+  private static readonly broadcastHistoryKey = 'elsewhere-cable.played-segments.v1';
   private readonly ui = elements();
   private manifest: PlayoutManifest | null = null;
   private index = 0;
@@ -121,6 +126,7 @@ export class PlayoutEngine {
   private timers: Array<ReturnType<typeof setTimeout>> = [];
   private activeAudio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
+  private persistPlaybackHistory = false;
 
   constructor(private readonly visuals: PlayoutVisuals) {
     const parameters = new URLSearchParams(window.location.search);
@@ -129,6 +135,8 @@ export class PlayoutEngine {
       this.index = requestedStart;
     }
     if (parameters.has('broadcast')) {
+      this.persistPlaybackHistory = true;
+      this.restorePlaybackHistory();
       this.audioUnlocked = true;
       this.ui.mode.textContent = 'Unattended broadcast playout · audio enabled';
     }
@@ -215,17 +223,52 @@ export class PlayoutEngine {
       }
       const segment = segmentPackageSchema.parse(await response.json());
       this.showSegment(segment, entry.packagePath);
-      this.playedSegmentIds.add(entry.segmentId);
+      this.markPlayed(entry.segmentId);
       this.index += 1;
       this.timer(() => void this.playCurrent(), segment.durationMs);
     } catch (error) {
       this.ui.status.textContent = 'Segment rejected';
       this.ui.lowerStatus.textContent =
         error instanceof Error ? error.message.slice(0, 80) : 'UNKNOWN SEGMENT ERROR';
-      this.playedSegmentIds.add(entry.segmentId);
+      this.markPlayed(entry.segmentId);
       this.index += 1;
       this.staticBurst();
       this.timer(() => void this.playCurrent(), 2_000);
+    }
+  }
+
+  private restorePlaybackHistory(): void {
+    try {
+      const stored = localStorage.getItem(PlayoutEngine.broadcastHistoryKey);
+      if (stored === null) {
+        return;
+      }
+      const segmentIds: unknown = JSON.parse(stored);
+      if (!Array.isArray(segmentIds)) {
+        return;
+      }
+      for (const segmentId of segmentIds) {
+        if (typeof segmentId === 'string' && /^seg_[a-z0-9_]+$/u.test(segmentId)) {
+          this.playedSegmentIds.add(segmentId);
+        }
+      }
+    } catch {
+      // Corrupt browser state must never interrupt broadcast playout.
+    }
+  }
+
+  private markPlayed(segmentId: string): void {
+    this.playedSegmentIds.add(segmentId);
+    if (!this.persistPlaybackHistory) {
+      return;
+    }
+    try {
+      localStorage.setItem(
+        PlayoutEngine.broadcastHistoryKey,
+        JSON.stringify([...this.playedSegmentIds]),
+      );
+    } catch {
+      // A full or unavailable browser store degrades to this session's in-memory history.
     }
   }
 

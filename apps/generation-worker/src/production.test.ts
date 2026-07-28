@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { playoutManifestSchema, segmentPackageSchema } from '@elsewhere-cable/schemas';
 import { demoDraft } from './creative.js';
-import { produceBatch } from './production.js';
+import { produceBatch, repairNetworkIdentityCollision } from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
 
 const temporaryDirectories: string[] = [];
@@ -18,6 +18,17 @@ afterEach(async () => {
 });
 
 describe('produceBatch', () => {
+  it('derives a channel name when a provider confuses the network identity for a channel', () => {
+    const draft = demoDraft(0);
+    draft.channelName = 'Elsewhere Cable';
+
+    const repaired = repairNetworkIdentityCollision(draft);
+
+    expect(repaired.channelName).toBe(`${draft.programmeTitle} Transmission`);
+    expect(repaired.programmeTitle).toBe(draft.programmeTitle);
+    expect(repaired.premise).toBe(draft.premise);
+  });
+
   it('runs bounded generation concurrently and commits one valid manifest', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-batch-'));
     temporaryDirectories.push(outputRoot);

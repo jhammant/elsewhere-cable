@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-mkdir -p "$XDG_RUNTIME_DIR" /tmp/chromium-profile /recordings
+mkdir -p "$XDG_RUNTIME_DIR" "$ELSEWHERE_CHROMIUM_PROFILE" /recordings
 chmod 0700 "$XDG_RUNTIME_DIR"
 
 # A failed encoder start can leave Xvfb's lock files in the container's
@@ -58,12 +58,14 @@ chromium \
   --disable-breakpad \
   --disable-dev-shm-usage \
   --disable-features=TranslateUI \
+  --disk-cache-size=104857600 \
   --autoplay-policy=no-user-gesture-required \
   --enable-features=Vulkan \
   --ignore-gpu-blocklist \
   --use-angle=vulkan \
   --use-gl=angle \
-  --user-data-dir=/tmp/chromium-profile \
+  --media-cache-size=104857600 \
+  --user-data-dir="$ELSEWHERE_CHROMIUM_PROFILE" \
   --window-position=0,0 \
   --window-size=1280,720 \
   --kiosk \

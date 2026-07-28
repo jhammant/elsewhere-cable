@@ -96,6 +96,10 @@ describe('single-use playout selection', () => {
     expect(nextUnplayedIndex(manifest, 0, new Set(['one']))).toBe(1);
   });
 
+  it('wraps after an atomic queue replacement to find unaired material', () => {
+    expect(nextUnplayedIndex(manifest, 3, new Set(['one']))).toBe(1);
+  });
+
   it('does not wrap to the beginning after every segment has aired', () => {
     expect(nextUnplayedIndex(manifest, 3, new Set(['one', 'two', 'three']))).toBeNull();
   });

@@ -87,6 +87,18 @@ function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
   }
 }
 
+export function repairNetworkIdentityCollision(
+  draft: GeneratedSegmentDraft,
+): GeneratedSegmentDraft {
+  if (draft.channelName.trim().toLowerCase() !== 'elsewhere cable') {
+    return draft;
+  }
+  return {
+    ...draft,
+    channelName: `${draft.programmeTitle} Transmission`,
+  };
+}
+
 async function readManifest(root: string): Promise<PlayoutManifest> {
   try {
     return playoutManifestSchema.parse(
@@ -340,17 +352,19 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       let rejectionReasons: string[] = [];
       for (let attempt = 0; attempt < 6; attempt += 1) {
         const recent = creativeHistory.slice(-24);
-        const candidate = options.demo
-          ? demoDraft(startingSegmentCount + index + attempt * options.count)
-          : await options.llm!.generateStructured({
-              systemPrompt,
-              userPrompt: userPrompt(
-                index,
-                recent.map((record) => record.title),
-                recent.map((record) => record.premise),
-                rejectionReasons,
-              ),
-            });
+        const candidate = repairNetworkIdentityCollision(
+          options.demo
+            ? demoDraft(startingSegmentCount + index + attempt * options.count)
+            : await options.llm!.generateStructured({
+                systemPrompt,
+                userPrompt: userPrompt(
+                  index,
+                  recent.map((record) => record.title),
+                  recent.map((record) => record.premise),
+                  rejectionReasons,
+                ),
+              }),
+        );
         const critique = critiquePremise(candidate);
         rejectionReasons = [...noveltyIssues(candidate, creativeHistory), ...critique.reasons];
         if (rejectionReasons.length === 0) {

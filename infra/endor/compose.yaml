@@ -16,6 +16,7 @@ services:
       ELSEWHERE_RECORDING_PATH: /recordings/elsewhere-test.mkv
       ELSEWHERE_STREAM_URL: ${ELSEWHERE_STREAM_URL:-rtmps://a.rtmps.youtube.com/live2}
       ELSEWHERE_STREAM_KEY_FILE: /run/secrets/youtube_stream_key
+      ELSEWHERE_CHROMIUM_PROFILE: /state/chromium
     devices:
       - /dev/dri:/dev/dri
     group_add:
@@ -28,6 +29,7 @@ services:
       - /mnt/tank/apps/elsewhere-cable/content:/content:ro
       - /mnt/tank/apps/elsewhere-cable/recordings:/recordings
       - /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key:/run/secrets/youtube_stream_key:ro
+      - /mnt/tank/apps/elsewhere-cable/state/chromium:/state/chromium
     tmpfs:
       - /dev/shm:size=1g,mode=1777
     mem_limit: 3g

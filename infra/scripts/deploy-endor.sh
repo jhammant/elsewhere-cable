@@ -16,8 +16,11 @@ ssh "$remote_host" "
     '$remote_root/source' \
     '$remote_root/secrets'
   sudo -n install -d -o truenas_admin -g truenas_admin -m 2770 \
-    '$remote_root/recordings'
+    '$remote_root/recordings' \
+    '$remote_root/state' \
+    '$remote_root/state/chromium'
   chmod 2770 '$remote_root/recordings'
+  chmod 2770 '$remote_root/state' '$remote_root/state/chromium'
   if [ ! -e '$remote_root/secrets/youtube-stream-key' ]; then
     install -m 640 /dev/null '$remote_root/secrets/youtube-stream-key'
   fi

@@ -14,6 +14,8 @@ YouTube. It never captures the desktop, microphone or camera.
 - Logs rotate at 10 MiB and retain three files.
 - Prepared content is published through an atomic `current` symlink, so a partial transfer cannot
   reach playout.
+- A persistent Chromium profile records aired segment IDs, so container restarts and atomic queue
+  replacements do not replay old material.
 
 ## Deploy a local recording test
 
