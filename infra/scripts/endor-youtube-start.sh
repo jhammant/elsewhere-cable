@@ -15,4 +15,4 @@ ssh "$remote_host" "
     docker compose -f infra/endor/compose.yaml up -d --force-recreate broadcast
 "
 
-echo "Endor is uploading to YouTube. Check the unlisted preview in Live Control Room."
+echo "Endor is uploading to YouTube. Check the preview and stream health in Live Control Room."

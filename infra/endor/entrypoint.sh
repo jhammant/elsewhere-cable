@@ -18,6 +18,16 @@ trap cleanup EXIT INT TERM
 mkdir -p "$XDG_RUNTIME_DIR" "$ELSEWHERE_CHROMIUM_PROFILE" /recordings
 chmod 0700 "$XDG_RUNTIME_DIR"
 
+# This profile is private to the broadcast container. Chromium leaves its
+# singleton links behind when Docker force-recreates the container, while the
+# next container has a different hostname and rejects those links as a foreign
+# active profile. No Chromium process exists at this point, so remove only the
+# three profile-local singleton artefacts before launching it.
+rm -f \
+  "$ELSEWHERE_CHROMIUM_PROFILE/SingletonLock" \
+  "$ELSEWHERE_CHROMIUM_PROFILE/SingletonCookie" \
+  "$ELSEWHERE_CHROMIUM_PROFILE/SingletonSocket"
+
 # A failed encoder start can leave Xvfb's lock files in the container's
 # writable layer. Removing only this private display's files makes restarts
 # deterministic without touching any host display.
