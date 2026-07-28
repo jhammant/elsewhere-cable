@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@elsewhere-cable/schemas": "workspace:*",
     "three": "^0.178.0"
   },
   "devDependencies": {

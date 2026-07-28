@@ -11,6 +11,8 @@ data/benchmarks/*
 !data/benchmarks/.gitkeep
 data/cache/
 data/generated/
+data/segments/*
+!data/segments/.gitkeep
 
 # Editors
 .idea/

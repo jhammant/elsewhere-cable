@@ -1,5 +1,6 @@
 import './style.css';
 import { calculateFrameStats, type FrameStats } from './metrics.js';
+import { PlayoutEngine } from './playout.js';
 import { BroadcastScene } from './scene.js';
 
 interface BenchmarkResult extends FrameStats {
@@ -36,6 +37,7 @@ const broadcastTime = requiredElement<HTMLTimeElement>('#broadcast-time');
 const scene = new BroadcastScene(canvas);
 const renderer = scene.getRendererInfo();
 const params = new URLSearchParams(window.location.search);
+const benchmarkMode = params.has('benchmark');
 const benchmarkSeconds = Math.max(3, Number(params.get('seconds') ?? 15));
 const targetFps = 25;
 const frameTimes: number[] = [];
@@ -96,6 +98,11 @@ requestAnimationFrame((now) => {
   benchmarkStart = now;
   requestAnimationFrame(animate);
 });
+
+if (!benchmarkMode) {
+  const playout = new PlayoutEngine();
+  void playout.start();
+}
 
 window.addEventListener('beforeunload', () => {
   scene.dispose();

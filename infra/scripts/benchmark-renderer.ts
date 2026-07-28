@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { chromium } from 'playwright-core';
-import { hasFlag, readNumberArg } from './lib/args.js';
+import { hasFlag, readArg, readNumberArg } from './lib/args.js';
 import { pathExists, run } from './lib/command.js';
 import { resolveFromWorkspace, writeJson } from './lib/files.js';
 
@@ -113,22 +113,59 @@ async function ensureBuild(): Promise<void> {
   }
 }
 
+async function descendantResidentMemoryBytes(rootPid: number): Promise<number> {
+  const result = await run('ps', ['-axo', 'pid=,ppid=,rss='], 3_000);
+  if (result.exitCode !== 0) {
+    return 0;
+  }
+  const processes = result.stdout
+    .split(/\r?\n/u)
+    .map((line) => line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)$/u))
+    .filter((match): match is RegExpMatchArray => match !== null)
+    .map((match) => ({
+      pid: Number(match[1]),
+      parentPid: Number(match[2]),
+      residentKib: Number(match[3]),
+    }));
+  const descendants = new Set([rootPid]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const processInfo of processes) {
+      if (descendants.has(processInfo.parentPid) && !descendants.has(processInfo.pid)) {
+        descendants.add(processInfo.pid);
+        changed = true;
+      }
+    }
+  }
+  return processes
+    .filter((processInfo) => processInfo.pid !== rootPid && descendants.has(processInfo.pid))
+    .reduce((total, processInfo) => total + processInfo.residentKib * 1_024, 0);
+}
+
+function average(values: readonly number[]): number {
+  return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 async function main(): Promise<void> {
   const durationSeconds = readNumberArg('seconds', 15);
+  const configuredUrl = readArg('url');
+  const benchmarkUrl = configuredUrl ?? baseUrl;
   const output = resolveFromWorkspace('data/benchmarks/renderer.json');
   const screenshotPath = resolveFromWorkspace('data/benchmarks/renderer-preview.png');
   await ensureBuild();
   const executablePath = await findBrowser();
-  const preview = startPreview();
+  const preview = configuredUrl === undefined ? startPreview() : null;
 
   try {
-    await waitForServer(baseUrl);
+    await waitForServer(benchmarkUrl);
     const browser = await chromium.launch({
       executablePath,
       headless: !hasFlag('headed'),
       args: [
         '--enable-gpu',
         '--ignore-gpu-blocklist',
+        '--autoplay-policy=no-user-gesture-required',
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
       ],
@@ -140,6 +177,17 @@ async function main(): Promise<void> {
         deviceScaleFactor: 1,
       });
       const consoleErrors: string[] = [];
+      const memorySamples: number[] = [];
+      const sampleMemory = (): void => {
+        void descendantResidentMemoryBytes(process.pid).then((bytes) => {
+          if (bytes > 0) {
+            memorySamples.push(bytes);
+          }
+        });
+      };
+      sampleMemory();
+      const memoryTimer = setInterval(sampleMemory, 500);
+      memoryTimer.unref();
       page.on('console', (message) => {
         if (message.type() === 'error') {
           consoleErrors.push(message.text());
@@ -149,12 +197,38 @@ async function main(): Promise<void> {
         consoleErrors.push(error.message);
       });
 
-      await page.goto(`${baseUrl}/?benchmark=1&seconds=${durationSeconds}`, {
+      const url = new URL(benchmarkUrl);
+      url.searchParams.set('benchmark', '1');
+      url.searchParams.set('seconds', String(durationSeconds));
+      if (configuredUrl !== undefined) {
+        url.searchParams.delete('benchmark');
+      }
+      await page.goto(url.toString(), {
         waitUntil: 'networkidle',
       });
-      await page.waitForFunction('window.__ELSEWHERE_BENCHMARK__?.completed === true', undefined, {
-        timeout: (durationSeconds + 30) * 1000,
-      });
+      try {
+        await page.waitForFunction(
+          'window.__ELSEWHERE_BENCHMARK__?.completed === true',
+          undefined,
+          {
+            timeout: (durationSeconds + 30) * 1000,
+          },
+        );
+      } catch (error) {
+        clearInterval(memoryTimer);
+        const diagnostic: unknown = await page.evaluate(`({
+          benchmark: window.__ELSEWHERE_BENCHMARK__,
+          readyState: document.readyState,
+          status: document.querySelector('#playout-status')?.textContent,
+          mode: document.querySelector('#playout-mode')?.textContent
+        })`);
+        await mkdir(path.dirname(screenshotPath), { recursive: true });
+        await page.screenshot({ path: screenshotPath });
+        throw new Error(
+          `Renderer benchmark did not complete: ${JSON.stringify(diagnostic)}; console errors: ${consoleErrors.join(' | ')}`,
+          { cause: error },
+        );
+      }
       const benchmark: unknown = await page.evaluate('window.__ELSEWHERE_BENCHMARK__');
       const typedBenchmark = benchmark as BrowserBenchmark | null;
       if (typedBenchmark === null) {
@@ -163,6 +237,7 @@ async function main(): Promise<void> {
 
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath });
+      clearInterval(memoryTimer);
 
       const result = {
         schemaVersion: 1,
@@ -172,6 +247,7 @@ async function main(): Promise<void> {
           version: browser.version(),
           executable: path.basename(executablePath),
           headless: !hasFlag('headed'),
+          url: benchmarkUrl,
         },
         scene: {
           resolution: { width: 1280, height: 720 },
@@ -184,6 +260,12 @@ async function main(): Promise<void> {
           targetMet: typedBenchmark.averageFps >= 25,
           noPageErrors: consoleErrors.length === 0,
           consoleErrors,
+        },
+        resources: {
+          processTree: configuredUrl === undefined ? 'browser-and-preview-server' : 'browser',
+          averageResidentMemoryBytes: Math.round(average(memorySamples)),
+          peakResidentMemoryBytes: Math.max(0, ...memorySamples),
+          sampleCount: memorySamples.length,
         },
         artefacts: {
           screenshot: path.relative(process.cwd(), screenshotPath),
@@ -200,13 +282,13 @@ async function main(): Promise<void> {
       await browser.close();
     }
   } catch (error) {
-    const previewLogs = preview.logs.join('').trim();
+    const previewLogs = preview?.logs.join('').trim() ?? '';
     if (previewLogs.length > 0) {
       process.stderr.write(`${previewLogs}\n`);
     }
     throw error;
   } finally {
-    preview.process.kill('SIGTERM');
+    preview?.process.kill('SIGTERM');
   }
 }
 

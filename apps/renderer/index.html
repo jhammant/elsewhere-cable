@@ -36,26 +36,26 @@
           </div>
           <div class="signal-lock">
             <span class="pulse"></span>
-            Signal locked
+            <span id="playout-status">Signal locked</span>
           </div>
         </header>
 
         <aside class="channel-panel">
           <div class="channel-number">
             <span>Channel</span>
-            <strong>42</strong>
+            <strong id="channel-number-value">42</strong>
           </div>
 
           <div class="programme-meta">
             <p class="label">Now receiving</p>
-            <h2>Municipal<br />Dream Service</h2>
-            <p class="episode">Your Tuesday Dream Appeal</p>
+            <h2 id="channel-name">Municipal Dream Service</h2>
+            <p id="programme-title" class="episode">Your Tuesday Dream Appeal</p>
           </div>
 
           <dl class="telemetry">
             <div>
               <dt>Reality</dt>
-              <dd>EC–11/VOID</dd>
+              <dd id="reality-id">EC–11/VOID</dd>
             </div>
             <div>
               <dt>Integrity</dt>
@@ -73,21 +73,21 @@
 
           <div class="next-card">
             <span>Next, possibly</span>
-            <strong>The Weather<br />Inside Your House</strong>
+            <strong id="next-title">The Weather Inside Your House</strong>
           </div>
 
           <p class="compatibility">Viewer compatibility uncertain</p>
         </aside>
 
         <div class="lower-third">
-          <span class="lower-third-channel">42</span>
+          <span id="lower-channel-number" class="lower-third-channel">42</span>
           <div>
-            <strong>MUNICIPAL DREAM SERVICE</strong>
-            <span>APPEAL STATUS: PENDING SINCE TOMORROW</span>
+            <strong id="lower-programme-title">MUNICIPAL DREAM SERVICE</strong>
+            <span id="lower-status">APPEAL STATUS: PENDING SINCE TOMORROW</span>
           </div>
         </div>
 
-        <div class="subtitle" role="status" aria-live="polite">
+        <div id="subtitle" class="subtitle" role="status" aria-live="polite">
           Your dream has been refused because the staircase was emotionally load-bearing.
         </div>
 
@@ -100,7 +100,7 @@
       </section>
 
       <footer class="preview-note">
-        <span>720p25 deterministic preview</span>
+        <span id="playout-mode">720p25 deterministic preview</span>
         <span>Programme already in progress</span>
       </footer>
     </main>
