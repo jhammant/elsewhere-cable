@@ -29,7 +29,10 @@
     "report": "tsx infra/scripts/generate-report.ts",
     "milestone0": "pnpm diagnose && pnpm build && pnpm benchmark:renderer && pnpm benchmark:encoder && pnpm report",
     "channel:start": "pnpm build && pnpm seed && pnpm --filter @elsewhere-cable/playout-controller start",
-    "channel:status": "tsx infra/scripts/channel-status.ts"
+    "channel:status": "tsx infra/scripts/channel-status.ts",
+    "endor:sync": "sh infra/scripts/sync-endor.sh",
+    "endor:deploy": "sh infra/scripts/deploy-endor.sh",
+    "endor:status": "sh infra/scripts/endor-status.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

@@ -123,9 +123,14 @@ export class PlayoutEngine {
   private audioUnlocked = false;
 
   constructor(private readonly visuals: PlayoutVisuals) {
-    const requestedStart = Number(new URLSearchParams(window.location.search).get('start') ?? 0);
+    const parameters = new URLSearchParams(window.location.search);
+    const requestedStart = Number(parameters.get('start') ?? 0);
     if (Number.isInteger(requestedStart) && requestedStart >= 0) {
       this.index = requestedStart;
+    }
+    if (parameters.has('broadcast')) {
+      this.audioUnlocked = true;
+      this.ui.mode.textContent = 'Unattended broadcast playout · audio enabled';
     }
     const unlock = (): void => {
       this.audioUnlocked = true;
