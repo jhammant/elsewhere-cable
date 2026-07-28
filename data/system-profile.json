@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-28T08:44:43.700Z",
+  "source": {
+    "kind": "live-local-diagnostic",
+    "workspace": "ElsewhereCable",
+    "note": "Development-host capture. Run pnpm diagnose directly on Endor before production deployment."
+  },
+  "host": { "hostname": "ghost", "productionHostMatch": false },
+  "operatingSystem": {
+    "name": "macOS",
+    "version": "26.5.1",
+    "kernel": "Darwin 25.5.0",
+    "architecture": "arm64"
+  },
+  "cpu": {
+    "model": "Apple M5 Max",
+    "logicalCores": 18,
+    "physicalCores": 18,
+    "architecture": "arm64"
+  },
+  "memory": { "totalBytes": 137438953472, "totalGiB": 128 },
+  "graphics": {
+    "devices": [
+      {
+        "model": "Apple M5 Max",
+        "vendor": "Apple",
+        "memoryBytes": null,
+        "details": ["Unified memory architecture"]
+      }
+    ],
+    "graphicsApis": ["Metal 4"]
+  },
+  "storage": {
+    "mount": "/System/Volumes/Data",
+    "filesystem": "/dev/disk3s5",
+    "totalBytes": 3996276899840,
+    "usedBytes": 3487455670272,
+    "freeBytes": 456542863360
+  },
+  "network": {
+    "interfaces": [
+      { "name": "awdl0", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "en0", "ipv4Addresses": 1, "ipv6Addresses": 2, "externalAddresses": 3 },
+      { "name": "llw0", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "lo0", "ipv4Addresses": 1, "ipv6Addresses": 2, "externalAddresses": 0 },
+      { "name": "utun0", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun1", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun10", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun12", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun13", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun14", "ipv4Addresses": 1, "ipv6Addresses": 2, "externalAddresses": 3 },
+      { "name": "utun2", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun3", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun5", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun6", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun7", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun8", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 },
+      { "name": "utun9", "ipv4Addresses": 0, "ipv6Addresses": 1, "externalAddresses": 1 }
+    ],
+    "uploadBandwidthMbps": null,
+    "uploadMeasurement": "Not measured automatically. Use the documented sustained RTMPS-safe test from Endor."
+  },
+  "tools": {
+    "node": { "available": true, "version": "v22.14.0" },
+    "pnpm": { "available": true, "version": "10.33.0" },
+    "docker": {
+      "available": true,
+      "version": "Docker version 29.4.0, build 9d7ad9f",
+      "daemonResponding": false,
+      "serverVersion": null
+    },
+    "ffmpeg": {
+      "available": true,
+      "version": "ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers",
+      "configuration": "configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon",
+      "h264Encoders": ["h264_videotoolbox", "libx264", "libx264rgb"],
+      "hardwareH264Encoders": ["h264_videotoolbox"],
+      "codecs": {
+        "count": 544,
+        "h264": {
+          "decode": true,
+          "encode": true,
+          "description": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (encoders: libx264 libx264rgb h264_videotoolbox)"
+        },
+        "aac": {
+          "decode": true,
+          "encode": true,
+          "description": "AAC (Advanced Audio Coding) (decoders: aac aac_fixed aac_at) (encoders: aac aac_at)"
+        }
+      }
+    }
+  },
+  "localAi": {
+    "llmRuntimes": [
+      {
+        "name": "Ollama",
+        "commandAvailable": true,
+        "version": "ollama version is 0.18.3",
+        "localEndpointResponding": true,
+        "notes": ["OpenAI-compatible use requires an adapter or compatibility endpoint."]
+      },
+      {
+        "name": "llama.cpp server",
+        "commandAvailable": true,
+        "version": "load_backend: loaded BLAS backend from /opt/homebrew/Cellar/ggml/0.9.8/libexec/libggml-blas.so",
+        "localEndpointResponding": false,
+        "notes": ["Endpoint probe is local-only."]
+      },
+      {
+        "name": "LM Studio",
+        "commandAvailable": false,
+        "version": null,
+        "localEndpointResponding": true,
+        "notes": ["Endpoint probe is local-only."]
+      },
+      {
+        "name": "MLX LM",
+        "commandAvailable": false,
+        "version": null,
+        "localEndpointResponding": null,
+        "notes": ["Apple Silicon development runtime."]
+      }
+    ],
+    "modelFiles": [
+      {
+        "source": "Ollama",
+        "present": true,
+        "fileCount": 26,
+        "totalBytes": 95586024422,
+        "formats": ["ollama-blob"]
+      },
+      {
+        "source": "Hugging Face cache",
+        "present": true,
+        "fileCount": 4,
+        "totalBytes": 0,
+        "formats": ["safetensors"]
+      },
+      {
+        "source": "llama.cpp cache",
+        "present": false,
+        "fileCount": 0,
+        "totalBytes": 0,
+        "formats": []
+      },
+      { "source": "LM Studio", "present": false, "fileCount": 0, "totalBytes": 0, "formats": [] }
+    ],
+    "ttsRuntimes": [
+      {
+        "name": "Piper",
+        "commandAvailable": false,
+        "version": null,
+        "localEndpointResponding": null,
+        "notes": ["Preferred lightweight local Linux candidate."]
+      },
+      {
+        "name": "Coqui TTS",
+        "commandAvailable": false,
+        "version": null,
+        "localEndpointResponding": null,
+        "notes": ["Heavier Python runtime."]
+      },
+      {
+        "name": "eSpeak NG",
+        "commandAvailable": true,
+        "version": "eSpeak NG text-to-speech: 1.52.0  Data at: /opt/homebrew/Cellar/espeak-ng/1.52.0/share/espeak-ng-data",
+        "localEndpointResponding": null,
+        "notes": ["Basic fallback voice."]
+      },
+      {
+        "name": "eSpeak",
+        "commandAvailable": true,
+        "version": "eSpeak NG text-to-speech: 1.52.0  Data at: /opt/homebrew/Cellar/espeak-ng/1.52.0/share/espeak-ng-data",
+        "localEndpointResponding": null,
+        "notes": ["Basic fallback voice."]
+      },
+      {
+        "name": "macOS say",
+        "commandAvailable": true,
+        "version": "say: unrecognized option `--help'",
+        "localEndpointResponding": null,
+        "notes": ["Development-only native macOS fallback."]
+      }
+    ],
+    "largeModelsInstalledByDiagnostic": false
+  },
+  "recommendation": {
+    "profile": "Enhanced",
+    "rationale": [
+      "At least 96 GiB RAM is available.",
+      "At least 16 logical CPU cores are available.",
+      "A graphics device was detected."
+    ]
+  },
+  "safety": {
+    "publicStreamStarted": false,
+    "firewallModified": false,
+    "routerModified": false,
+    "secretsCollected": false,
+    "networkAddressesRedacted": true
+  }
+}

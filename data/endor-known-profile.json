@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "host": "endor",
+  "evidence": {
+    "kind": "archive-and-monitoring",
+    "observedAt": "2026-07-28",
+    "liveDiagnosticPending": true,
+    "notes": [
+      "Compute facts were read from the existing LAN Netdata endpoint.",
+      "Platform, storage and network facts were read from the Imperial Archives.",
+      "FFmpeg, encoder execution, GPU device access and local AI runtimes still require pnpm diagnose on Endor."
+    ]
+  },
+  "os": {
+    "name": "TrueNAS SCALE",
+    "version": "25.10",
+    "kernel": "Linux 6.12.91-production+truenas",
+    "architecture": "x86_64"
+  },
+  "cpu": {
+    "model": "AMD Ryzen AI 9 HX PRO 370 with Radeon 890M",
+    "logicalCores": 24,
+    "reportedFrequencyHz": 4367000000
+  },
+  "memory": {
+    "totalBytes": 64909332480,
+    "totalGiB": 60.45
+  },
+  "gpu": [
+    {
+      "model": "AMD Radeon 890M",
+      "kind": "integrated",
+      "dedicatedMemoryBytes": null,
+      "hardwareEncodeExpected": "AMD VCN via VA-API, subject to direct verification"
+    }
+  ],
+  "storage": {
+    "reportedTotalBytes": 82130808348672,
+    "tank": "3 x 26 TB RAIDZ1",
+    "flash": "2 x 2 TB NVMe mirror",
+    "boot": "128 GB SSD"
+  },
+  "network": {
+    "uplink": "2 x 1 GbE LACP",
+    "uploadBandwidth": "not measured"
+  },
+  "containers": {
+    "runtime": "Docker via TrueNAS Apps",
+    "available": true
+  }
+}

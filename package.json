@@ -1,0 +1,37 @@
+{
+  "name": "elsewhere-cable",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Infinite television from places that do not exist.",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "pnpm typecheck && pnpm -r build",
+    "typecheck": "tsc --noEmit",
+    "dev": "pnpm --filter @elsewhere-cable/renderer dev",
+    "preview": "pnpm --filter @elsewhere-cable/renderer preview",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "diagnose": "tsx infra/scripts/diagnose.ts --output data/system-profile.json",
+    "benchmark:renderer": "tsx infra/scripts/benchmark-renderer.ts",
+    "benchmark:encoder": "tsx infra/scripts/benchmark-encoder.ts",
+    "report": "tsx infra/scripts/generate-report.ts",
+    "milestone0": "pnpm diagnose && pnpm build && pnpm benchmark:renderer && pnpm benchmark:encoder && pnpm report"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@types/node": "^24.1.0",
+    "eslint": "^9.32.0",
+    "playwright-core": "^1.54.1",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0"
+  }
+}

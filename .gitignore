@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Generated benchmark artefacts can be large or host-specific.
+data/benchmarks/*
+!data/benchmarks/.gitkeep
+data/cache/
+data/generated/
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json

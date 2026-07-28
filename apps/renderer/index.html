@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Elsewhere Cable Milestone 0 renderer — a broadcast received by Endor."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23071112'/%3E%3Cpath d='M13 28 31 10l9 9-18 18zm11 11 18-18 9 9-18 18zm12 12 15-15v13l-6 6z' fill='%2395f3d4'/%3E%3C/svg%3E"
+    />
+    <title>Elsewhere Cable — Signal received</title>
+  </head>
+  <body>
+    <main class="shell">
+      <section
+        id="broadcast"
+        class="broadcast"
+        aria-label="Elsewhere Cable renderer preview"
+        data-benchmark-complete="false"
+      >
+        <canvas id="programme-canvas" width="1280" height="720"></canvas>
+
+        <div class="programme-mask" aria-hidden="true"></div>
+        <div class="scanlines" aria-hidden="true"></div>
+        <div class="signal-noise" aria-hidden="true"></div>
+        <div class="tracking-line" aria-hidden="true"></div>
+
+        <header class="network-header">
+          <div class="network-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <p class="eyebrow">Signal received by Endor</p>
+            <h1>Elsewhere Cable</h1>
+          </div>
+          <div class="signal-lock">
+            <span class="pulse"></span>
+            Signal locked
+          </div>
+        </header>
+
+        <aside class="channel-panel">
+          <div class="channel-number">
+            <span>Channel</span>
+            <strong>42</strong>
+          </div>
+
+          <div class="programme-meta">
+            <p class="label">Now receiving</p>
+            <h2>Municipal<br />Dream Service</h2>
+            <p class="episode">Your Tuesday Dream Appeal</p>
+          </div>
+
+          <dl class="telemetry">
+            <div>
+              <dt>Reality</dt>
+              <dd>EC–11/VOID</dd>
+            </div>
+            <div>
+              <dt>Integrity</dt>
+              <dd>Emotionally stable</dd>
+            </div>
+            <div>
+              <dt>Renderer</dt>
+              <dd id="renderer-api">Acquiring…</dd>
+            </div>
+            <div>
+              <dt>Frame rate</dt>
+              <dd><span id="fps-value">--</span> FPS</dd>
+            </div>
+          </dl>
+
+          <div class="next-card">
+            <span>Next, possibly</span>
+            <strong>The Weather<br />Inside Your House</strong>
+          </div>
+
+          <p class="compatibility">Viewer compatibility uncertain</p>
+        </aside>
+
+        <div class="lower-third">
+          <span class="lower-third-channel">42</span>
+          <div>
+            <strong>MUNICIPAL DREAM SERVICE</strong>
+            <span>APPEAL STATUS: PENDING SINCE TOMORROW</span>
+          </div>
+        </div>
+
+        <div class="subtitle" role="status" aria-live="polite">
+          Your dream has been refused because the staircase was emotionally load-bearing.
+        </div>
+
+        <div class="broadcast-clock">
+          <span class="live-dot"></span>
+          <time id="broadcast-time">00:00:00</time>
+        </div>
+
+        <div class="overscan" aria-hidden="true"></div>
+      </section>
+
+      <footer class="preview-note">
+        <span>720p25 deterministic preview</span>
+        <span>Programme already in progress</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
