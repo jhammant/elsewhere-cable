@@ -2,18 +2,26 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
+  generatedSegmentProposalSchema,
   playoutManifestSchema,
   segmentPackageSchema,
   type GeneratedSegmentDraft,
+  type GeneratedSegmentProposal,
   type PlayoutManifest,
   type SegmentEvent,
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
 import type { EmbeddingProvider, LlmProvider, TtsProvider } from './providers.js';
-import { demoDraft, systemPrompt, userPrompt } from './creative.js';
 import {
-  noveltyIssues,
-  recordFromDraft,
+  demoDraft,
+  proposalSystemPrompt,
+  scriptPrompt,
+  systemPrompt,
+  userPrompt,
+} from './creative.js';
+import {
+  conceptNoveltyIssues,
+  dialogueNoveltyIssues,
   recordFromSegment,
   type CreativeRecord,
 } from './novelty.js';
@@ -87,16 +95,38 @@ function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
   }
 }
 
-export function repairNetworkIdentityCollision(
-  draft: GeneratedSegmentDraft,
-): GeneratedSegmentDraft {
-  if (draft.channelName.trim().toLowerCase() !== 'elsewhere cable') {
+export function repairNetworkIdentityCollision<
+  T extends { channelName: string; programmeTitle: string },
+>(draft: T): T {
+  if (!/^elsewhere cable\b/iu.test(draft.channelName.trim())) {
     return draft;
   }
   return {
     ...draft,
     channelName: `${draft.programmeTitle} Transmission`,
   };
+}
+
+function proposalQualityIssues(proposal: GeneratedSegmentProposal): string[] {
+  const issues: string[] = [];
+  const premiseWordCount = proposal.premise.trim().split(/\s+/u).filter(Boolean).length;
+  if (premiseWordCount < 7 || premiseWordCount > 38) {
+    issues.push('premise must state one legible comic rule in 7–38 words');
+  }
+  if (/\b(?:random|wacky|nonsense|for no reason|anything can happen)\b/iu.test(proposal.premise)) {
+    issues.push('proposal describes randomness instead of a consistent comic mechanism');
+  }
+  return issues;
+}
+
+function proposalPreservationIssues(
+  proposal: GeneratedSegmentProposal,
+  draft: GeneratedSegmentDraft,
+): string[] {
+  const scriptedProposal = generatedSegmentProposalSchema.parse(draft);
+  return JSON.stringify(scriptedProposal) === JSON.stringify(proposal)
+    ? []
+    : ['script changed approved proposal metadata'];
 }
 
 async function readManifest(root: string): Promise<PlayoutManifest> {
@@ -222,19 +252,38 @@ async function buildSegment(
   await mkdir(segmentDirectory, { recursive: true });
 
   const pacing = pacingFor(draft);
-  const speech = [];
-  for (const [index, line] of draft.dialogue.entries()) {
-    const speechId = `speech_${index.toString().padStart(2, '0')}`;
-    const voiceId = voiceFor(line.speaker, tts);
-    const result = await tts.synthesize({
-      speechId,
-      text: line.text,
-      voiceId,
-      speakingRate: speakingRateFor(pacing, line.speaker),
-      outputDirectory: segmentDirectory,
-    });
-    speech.push({ line, speechId, voiceId, result });
-  }
+  const speech = new Array<{
+    line: GeneratedSegmentDraft['dialogue'][number];
+    speechId: string;
+    voiceId: string;
+    result: Awaited<ReturnType<TtsProvider['synthesize']>>;
+  }>(draft.dialogue.length);
+  let nextSpeechIndex = 0;
+  const speechWorker = async (): Promise<void> => {
+    while (nextSpeechIndex < draft.dialogue.length) {
+      const index = nextSpeechIndex;
+      nextSpeechIndex += 1;
+      const line = draft.dialogue[index]!;
+      const speechId = `speech_${index.toString().padStart(2, '0')}`;
+      const voiceId = voiceFor(line.speaker, tts);
+      const result = await tts.synthesize({
+        speechId,
+        text: line.text,
+        voiceId,
+        speakingRate: speakingRateFor(pacing, line.speaker),
+        outputDirectory: segmentDirectory,
+      });
+      speech[index] = { line, speechId, voiceId, result };
+    }
+  };
+  await Promise.all(
+    Array.from(
+      {
+        length: Math.min(Math.max(1, tts.parallelism ?? 1), draft.dialogue.length),
+      },
+      async () => speechWorker(),
+    ),
+  );
 
   const events: SegmentEvent[] = [
     { atMs: 0, type: 'transition.play', transition: 'STATIC_BURST' },
@@ -388,6 +437,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       ? []
       : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
   let addedDurationMs = 0;
+  const proposals = new Array<GeneratedSegmentProposal | undefined>(options.count);
+  const reservedRecords = new Array<CreativeRecord | undefined>(options.count);
+  const drafts = new Array<GeneratedSegmentDraft | undefined>(options.count);
   const produced = new Array<SegmentPackage | undefined>(options.count);
   const failures = new Array<string | undefined>(options.count);
   let nextIndex = 0;
@@ -397,57 +449,153 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       const index = nextIndex;
       nextIndex += 1;
       try {
-        let draft: GeneratedSegmentDraft | undefined;
         let rejectionReasons: string[] = [];
-        const maximumProposalAttempts = 14;
+        const maximumProposalAttempts = 6;
         for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
           const recent = creativeHistory.slice(-24);
-          const candidate = repairNetworkIdentityCollision(
+          const prompt = userPrompt(
+            startingSegmentCount + index + attempt * options.count,
+            recent.map((record) => record.title),
+            recent.map((record) => record.premise),
+            rejectionReasons,
+          );
+          const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
+          const generated = repairNetworkIdentityCollision(
             options.demo
               ? demoDraft(startingSegmentCount + index + attempt * options.count)
-              : await options.llm!.generateStructured({
-                  systemPrompt,
-                  userPrompt: userPrompt(
-                    index + attempt * options.count,
-                    recent.map((record) => record.title),
-                    recent.map((record) => record.premise),
-                    rejectionReasons,
-                  ),
-                }),
+              : useProposalStage
+                ? await options.llm!.generateProposal!({
+                    systemPrompt: proposalSystemPrompt,
+                    userPrompt: prompt,
+                  })
+                : await options.llm!.generateStructured({
+                    systemPrompt,
+                    userPrompt: prompt,
+                  }),
           );
-          const critique = critiquePremise(candidate);
           const candidateEmbedding =
             options.embeddingProvider === null
               ? null
-              : (await options.embeddingProvider.embed([candidate.premise]))[0];
+              : (await options.embeddingProvider.embed([generated.premise]))[0];
           const semanticIssue =
             candidateEmbedding === null || candidateEmbedding === undefined
               ? null
               : semanticNoveltyIssue(
-                  candidate.premise,
+                  generated.premise,
                   candidateEmbedding,
                   creativeHistory,
                   semanticHistory,
                 );
           rejectionReasons = [
-            ...noveltyIssues(candidate, creativeHistory),
+            ...conceptNoveltyIssues(generated, creativeHistory),
             ...(semanticIssue === null ? [] : [semanticIssue]),
-            ...critique.reasons,
+            ...(useProposalStage
+              ? proposalQualityIssues(generated)
+              : [
+                  ...dialogueNoveltyIssues(
+                    (generated as GeneratedSegmentDraft).dialogue,
+                    creativeHistory,
+                  ),
+                  ...critiquePremise(generated as GeneratedSegmentDraft).reasons,
+                ]),
           ];
           if (rejectionReasons.length === 0) {
-            draft = candidate;
-            creativeHistory.push(recordFromDraft(candidate));
+            const record: CreativeRecord = {
+              title: generated.programmeTitle,
+              premise: generated.premise,
+              dialogue: useProposalStage
+                ? []
+                : (generated as GeneratedSegmentDraft).dialogue.map((line) => line.text),
+            };
+            creativeHistory.push(record);
+            reservedRecords[index] = record;
             if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
               semanticHistory.push(candidateEmbedding);
+            }
+            if (useProposalStage) {
+              proposals[index] = generated;
+            } else {
+              drafts[index] = generated as GeneratedSegmentDraft;
             }
             break;
           }
         }
-        if (draft === undefined) {
+        if (proposals[index] === undefined && drafts[index] === undefined) {
           throw new Error(
-            `Could not produce a novel segment after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
+            `Could not produce a novel premise after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
           );
         }
+      } catch (error) {
+        failures[index] = error instanceof Error ? error.message : String(error);
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(options.concurrency, options.count) }, async () => worker()),
+  );
+
+  let nextScriptIndex = 0;
+  const scriptWorker = async (): Promise<void> => {
+    while (nextScriptIndex < proposals.length) {
+      const index = nextScriptIndex;
+      nextScriptIndex += 1;
+      const proposal = proposals[index];
+      if (proposal === undefined) {
+        continue;
+      }
+      let rejectionReasons: string[] = [];
+      const maximumScriptAttempts = 2;
+      for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
+        try {
+          const scripted = await options.llm!.generateStructured({
+            systemPrompt,
+            userPrompt: scriptPrompt(proposal, rejectionReasons),
+          });
+          const candidate = repairNetworkIdentityCollision({
+            ...scripted,
+            ...proposal,
+            dialogue: scripted.dialogue,
+          });
+          rejectionReasons = [
+            ...proposalPreservationIssues(proposal, candidate),
+            ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
+            ...critiquePremise(candidate).reasons,
+          ];
+          if (rejectionReasons.length === 0) {
+            drafts[index] = candidate;
+            const record = reservedRecords[index];
+            if (record !== undefined) {
+              record.dialogue = candidate.dialogue.map((line) => line.text);
+            }
+            break;
+          }
+        } catch (error) {
+          rejectionReasons = [error instanceof Error ? error.message : String(error)];
+        }
+      }
+      if (drafts[index] === undefined) {
+        failures[index] =
+          `Could not script approved premise after ${maximumScriptAttempts} attempts: ${rejectionReasons.join('; ')}`;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(options.concurrency, options.count) }, async () =>
+      scriptWorker(),
+    ),
+  );
+
+  let nextProductionIndex = 0;
+  const productionWorker = async (): Promise<void> => {
+    while (nextProductionIndex < drafts.length) {
+      const index = nextProductionIndex;
+      nextProductionIndex += 1;
+      const draft = drafts[index];
+      if (draft === undefined) {
+        continue;
+      }
+      try {
         produced[index] = await buildSegment(
           draft,
           options.outputRoot,
@@ -460,10 +608,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       }
     }
   };
-
-  await Promise.all(
-    Array.from({ length: Math.min(options.concurrency, options.count) }, async () => worker()),
-  );
+  await productionWorker();
 
   const completedSegments = produced.filter(
     (segment): segment is SegmentPackage => segment !== undefined,

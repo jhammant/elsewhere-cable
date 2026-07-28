@@ -208,7 +208,12 @@ export const generatedSegmentDraftSchema = z.object({
   endingBeat: z.string().min(1).max(220),
 });
 
+export const generatedSegmentProposalSchema = generatedSegmentDraftSchema.omit({
+  dialogue: true,
+});
+
 export type SegmentEvent = z.infer<typeof segmentEventSchema>;
 export type SegmentPackage = z.infer<typeof segmentPackageSchema>;
 export type PlayoutManifest = z.infer<typeof playoutManifestSchema>;
 export type GeneratedSegmentDraft = z.infer<typeof generatedSegmentDraftSchema>;
+export type GeneratedSegmentProposal = z.infer<typeof generatedSegmentProposalSchema>;

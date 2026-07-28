@@ -1,4 +1,8 @@
-import type { GeneratedSegmentDraft, SegmentPackage } from '@elsewhere-cable/schemas';
+import type {
+  GeneratedSegmentDraft,
+  GeneratedSegmentProposal,
+  SegmentPackage,
+} from '@elsewhere-cable/schemas';
 
 export interface CreativeRecord {
   title: string;
@@ -65,10 +69,19 @@ export function noveltyIssues(
   draft: GeneratedSegmentDraft,
   history: readonly CreativeRecord[],
 ): string[] {
+  return [
+    ...conceptNoveltyIssues(draft, history),
+    ...dialogueNoveltyIssues(draft.dialogue, history),
+  ];
+}
+
+export function conceptNoveltyIssues(
+  proposal: Pick<GeneratedSegmentProposal, 'programmeTitle' | 'premise'>,
+  history: readonly CreativeRecord[],
+): string[] {
   const issues: string[] = [];
-  const title = normalise(draft.programmeTitle);
-  const premise = normalise(draft.premise);
-  const lines = draft.dialogue.map((line) => normalise(line.text));
+  const title = normalise(proposal.programmeTitle);
+  const premise = normalise(proposal.premise);
 
   for (const previous of history) {
     if (title === normalise(previous.title)) {
@@ -77,6 +90,19 @@ export function noveltyIssues(
     if (premise === normalise(previous.premise) || similarity(premise, previous.premise) >= 0.7) {
       issues.push(`premise resembles "${previous.premise}"`);
     }
+  }
+
+  return [...new Set(issues)];
+}
+
+export function dialogueNoveltyIssues(
+  dialogue: readonly { text: string }[],
+  history: readonly CreativeRecord[],
+): string[] {
+  const issues: string[] = [];
+  const lines = dialogue.map((line) => normalise(line.text));
+
+  for (const previous of history) {
     for (const line of lines) {
       for (const previousLine of previous.dialogue) {
         if (

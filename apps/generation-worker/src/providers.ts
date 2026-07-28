@@ -2,8 +2,11 @@ import { execFile } from 'node:child_process';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
-import { generatedSegmentDraftSchema } from '@elsewhere-cable/schemas';
+import type { GeneratedSegmentDraft, GeneratedSegmentProposal } from '@elsewhere-cable/schemas';
+import {
+  generatedSegmentDraftSchema,
+  generatedSegmentProposalSchema,
+} from '@elsewhere-cable/schemas';
 import { z } from 'zod';
 
 const execFileAsync = promisify(execFile);
@@ -16,6 +19,7 @@ export interface StructuredGenerationRequest {
 export interface LlmProvider {
   readonly id: string;
   readonly model: string;
+  generateProposal?(request: StructuredGenerationRequest): Promise<GeneratedSegmentProposal>;
   generateStructured(request: StructuredGenerationRequest): Promise<GeneratedSegmentDraft>;
 }
 
@@ -94,7 +98,13 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     private readonly apiKey: string,
   ) {}
 
-  async generateStructured(request: StructuredGenerationRequest): Promise<GeneratedSegmentDraft> {
+  private async generateWithSchema<T>(
+    request: StructuredGenerationRequest,
+    schema: z.ZodType<T>,
+    schemaName: string,
+    structuralExample: string,
+    maxTokens: number,
+  ): Promise<T> {
     let repairInstruction = '';
     let lastError: unknown = null;
     for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -113,19 +123,22 @@ export class OpenAiCompatibleProvider implements LlmProvider {
               content: `${request.userPrompt}
 
 Use this structural example exactly:
-{"channelNumber":4700219,"channelName":"Example Channel","programmeTitle":"Example Programme","format":"public_access","realityId":"REALITY-42","visualStyle":"public_access_1991","visualMedium":"public_access_vhs","castArchetype":"mixed","pacing":"interrupted","premise":"One clear sentence.","tone":["dry","surreal"],"dialogue":[{"speaker":"Host Name","text":"A short opening line.","action":"IDLE"},{"speaker":"Guest Name","text":"A short response.","action":"REACTION_CONFUSED"},{"speaker":"Third Presence","text":"The rule becomes clear.","action":"POINT_AT"},{"speaker":"Object Witness","text":"The rule escalates.","action":"REACTION_SHOCKED"},{"speaker":"Host Name","text":"The ending line.","action":"FREEZE"}],"continuityFact":"One proposed fictional fact.","endingBeat":"One visual ending."}
+${structuralExample}
 ${repairInstruction}`,
             },
           ],
-          temperature: attempt === 0 ? 0.85 : 0.45,
-          max_tokens: 4_096,
+          temperature: attempt === 0 ? 1.05 : 0.6,
+          top_p: 0.95,
+          presence_penalty: 0.45,
+          frequency_penalty: 0.25,
+          max_tokens: maxTokens,
           reasoning_effort: 'none',
           response_format: {
             type: 'json_schema',
             json_schema: {
-              name: 'elsewhere_segment',
+              name: schemaName,
               strict: true,
-              schema: z.toJSONSchema(generatedSegmentDraftSchema),
+              schema: z.toJSONSchema(schema),
             },
           },
         }),
@@ -150,16 +163,36 @@ ${repairInstruction}`,
         .replace(/\s*```$/u, '')
         .trim();
       try {
-        return generatedSegmentDraftSchema.parse(JSON.parse(cleaned));
+        return schema.parse(JSON.parse(cleaned));
       } catch (error) {
         lastError = error;
         repairInstruction =
-          '\nYour previous shape was invalid. realityId must be a quoted string. Every dialogue entry must be an object with the keys speaker, text, and action. Return the complete corrected object only.';
+          '\nYour previous shape was invalid. Preserve every required key and enum value from the structural example. Return the complete corrected object only.';
       }
     }
 
     throw new Error(
       `LLM failed the structured-output contract after one repair: ${lastError instanceof Error ? lastError.message : 'unknown validation error'}`,
+    );
+  }
+
+  generateProposal(request: StructuredGenerationRequest): Promise<GeneratedSegmentProposal> {
+    return this.generateWithSchema(
+      request,
+      generatedSegmentProposalSchema,
+      'elsewhere_proposal',
+      '{"channelNumber":4700219,"channelName":"Example Channel","programmeTitle":"Example Programme","format":"public_access","realityId":"REALITY-42","visualStyle":"public_access_1991","visualMedium":"public_access_vhs","castArchetype":"mixed","pacing":"interrupted","premise":"One clear comic rule in a physical setting.","tone":["dry","surreal"],"continuityFact":"One proposed fictional fact.","endingBeat":"One visual ending."}',
+      1_024,
+    );
+  }
+
+  generateStructured(request: StructuredGenerationRequest): Promise<GeneratedSegmentDraft> {
+    return this.generateWithSchema(
+      request,
+      generatedSegmentDraftSchema,
+      'elsewhere_segment',
+      '{"channelNumber":4700219,"channelName":"Example Channel","programmeTitle":"Example Programme","format":"public_access","realityId":"REALITY-42","visualStyle":"public_access_1991","visualMedium":"public_access_vhs","castArchetype":"mixed","pacing":"interrupted","premise":"One clear sentence.","tone":["dry","surreal"],"dialogue":[{"speaker":"Host Name","text":"A short opening line.","action":"POINT_AT"},{"speaker":"Guest Name","text":"A short response.","action":"REACTION_CONFUSED"},{"speaker":"Third Presence","text":"The rule becomes clear.","action":"POINT_AT"},{"speaker":"Object Witness","text":"The rule escalates.","action":"REACTION_SHOCKED"},{"speaker":"Host Name","text":"The ending line.","action":"FREEZE"}],"continuityFact":"One proposed fictional fact.","endingBeat":"One visual ending."}',
+      2_048,
     );
   }
 }
@@ -181,6 +214,7 @@ export interface SpeechResult {
 export interface TtsProvider {
   readonly id: string;
   readonly voiceIds?: readonly string[];
+  readonly parallelism?: number;
   synthesize(request: SpeechRequest): Promise<SpeechResult>;
 }
 
@@ -309,33 +343,46 @@ export class LocalCommandTtsProvider implements TtsProvider {
 export class OpenAiCompatibleTtsProvider implements TtsProvider {
   readonly id = 'openai-compatible-tts';
   readonly voiceIds: readonly string[];
+  readonly parallelism: number;
+  private readonly baseUrls: readonly string[];
+  private nextBaseUrl = 0;
 
   constructor(
     readonly model: string,
-    private readonly baseUrl: string,
+    baseUrl: string,
     private readonly apiKey = '',
   ) {
-    this.voiceIds = model.toLowerCase().includes('qwen')
-      ? [
-          'Dry British woman, low calm register, precise diction, restrained irritation',
-          'Weary British man, gentle baritone, hesitant warmth, excellent deadpan timing',
-          'Bright northern English woman, brisk delivery, practical and quietly alarmed',
-          'Older Welsh man, textured voice, patient authority, faintly disappointed',
-          'Young London man, clipped confidence, fragile enthusiasm, conversational',
-          'Scottish woman, measured alto, civic authority, understated disbelief',
-          'Soft-spoken Irish man, warm tenor, careful pauses, private amusement',
-          'Midlands woman, clear contralto, officious composure, sudden vulnerability',
-        ]
-      : [
-          'bf_emma',
-          'bm_george',
-          'af_nova',
-          'am_echo',
-          'bf_isabella',
-          'bm_lewis',
-          'af_sky',
-          'am_adam',
-        ];
+    this.baseUrls = baseUrl
+      .split(',')
+      .map((value) => value.trim().replace(/\/$/u, ''))
+      .filter(Boolean);
+    if (this.baseUrls.length === 0) {
+      throw new Error('TTS base URL must contain at least one endpoint');
+    }
+    this.parallelism = this.baseUrls.length;
+    this.voiceIds = model.toLowerCase().includes('customvoice')
+      ? ['Ryan', 'Aiden', 'Serena', 'Vivian', 'Uncle_Fu', 'Dylan', 'Eric', 'Ono_Anna', 'Sohee']
+      : model.toLowerCase().includes('qwen')
+        ? [
+            'Dry British woman, low calm register, precise diction, restrained irritation',
+            'Weary British man, gentle baritone, hesitant warmth, excellent deadpan timing',
+            'Bright northern English woman, brisk delivery, practical and quietly alarmed',
+            'Older Welsh man, textured voice, patient authority, faintly disappointed',
+            'Young London man, clipped confidence, fragile enthusiasm, conversational',
+            'Scottish woman, measured alto, civic authority, understated disbelief',
+            'Soft-spoken Irish man, warm tenor, careful pauses, private amusement',
+            'Midlands woman, clear contralto, officious composure, sudden vulnerability',
+          ]
+        : [
+            'bf_emma',
+            'bm_george',
+            'af_nova',
+            'am_echo',
+            'bf_isabella',
+            'bm_lewis',
+            'af_sky',
+            'am_adam',
+          ];
   }
 
   async synthesize(request: SpeechRequest): Promise<SpeechResult> {
@@ -349,22 +396,50 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
     if (this.apiKey !== '') {
       headers.Authorization = `Bearer ${this.apiKey}`;
     }
-    const response = await fetch(`${this.baseUrl.replace(/\/$/u, '')}/audio/speech`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: this.model,
-        input: request.text,
-        voice: request.voiceId,
-        speed: request.speakingRate ?? 1,
-        response_format: 'wav',
-      }),
-      signal: AbortSignal.timeout(120_000),
-    });
-    if (!response.ok) {
-      throw new Error(`TTS request failed with HTTP ${response.status}`);
+    const firstBaseUrl = this.nextBaseUrl;
+    this.nextBaseUrl = (this.nextBaseUrl + 1) % this.baseUrls.length;
+    let sourceDurationMs: number | undefined;
+    const failures: string[] = [];
+    for (let offset = 0; offset < this.baseUrls.length; offset += 1) {
+      const baseUrl = this.baseUrls[(firstBaseUrl + offset) % this.baseUrls.length]!;
+      try {
+        const candidate = await fetch(`${baseUrl}/audio/speech`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: this.model,
+            input: request.text,
+            voice: request.voiceId,
+            speed: request.speakingRate ?? 1,
+            response_format: 'wav',
+          }),
+          signal: AbortSignal.timeout(120_000),
+        });
+        if (!candidate.ok) {
+          failures.push(`${baseUrl}: HTTP ${candidate.status}`);
+          continue;
+        }
+        await writeFile(sourceFile, Buffer.from(await candidate.arrayBuffer()));
+        const durationMs = await probeDurationMs(sourceFile);
+        const wordCount = request.text.trim().split(/\s+/u).length;
+        const maximumPlausibleDurationMs = Math.min(
+          30_000,
+          Math.max(12_000, Math.round((wordCount / 1.2) * 1_000 + 5_000)),
+        );
+        if (durationMs > maximumPlausibleDurationMs) {
+          failures.push(`${baseUrl}: implausible ${durationMs}ms audio for ${wordCount} words`);
+          await unlink(sourceFile);
+          continue;
+        }
+        sourceDurationMs = durationMs;
+        break;
+      } catch (error) {
+        failures.push(`${baseUrl}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-    await writeFile(sourceFile, Buffer.from(await response.arrayBuffer()));
+    if (sourceDurationMs === undefined) {
+      throw new Error(`All TTS endpoints failed: ${failures.join('; ')}`);
+    }
     await execFileAsync('ffmpeg', [
       '-hide_banner',
       '-loglevel',
@@ -384,7 +459,7 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
 
     return {
       audioFile: path.posix.join('audio', path.basename(outputFile)),
-      durationMs: await probeDurationMs(outputFile),
+      durationMs: sourceDurationMs,
       provider: `${this.id}:${this.model}`,
     };
   }

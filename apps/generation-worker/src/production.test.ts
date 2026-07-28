@@ -2,7 +2,11 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { playoutManifestSchema, segmentPackageSchema } from '@elsewhere-cable/schemas';
+import {
+  generatedSegmentProposalSchema,
+  playoutManifestSchema,
+  segmentPackageSchema,
+} from '@elsewhere-cable/schemas';
 import { demoDraft } from './creative.js';
 import {
   produceBatch,
@@ -33,12 +37,23 @@ describe('produceBatch', () => {
     expect(repaired.premise).toBe(draft.premise);
   });
 
+  it('repairs numbered channels that misuse the network identity', () => {
+    const draft = demoDraft(0);
+    draft.channelName = 'Elsewhere Cable 8841290';
+
+    expect(repairNetworkIdentityCollision(draft).channelName).toBe(
+      `${draft.programmeTitle} Transmission`,
+    );
+  });
+
   it('runs bounded generation concurrently and commits one valid manifest', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-batch-'));
     temporaryDirectories.push(outputRoot);
     let active = 0;
     let peakActive = 0;
     let draftIndex = 0;
+    let completedGenerations = 0;
+    let ttsOverlappedGeneration = false;
 
     const llm: LlmProvider = {
       id: 'test-llm',
@@ -50,12 +65,16 @@ describe('produceBatch', () => {
         peakActive = Math.max(peakActive, active);
         await new Promise((resolve) => setTimeout(resolve, 10));
         active -= 1;
+        completedGenerations += 1;
         return demoDraft(index);
       },
     };
     const tts: TtsProvider = {
       id: 'test-tts',
       synthesize(request: SpeechRequest): Promise<SpeechResult> {
+        if (completedGenerations < 4) {
+          ttsOverlappedGeneration = true;
+        }
         return Promise.resolve({
           audioFile: `audio/${request.speechId}.m4a`,
           durationMs: 1_000,
@@ -78,6 +97,7 @@ describe('produceBatch', () => {
     );
 
     expect(peakActive).toBe(2);
+    expect(ttsOverlappedGeneration).toBe(false);
     expect(result.segmentCount).toBe(4);
     expect(result.concurrency).toBe(2);
     expect(manifest.segments).toHaveLength(4);
@@ -103,7 +123,7 @@ describe('produceBatch', () => {
       generateStructured() {
         requestCount += 1;
         const draft = demoDraft(requestCount);
-        if (requestCount <= 14) {
+        if (requestCount <= 6) {
           draft.premise = 'Too short';
         }
         return Promise.resolve(draft);
@@ -137,6 +157,84 @@ describe('produceBatch', () => {
     expect(result.segmentCount).toBe(1);
     expect(result.rejectedSegmentCount).toBe(1);
     expect(manifest.segments).toHaveLength(1);
+  });
+
+  it('screens a premise before requesting its full script', async () => {
+    const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-two-stage-'));
+    temporaryDirectories.push(outputRoot);
+    const draft = demoDraft(7);
+    let proposalCalls = 0;
+    let scriptCalls = 0;
+    const llm: LlmProvider = {
+      id: 'two-stage-test-llm',
+      model: 'test-model',
+      generateProposal() {
+        proposalCalls += 1;
+        return Promise.resolve(generatedSegmentProposalSchema.parse(draft));
+      },
+      generateStructured() {
+        scriptCalls += 1;
+        return Promise.resolve(draft);
+      },
+    };
+    const tts: TtsProvider = {
+      id: 'test-tts',
+      synthesize(request: SpeechRequest): Promise<SpeechResult> {
+        return Promise.resolve({
+          audioFile: `audio/${request.speechId}.m4a`,
+          durationMs: 1_000,
+          provider: 'test-tts',
+        });
+      },
+    };
+
+    const result = await produceBatch({
+      count: 1,
+      concurrency: 1,
+      outputRoot,
+      demo: false,
+      llm,
+      tts,
+      embeddingProvider: null,
+    });
+
+    expect(proposalCalls).toBe(1);
+    expect(scriptCalls).toBe(1);
+    expect(result.segmentCount).toBe(1);
+  });
+
+  it('prepares dialogue with bounded TTS endpoint parallelism', async () => {
+    const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-parallel-tts-'));
+    temporaryDirectories.push(outputRoot);
+    let active = 0;
+    let peakActive = 0;
+    const tts: TtsProvider = {
+      id: 'parallel-test-tts',
+      parallelism: 2,
+      async synthesize(request: SpeechRequest): Promise<SpeechResult> {
+        active += 1;
+        peakActive = Math.max(peakActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        active -= 1;
+        return {
+          audioFile: `audio/${request.speechId}.m4a`,
+          durationMs: 1_000,
+          provider: 'parallel-test-tts',
+        };
+      },
+    };
+
+    await produceBatch({
+      count: 1,
+      concurrency: 1,
+      outputRoot,
+      demo: true,
+      llm: null,
+      tts,
+      embeddingProvider: null,
+    });
+
+    expect(peakActive).toBe(2);
   });
 
   it('rejects a semantically repeated premise even when the wording changes', () => {

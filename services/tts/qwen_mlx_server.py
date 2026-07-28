@@ -25,6 +25,7 @@ def delivery_instruction(speed: float) -> str:
 class VoiceServer(ThreadingHTTPServer):
     model: object
     model_id: str
+    custom_voice: bool
     generation_lock: threading.Lock
 
 
@@ -64,14 +65,31 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("voice must contain a concise character description")
 
             instruction = f"{voice}. {delivery_instruction(speed)}"
+            # Qwen's upstream default is 4,096 audio tokens, which can produce
+            # several minutes of audio if a sampled line misses its stop token.
+            # Dialogue lines are intentionally short, so keep a generous but
+            # broadcast-safe ceiling based on their word count.
+            max_tokens = max(96, min(320, len(text.split()) * 12 + 48))
             with self.server.generation_lock:
-                chunks = list(
-                    self.server.model.generate_voice_design(
-                        text=text,
-                        language="English",
-                        instruct=instruction,
+                if self.server.custom_voice:
+                    chunks = list(
+                        self.server.model.generate_custom_voice(
+                            text=text,
+                            language="English",
+                            speaker=voice,
+                            instruct=delivery_instruction(speed),
+                            max_tokens=max_tokens,
+                        )
                     )
-                )
+                else:
+                    chunks = list(
+                        self.server.model.generate_voice_design(
+                            text=text,
+                            language="English",
+                            instruct=instruction,
+                            max_tokens=max_tokens,
+                        )
+                    )
             if not chunks:
                 raise RuntimeError("model returned no audio")
             arrays = [np.asarray(chunk.audio, dtype=np.float32) for chunk in chunks]
@@ -106,6 +124,7 @@ def main() -> None:
     server = VoiceServer((args.host, args.port), Handler)
     server.model = model
     server.model_id = args.model
+    server.custom_voice = "customvoice" in args.model.lower()
     server.generation_lock = threading.Lock()
     print(f"Qwen VoiceDesign ready at http://{args.host}:{args.port}", flush=True)
     server.serve_forever()
