@@ -1,6 +1,7 @@
 import './style.css';
 import { calculateFrameStats, type FrameStats } from './metrics.js';
-import { BroadcastScene } from './scene.js';
+import { HybridBroadcastScene } from './hybrid-scene.js';
+import { PlayoutEngine } from './playout.js';
 
 interface BenchmarkResult extends FrameStats {
   completed: boolean;
@@ -29,17 +30,22 @@ function requiredElement<T extends HTMLElement>(selector: string): T {
 }
 
 const canvas = requiredElement<HTMLCanvasElement>('#programme-canvas');
+const canvas2d = requiredElement<HTMLCanvasElement>('#programme-2d-canvas');
 const broadcast = requiredElement<HTMLElement>('#broadcast');
 const fpsValue = requiredElement<HTMLElement>('#fps-value');
 const rendererApi = requiredElement<HTMLElement>('#renderer-api');
 const broadcastTime = requiredElement<HTMLTimeElement>('#broadcast-time');
-const scene = new BroadcastScene(canvas);
+const scene = new HybridBroadcastScene(canvas, canvas2d);
 const renderer = scene.getRendererInfo();
 const params = new URLSearchParams(window.location.search);
+const benchmarkMode = params.has('benchmark');
 const benchmarkSeconds = Math.max(3, Number(params.get('seconds') ?? 15));
 const targetFps = 25;
+const targetFrameTimeMs = 1000 / targetFps;
 const frameTimes: number[] = [];
 let previousFrame = performance.now();
+let previousAnimationFrame = previousFrame;
+let renderAccumulatorMs = 0;
 let recentFrameTimes: number[] = [];
 let benchmarkStart = previousFrame;
 window.__ELSEWHERE_BENCHMARK__ = null;
@@ -58,6 +64,18 @@ function updateClock(now: number): void {
 }
 
 function animate(now: number): void {
+  const animationFrameTime = now - previousAnimationFrame;
+  previousAnimationFrame = now;
+  if (animationFrameTime > 0 && animationFrameTime < 1000) {
+    renderAccumulatorMs += animationFrameTime;
+  }
+
+  if (renderAccumulatorMs < targetFrameTimeMs) {
+    requestAnimationFrame(animate);
+    return;
+  }
+  renderAccumulatorMs %= targetFrameTimeMs;
+
   const frameTime = now - previousFrame;
   previousFrame = now;
 
@@ -93,9 +111,15 @@ function animate(now: number): void {
 
 requestAnimationFrame((now) => {
   previousFrame = now;
+  previousAnimationFrame = now;
   benchmarkStart = now;
   requestAnimationFrame(animate);
 });
+
+if (!benchmarkMode) {
+  const playout = new PlayoutEngine(scene);
+  void playout.start();
+}
 
 window.addEventListener('beforeunload', () => {
   scene.dispose();

@@ -1,0 +1,43 @@
+services:
+  broadcast:
+    build:
+      context: ../..
+      dockerfile: infra/endor/Dockerfile
+    image: elsewhere-cable:local
+    container_name: elsewhere-cable
+    restart: unless-stopped
+    init: true
+    environment:
+      ELSEWHERE_HOST: 0.0.0.0
+      ELSEWHERE_PORT: '4174'
+      ELSEWHERE_SEGMENTS_DIR: /content/current
+      ELSEWHERE_LOG_LEVEL: info
+      ELSEWHERE_OUTPUT_MODE: ${ELSEWHERE_OUTPUT_MODE:-record}
+      ELSEWHERE_RECORDING_PATH: /recordings/elsewhere-test.mkv
+      ELSEWHERE_STREAM_URL: ${ELSEWHERE_STREAM_URL:-rtmps://a.rtmps.youtube.com/live2}
+      ELSEWHERE_STREAM_KEY_FILE: /run/secrets/youtube_stream_key
+      ELSEWHERE_CHROMIUM_PROFILE: /state/chromium
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - '44'
+      - '107'
+      - '950'
+    ports:
+      - 127.0.0.1:4174:4174
+    volumes:
+      - /mnt/tank/apps/elsewhere-cable/content:/content:ro
+      - /mnt/tank/apps/elsewhere-cable/recordings:/recordings
+      - /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key:/run/secrets/youtube_stream_key:ro
+      - /mnt/tank/apps/elsewhere-cable/state/chromium:/state/chromium
+    tmpfs:
+      - /dev/shm:size=1g,mode=1777
+    mem_limit: 3g
+    cpus: 8
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'

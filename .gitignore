@@ -1,5 +1,7 @@
 node_modules/
+__pycache__/
 dist/
+.venv-tts/
 .DS_Store
 *.log
 .env
@@ -11,6 +13,9 @@ data/benchmarks/*
 !data/benchmarks/.gitkeep
 data/cache/
 data/generated/
+data/segments/*
+!data/segments/.gitkeep
+data/segments-*/
 
 # Editors
 .idea/
