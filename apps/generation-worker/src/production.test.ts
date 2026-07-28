@@ -92,6 +92,53 @@ describe('produceBatch', () => {
     expect(firstSegment.castArchetype).toBeDefined();
   });
 
+  it('commits completed novel segments when another batch slot is exhausted', async () => {
+    const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-partial-batch-'));
+    temporaryDirectories.push(outputRoot);
+    let requestCount = 0;
+
+    const llm: LlmProvider = {
+      id: 'test-llm',
+      model: 'test-model',
+      generateStructured() {
+        requestCount += 1;
+        const draft = demoDraft(requestCount);
+        if (requestCount <= 14) {
+          draft.premise = 'Too short';
+        }
+        return Promise.resolve(draft);
+      },
+    };
+    const tts: TtsProvider = {
+      id: 'test-tts',
+      synthesize(request: SpeechRequest): Promise<SpeechResult> {
+        return Promise.resolve({
+          audioFile: `audio/${request.speechId}.m4a`,
+          durationMs: 1_000,
+          provider: 'test-tts',
+        });
+      },
+    };
+
+    const result = await produceBatch({
+      count: 2,
+      concurrency: 1,
+      outputRoot,
+      demo: false,
+      llm,
+      tts,
+      embeddingProvider: null,
+    });
+    const manifest = playoutManifestSchema.parse(
+      JSON.parse(await readFile(path.join(outputRoot, 'manifest.json'), 'utf8')),
+    );
+
+    expect(result.requestedSegmentCount).toBe(2);
+    expect(result.segmentCount).toBe(1);
+    expect(result.rejectedSegmentCount).toBe(1);
+    expect(manifest.segments).toHaveLength(1);
+  });
+
   it('rejects a semantically repeated premise even when the wording changes', () => {
     const issue = semanticNoveltyIssue(
       'Breakfast adds weight to your spirit.',

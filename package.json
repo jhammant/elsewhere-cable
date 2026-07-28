@@ -21,6 +21,7 @@
     "diagnose": "tsx infra/scripts/diagnose.ts --output data/system-profile.json",
     "seed": "pnpm --filter @elsewhere-cable/generation-worker generate -- --demo --if-empty --count 4",
     "generate:batch": "pnpm --filter @elsewhere-cable/generation-worker generate",
+    "generate:live:bootstrap": "tsx infra/scripts/bootstrap-live-queue.ts",
     "generate:live": "sh infra/scripts/generate-ghost-live.sh once",
     "generate:live:loop": "sh infra/scripts/generate-ghost-live.sh loop",
     "tts:qwen:setup": "sh infra/scripts/setup-ghost-tts.sh",

@@ -27,11 +27,14 @@ if [ "$batch_count" -lt 1 ] || [ "$batch_count" -gt 100 ]; then
   exit 64
 fi
 
+pnpm exec tsx infra/scripts/bootstrap-live-queue.ts \
+  --base "$history_root" \
+  --output "$output_root"
+
 while :; do
   pnpm generate:batch -- \
     --count "$batch_count" \
     --concurrency 2 \
-    --history "$history_root" \
     --output "$output_root" \
     --base-url "$llm_base_url" \
     --model "$llm_model" \

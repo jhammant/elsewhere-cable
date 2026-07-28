@@ -197,7 +197,9 @@ export function semanticNoveltyIssue(
 }
 
 export interface BatchResult {
+  requestedSegmentCount: number;
   segmentCount: number;
+  rejectedSegmentCount: number;
   concurrency: number;
   addedDurationMs: number;
   wallTimeMs: number;
@@ -387,71 +389,75 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
   let addedDurationMs = 0;
   const produced = new Array<SegmentPackage | undefined>(options.count);
+  const failures = new Array<string | undefined>(options.count);
   let nextIndex = 0;
 
   const worker = async (): Promise<void> => {
     while (nextIndex < options.count) {
       const index = nextIndex;
       nextIndex += 1;
-      let draft: GeneratedSegmentDraft | undefined;
-      let rejectionReasons: string[] = [];
-      const maximumProposalAttempts = 14;
-      for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
-        const recent = creativeHistory.slice(-24);
-        const candidate = repairNetworkIdentityCollision(
-          options.demo
-            ? demoDraft(startingSegmentCount + index + attempt * options.count)
-            : await options.llm!.generateStructured({
-                systemPrompt,
-                userPrompt: userPrompt(
-                  index + attempt * options.count,
-                  recent.map((record) => record.title),
-                  recent.map((record) => record.premise),
-                  rejectionReasons,
-                ),
-              }),
-        );
-        const critique = critiquePremise(candidate);
-        const candidateEmbedding =
-          options.embeddingProvider === null
-            ? null
-            : (await options.embeddingProvider.embed([candidate.premise]))[0];
-        const semanticIssue =
-          candidateEmbedding === null || candidateEmbedding === undefined
-            ? null
-            : semanticNoveltyIssue(
-                candidate.premise,
-                candidateEmbedding,
-                creativeHistory,
-                semanticHistory,
-              );
-        rejectionReasons = [
-          ...noveltyIssues(candidate, creativeHistory),
-          ...(semanticIssue === null ? [] : [semanticIssue]),
-          ...critique.reasons,
-        ];
-        if (rejectionReasons.length === 0) {
-          draft = candidate;
-          creativeHistory.push(recordFromDraft(candidate));
-          if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
-            semanticHistory.push(candidateEmbedding);
+      try {
+        let draft: GeneratedSegmentDraft | undefined;
+        let rejectionReasons: string[] = [];
+        const maximumProposalAttempts = 14;
+        for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
+          const recent = creativeHistory.slice(-24);
+          const candidate = repairNetworkIdentityCollision(
+            options.demo
+              ? demoDraft(startingSegmentCount + index + attempt * options.count)
+              : await options.llm!.generateStructured({
+                  systemPrompt,
+                  userPrompt: userPrompt(
+                    index + attempt * options.count,
+                    recent.map((record) => record.title),
+                    recent.map((record) => record.premise),
+                    rejectionReasons,
+                  ),
+                }),
+          );
+          const critique = critiquePremise(candidate);
+          const candidateEmbedding =
+            options.embeddingProvider === null
+              ? null
+              : (await options.embeddingProvider.embed([candidate.premise]))[0];
+          const semanticIssue =
+            candidateEmbedding === null || candidateEmbedding === undefined
+              ? null
+              : semanticNoveltyIssue(
+                  candidate.premise,
+                  candidateEmbedding,
+                  creativeHistory,
+                  semanticHistory,
+                );
+          rejectionReasons = [
+            ...noveltyIssues(candidate, creativeHistory),
+            ...(semanticIssue === null ? [] : [semanticIssue]),
+            ...critique.reasons,
+          ];
+          if (rejectionReasons.length === 0) {
+            draft = candidate;
+            creativeHistory.push(recordFromDraft(candidate));
+            if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
+              semanticHistory.push(candidateEmbedding);
+            }
+            break;
           }
-          break;
         }
-      }
-      if (draft === undefined) {
-        throw new Error(
-          `Could not produce a novel segment after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
+        if (draft === undefined) {
+          throw new Error(
+            `Could not produce a novel segment after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
+          );
+        }
+        produced[index] = await buildSegment(
+          draft,
+          options.outputRoot,
+          options.demo ? 'demo-library' : options.llm!.id,
+          options.demo ? 'hand-authored-demo' : options.llm!.model,
+          options.tts,
         );
+      } catch (error) {
+        failures[index] = error instanceof Error ? error.message : String(error);
       }
-      const segment = await buildSegment(
-        draft,
-        options.outputRoot,
-        options.demo ? 'demo-library' : options.llm!.id,
-        options.demo ? 'hand-authored-demo' : options.llm!.model,
-        options.tts,
-      );
-      produced[index] = segment;
     }
   };
 
@@ -459,10 +465,17 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     Array.from({ length: Math.min(options.concurrency, options.count) }, async () => worker()),
   );
 
-  for (const segment of produced) {
-    if (segment === undefined) {
-      throw new Error('Batch worker completed without a segment package');
-    }
+  const completedSegments = produced.filter(
+    (segment): segment is SegmentPackage => segment !== undefined,
+  );
+  if (completedSegments.length === 0) {
+    const reasons = failures.filter((failure): failure is string => failure !== undefined);
+    throw new Error(
+      `Batch produced no approved segment packages${reasons.length === 0 ? '' : `: ${reasons.join(' | ')}`}`,
+    );
+  }
+
+  for (const segment of completedSegments) {
     addedDurationMs += segment.durationMs;
     manifest.segments.push({
       segmentId: segment.segmentId,
@@ -479,7 +492,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
 
   const wallTimeMs = performance.now() - startedAt;
   return {
-    segmentCount: options.count,
+    requestedSegmentCount: options.count,
+    segmentCount: completedSegments.length,
+    rejectedSegmentCount: options.count - completedSegments.length,
     concurrency: options.concurrency,
     addedDurationMs,
     wallTimeMs: Math.round(wallTimeMs),
