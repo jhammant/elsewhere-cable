@@ -41,8 +41,11 @@ const params = new URLSearchParams(window.location.search);
 const benchmarkMode = params.has('benchmark');
 const benchmarkSeconds = Math.max(3, Number(params.get('seconds') ?? 15));
 const targetFps = 25;
+const targetFrameTimeMs = 1000 / targetFps;
 const frameTimes: number[] = [];
 let previousFrame = performance.now();
+let previousAnimationFrame = previousFrame;
+let renderAccumulatorMs = 0;
 let recentFrameTimes: number[] = [];
 let benchmarkStart = previousFrame;
 window.__ELSEWHERE_BENCHMARK__ = null;
@@ -61,6 +64,18 @@ function updateClock(now: number): void {
 }
 
 function animate(now: number): void {
+  const animationFrameTime = now - previousAnimationFrame;
+  previousAnimationFrame = now;
+  if (animationFrameTime > 0 && animationFrameTime < 1000) {
+    renderAccumulatorMs += animationFrameTime;
+  }
+
+  if (renderAccumulatorMs < targetFrameTimeMs) {
+    requestAnimationFrame(animate);
+    return;
+  }
+  renderAccumulatorMs %= targetFrameTimeMs;
+
   const frameTime = now - previousFrame;
   previousFrame = now;
 
@@ -96,6 +111,7 @@ function animate(now: number): void {
 
 requestAnimationFrame((now) => {
   previousFrame = now;
+  previousAnimationFrame = now;
   benchmarkStart = now;
   requestAnimationFrame(animate);
 });
