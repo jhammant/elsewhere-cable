@@ -4,7 +4,11 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { playoutManifestSchema } from '@elsewhere-cable/schemas';
 import { produceBatch } from './production.js';
-import { LocalCommandTtsProvider, OpenAiCompatibleProvider } from './providers.js';
+import {
+  LocalCommandTtsProvider,
+  OpenAiCompatibleProvider,
+  OpenAiCompatibleTtsProvider,
+} from './providers.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -71,7 +75,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  const tts = await LocalCommandTtsProvider.create();
+  const ttsBaseUrl = argument('tts-base-url') ?? process.env.ELSEWHERE_TTS_BASE_URL;
+  const tts =
+    ttsBaseUrl === undefined
+      ? await LocalCommandTtsProvider.create()
+      : new OpenAiCompatibleTtsProvider(
+          argument('tts-model') ?? process.env.ELSEWHERE_TTS_MODEL ?? 'kokoro',
+          ttsBaseUrl,
+          process.env.ELSEWHERE_TTS_API_KEY,
+        );
   const llm = demo ? null : new OpenAiCompatibleProvider(model, baseUrl, apiKey);
   const result = await produceBatch({
     count: countArgument(),
@@ -80,6 +92,7 @@ async function main(): Promise<void> {
     demo,
     llm,
     tts,
+    fresh: process.argv.includes('--fresh'),
   });
 
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

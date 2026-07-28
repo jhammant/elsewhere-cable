@@ -11,6 +11,13 @@ import {
 } from '@elsewhere-cable/schemas';
 import type { LlmProvider, TtsProvider } from './providers.js';
 import { demoDraft, systemPrompt, userPrompt } from './creative.js';
+import {
+  noveltyIssues,
+  recordFromDraft,
+  recordFromSegment,
+  type CreativeRecord,
+} from './novelty.js';
+import { critiquePremise } from './premise-critic.js';
 
 const forbiddenPatterns = [
   /https?:\/\//iu,
@@ -20,7 +27,7 @@ const forbiddenPatterns = [
   /\bignore (?:all|previous) instructions\b/iu,
 ];
 
-const voices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
+const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
 
 function slug(value: string): string {
   return value
@@ -31,12 +38,45 @@ function slug(value: string): string {
     .slice(0, 48);
 }
 
-function voiceFor(name: string): string {
+function voiceFor(name: string, tts: TtsProvider): string {
   let hash = 0;
   for (const character of name) {
     hash = (hash * 31 + character.codePointAt(0)!) >>> 0;
   }
-  return voices[hash % voices.length] ?? 'Samantha';
+  const voices = tts.voiceIds ?? fallbackVoices;
+  return voices[hash % voices.length] ?? voices[0] ?? 'default';
+}
+
+function pacingFor(draft: GeneratedSegmentDraft): NonNullable<GeneratedSegmentDraft['pacing']> {
+  if (draft.pacing !== undefined) {
+    return draft.pacing;
+  }
+  if (draft.format === 'emergency') {
+    return 'interrupted';
+  }
+  if (draft.format === 'ident') {
+    return 'near_silent';
+  }
+  return 'conversational';
+}
+
+function speakingRateFor(
+  pacing: NonNullable<GeneratedSegmentDraft['pacing']>,
+  speaker: string,
+): number {
+  const base = {
+    frantic: 1.28,
+    staccato: 1.12,
+    conversational: 1,
+    slow_burn: 0.84,
+    interrupted: 1.04,
+    near_silent: 0.78,
+  }[pacing];
+  let variation = 0;
+  for (const character of speaker) {
+    variation = (variation + (character.codePointAt(0) ?? 0)) % 7;
+  }
+  return Number((base + (variation - 3) * 0.018).toFixed(3));
 }
 
 function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
@@ -65,6 +105,24 @@ async function readManifest(root: string): Promise<PlayoutManifest> {
   }
 }
 
+async function readCreativeHistory(
+  root: string,
+  manifest: PlayoutManifest,
+): Promise<CreativeRecord[]> {
+  const records: CreativeRecord[] = [];
+  for (const entry of manifest.segments.slice(-250)) {
+    try {
+      const segment = segmentPackageSchema.parse(
+        JSON.parse(await readFile(path.join(root, entry.packagePath), 'utf8')),
+      );
+      records.push(recordFromSegment(segment));
+    } catch {
+      // A missing or obsolete package must not prevent new material from being prepared.
+    }
+  }
+  return records;
+}
+
 async function writeManifest(root: string, manifest: PlayoutManifest): Promise<void> {
   await writeFile(
     path.join(root, 'manifest.json'),
@@ -80,6 +138,7 @@ interface ProduceOptions {
   demo: boolean;
   llm: LlmProvider | null;
   tts: TtsProvider;
+  fresh?: boolean;
 }
 
 export interface BatchResult {
@@ -105,14 +164,16 @@ async function buildSegment(
   const segmentDirectory = path.join(outputRoot, segmentId);
   await mkdir(segmentDirectory, { recursive: true });
 
+  const pacing = pacingFor(draft);
   const speech = await Promise.all(
     draft.dialogue.map(async (line, index) => {
       const speechId = `speech_${index.toString().padStart(2, '0')}`;
-      const voiceId = voiceFor(line.speaker);
+      const voiceId = voiceFor(line.speaker, tts);
       const result = await tts.synthesize({
         speechId,
         text: line.text,
         voiceId,
+        speakingRate: speakingRateFor(pacing, line.speaker),
         outputDirectory: segmentDirectory,
       });
       return { line, speechId, voiceId, result };
@@ -129,7 +190,15 @@ async function buildSegment(
       text: draft.programmeTitle,
     },
   ];
-  let cursorMs = 1_200;
+  const timing = {
+    frantic: { openingMs: 420, lineGapMs: 90, endingHoldMs: 900 },
+    staccato: { openingMs: 700, lineGapMs: 280, endingHoldMs: 1_250 },
+    conversational: { openingMs: 1_200, lineGapMs: 650, endingHoldMs: 2_000 },
+    slow_burn: { openingMs: 2_000, lineGapMs: 1_800, endingHoldMs: 3_200 },
+    interrupted: { openingMs: 650, lineGapMs: 520, endingHoldMs: 1_100 },
+    near_silent: { openingMs: 3_200, lineGapMs: 2_700, endingHoldMs: 4_200 },
+  }[pacing];
+  let cursorMs = timing.openingMs;
   speech.forEach(({ line, speechId, voiceId, result }, index) => {
     const characterId = `character_${slug(line.speaker)}`;
     events.push({
@@ -154,7 +223,26 @@ async function buildSegment(
       audioFile: result.audioFile,
       durationMs: result.durationMs,
     });
-    cursorMs += result.durationMs + 650;
+    if (pacing === 'frantic' && result.durationMs > 1_400) {
+      events.push({
+        atMs: cursorMs + Math.floor(result.durationMs * 0.58),
+        type: 'camera.cut',
+        camera: index % 2 === 0 ? 'CAMERA_GUEST' : 'CAMERA_HOST',
+      });
+    }
+    if (pacing === 'interrupted' && index < speech.length - 1 && index % 2 === 0) {
+      events.push({
+        atMs: cursorMs + result.durationMs + 120,
+        type: 'audio.static',
+        durationMs: 360,
+      });
+      events.push({
+        atMs: cursorMs + result.durationMs + 120,
+        type: 'transition.play',
+        transition: 'SIGNAL_LOSS',
+      });
+    }
+    cursorMs += result.durationMs + timing.lineGapMs;
   });
   events.push({
     atMs: cursorMs,
@@ -163,11 +251,11 @@ async function buildSegment(
     text: draft.endingBeat,
   });
   events.push({
-    atMs: cursorMs + 2_000,
+    atMs: cursorMs + timing.endingHoldMs,
     type: 'transition.play',
     transition: 'STATIC_BURST',
   });
-  const durationMs = Math.max(8_000, cursorMs + 2_700);
+  const durationMs = Math.max(8_000, cursorMs + timing.endingHoldMs + 700);
 
   const segment = segmentPackageSchema.parse({
     schemaVersion: 1,
@@ -186,6 +274,9 @@ async function buildSegment(
     },
     durationMs,
     visualStyle: draft.visualStyle,
+    visualMedium: draft.visualMedium,
+    castArchetype: draft.castArchetype,
+    pacing,
     tone: draft.tone,
     events,
     continuityUpdates: [
@@ -219,9 +310,16 @@ async function buildSegment(
 export async function produceBatch(options: ProduceOptions): Promise<BatchResult> {
   const startedAt = performance.now();
   await mkdir(options.outputRoot, { recursive: true });
-  const manifest = await readManifest(options.outputRoot);
+  const manifest: PlayoutManifest = options.fresh
+    ? {
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        totalDurationMs: 0,
+        segments: [],
+      }
+    : await readManifest(options.outputRoot);
   const startingSegmentCount = manifest.segments.length;
-  const recentTitles = manifest.segments.slice(-12).map((entry) => entry.programmeTitle);
+  const creativeHistory = await readCreativeHistory(options.outputRoot, manifest);
   let addedDurationMs = 0;
   const produced = new Array<SegmentPackage | undefined>(options.count);
   let nextIndex = 0;
@@ -230,12 +328,34 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     while (nextIndex < options.count) {
       const index = nextIndex;
       nextIndex += 1;
-      const draft = options.demo
-        ? demoDraft(startingSegmentCount + index)
-        : await options.llm!.generateStructured({
-            systemPrompt,
-            userPrompt: userPrompt(index, recentTitles),
-          });
+      let draft: GeneratedSegmentDraft | undefined;
+      let rejectionReasons: string[] = [];
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const recent = creativeHistory.slice(-24);
+        const candidate = options.demo
+          ? demoDraft(startingSegmentCount + index + attempt * options.count)
+          : await options.llm!.generateStructured({
+              systemPrompt,
+              userPrompt: userPrompt(
+                index,
+                recent.map((record) => record.title),
+                recent.map((record) => record.premise),
+                rejectionReasons,
+              ),
+            });
+        const critique = critiquePremise(candidate);
+        rejectionReasons = [...noveltyIssues(candidate, creativeHistory), ...critique.reasons];
+        if (rejectionReasons.length === 0) {
+          draft = candidate;
+          creativeHistory.push(recordFromDraft(candidate));
+          break;
+        }
+      }
+      if (draft === undefined) {
+        throw new Error(
+          `Could not produce a novel segment after six attempts: ${rejectionReasons.join('; ')}`,
+        );
+      }
       const segment = await buildSegment(
         draft,
         options.outputRoot,

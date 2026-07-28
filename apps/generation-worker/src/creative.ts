@@ -1,6 +1,7 @@
 import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
+import { expandedDemoDrafts } from './demo-network.js';
 
-const demoDrafts: GeneratedSegmentDraft[] = [
+const originalDemoDrafts: GeneratedSegmentDraft[] = [
   {
     channelNumber: 42,
     channelName: 'Municipal Dream Service',
@@ -8,6 +9,8 @@ const demoDrafts: GeneratedSegmentDraft[] = [
     format: 'public_access',
     realityId: 'EC-11-VOID',
     visualStyle: 'public_access_1991',
+    visualMedium: 'public_access_vhs',
+    castArchetype: 'humanoid',
     premise: 'Residents appeal fines for dreams that violated local planning rules.',
     tone: ['earnest', 'bureaucratic', 'surreal'],
     dialogue: [
@@ -47,6 +50,8 @@ const demoDrafts: GeneratedSegmentDraft[] = [
     format: 'shopping',
     realityId: 'RETAIL-9',
     visualStyle: 'shopping_studio_late',
+    visualMedium: 'neon_wireframe',
+    castArchetype: 'geometric_aliens',
     premise: 'A shopping host sells a doorbell that rings before visitors decide to arrive.',
     tone: ['warm', 'sales-driven', 'uneasy'],
     dialogue: [
@@ -86,6 +91,8 @@ const demoDrafts: GeneratedSegmentDraft[] = [
     format: 'news',
     realityId: 'NEWS-CENTRAL-4',
     visualStyle: 'regional_news_1987',
+    visualMedium: 'cel_shaded',
+    castArchetype: 'mixed',
     premise: 'Every developing story concerns the same municipal roundabout.',
     tone: ['serious', 'local', 'escalating'],
     dialogue: [
@@ -125,6 +132,8 @@ const demoDrafts: GeneratedSegmentDraft[] = [
     format: 'ident',
     realityId: 'LUNAR-NURSERY-2',
     visualStyle: 'childrens_studio_twilight',
+    visualMedium: 'paper_cutout',
+    castArchetype: 'celestial',
     premise: 'An exhausted moon explains why it cannot orbit one more time today.',
     tone: ['gentle', 'tired', 'unexpectedly emotional'],
     dialogue: [
@@ -159,28 +168,88 @@ const demoDrafts: GeneratedSegmentDraft[] = [
   },
 ];
 
+const demoDrafts = [...expandedDemoDrafts, ...originalDemoDrafts];
+
 export function demoDraft(index: number): GeneratedSegmentDraft {
   const draft = demoDrafts[index % demoDrafts.length];
   if (draft === undefined) {
     throw new Error('Demo draft library is empty');
   }
-  return structuredClone(draft);
+  const pacing = [
+    'frantic',
+    'slow_burn',
+    'staccato',
+    'near_silent',
+    'interrupted',
+    'conversational',
+  ] as const;
+  const visualMedium = [
+    'corporate_vector',
+    'miniature_diorama',
+    'signal_corruption',
+    'collage_zine',
+    'pixel_broadcast',
+    'claymation',
+    'ink_monochrome',
+    'hand_drawn',
+    'public_access_vhs',
+    'miniature_diorama',
+    'corporate_vector',
+    'ink_monochrome',
+    'neon_wireframe',
+    'corporate_vector',
+    'cel_shaded',
+    'thermal_camera',
+    'corporate_vector',
+    'archive_film',
+    'paper_cutout',
+    'claymation',
+    'cel_shaded',
+    'collage_zine',
+    'neon_wireframe',
+    'signal_corruption',
+    'shadow_theatre',
+    'corporate_vector',
+    'public_access_vhs',
+    'ink_monochrome',
+    'hand_drawn',
+    'paper_cutout',
+    'neon_wireframe',
+    'miniature_diorama',
+  ] as const;
+  return {
+    ...structuredClone(draft),
+    pacing: draft.pacing ?? pacing[index % pacing.length],
+    visualMedium: visualMedium[index % visualMedium.length] ?? draft.visualMedium,
+  };
 }
 
 export const systemPrompt = `You create original programme fragments for Elsewhere Cable, an infinite fictional television network from impossible realities.
 
-Return JSON only. Keep one clear comic rule, escalate it coherently, and end before the premise becomes exhausted. The tone is dry, awkward, playful and internally consistent. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
+Return JSON only. Every fragment is a comedy scene, not a collection of random surreal details. Begin with a familiar television format and alter exactly one understandable rule. Every character wants something concrete under that rule. Each dialogue line must respond to the preceding line, reveal a consequence, or escalate the same problem. End with a visual payoff caused by the premise. Do not add unrelated strange nouns merely to sound surreal.
+
+The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
 Elsewhere Cable is the network identity, not a channel name or programme title.
 
 Use only these formats: advert, public_access, news, shopping, sitcom, emergency, ident.
 Use only these actions: IDLE, ENTER, EXIT, LOOK_AT, POINT_AT, REACTION_NEUTRAL, REACTION_CONFUSED, REACTION_SHOCKED, REACTION_ANGRY, PAUSE, FREEZE.
+Use only these visual mediums: cel_shaded, paper_cutout, pixel_broadcast, archive_film, neon_wireframe, public_access_vhs, signal_corruption, stop_motion, collage_zine, ink_monochrome, miniature_diorama, corporate_vector, claymation, shadow_theatre, hand_drawn, thermal_camera.
+Use only these cast archetypes: humanoid, geometric_aliens, talking_objects, celestial, paper_puppets, mixed.
+Use only these pacing modes: frantic, staccato, conversational, slow_burn, interrupted, near_silent.
+Vary the visual medium and cast archetype between segments. Choose a medium, cast and physical set that make the spoken comic rule immediately legible. Every visible character and prop must have a reason to be in the scene.
+Vary pacing aggressively. Some fragments should interrupt themselves, some should race, some should leave long awkward pauses, and some should end almost immediately. Do not default to alternating two-person dialogue.
 
 The exact JSON fields are:
-channelNumber, channelName, programmeTitle, format, realityId, visualStyle, premise, tone (array), dialogue (array of speaker, text, action), continuityFact, endingBeat.
+channelNumber, channelName, programmeTitle, format, realityId, visualStyle, visualMedium, castArchetype, pacing, premise, tone (array), dialogue (array of speaker, text, action), continuityFact, endingBeat.
 
-Create 4–8 short dialogue lines suitable for a 30–90 second low-poly studio segment.`;
+Create 4–8 short dialogue lines suitable for a 12–110 second segment. Prefer unusual non-human characters and locations that visually reinforce the spoken premise. Channel numbers may range from 1 to 9,999,999,999 and should usually be implausibly high.`;
 
-export function userPrompt(index: number, recentTitles: readonly string[]): string {
+export function userPrompt(
+  index: number,
+  recentTitles: readonly string[],
+  recentPremises: readonly string[] = [],
+  rejectionReasons: readonly string[] = [],
+): string {
   const formats = [
     'advert',
     'public_access',
@@ -191,5 +260,9 @@ export function userPrompt(index: number, recentTitles: readonly string[]): stri
     'ident',
   ] as const;
   const format = formats[(recentTitles.length + index) % formats.length] ?? 'advert';
-  return `Create batch segment ${index + 1} using the ${format} format. Avoid these recent titles: ${recentTitles.join(', ') || 'none'}.`;
+  return `Create batch segment ${index + 1} using the ${format} format.
+Avoid these recent titles: ${recentTitles.join(', ') || 'none'}.
+Do not reuse or lightly paraphrase these premises: ${recentPremises.join(' | ') || 'none'}.
+${rejectionReasons.length > 0 ? `The previous attempt was rejected for novelty: ${rejectionReasons.join('; ')}.` : ''}
+Select a very high, memorable channel number. Make the scene, cast composition, visual medium and pacing unlike the immediately preceding material.`;
 }

@@ -152,7 +152,7 @@ For an AMD hardware benchmark, the process must be able to access the render dev
 apps/
   generation-worker/       Ghost batch generation + TTS packaging
   playout-controller/      Local queue API and static playout server
-  renderer/                Three.js 720p broadcast scene
+  renderer/                Hybrid Canvas 2D / Three.js 720p broadcast scene
 packages/
   schemas/                  Versioned Zod segment and manifest contracts
 data/

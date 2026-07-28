@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
+import {
+  resolveProductionDesign,
+  type CastArchetype,
+  type VisualMedium,
+} from './production-design.js';
 
 const streamWidth = 1280;
 const streamHeight = 720;
@@ -27,7 +32,9 @@ interface ProgrammeViewport {
 interface CharacterRig {
   group: THREE.Group;
   body: THREE.Mesh;
+  bodyOutline: THREE.Mesh;
   head: THREE.Mesh;
+  headOutline: THREE.Mesh;
   hair: THREE.Mesh;
   eyes: THREE.Mesh[];
   mouth: THREE.Mesh;
@@ -59,6 +66,11 @@ interface ShoppingRig {
   group: THREE.Group;
   doorbell: THREE.Group;
   mug: THREE.Group;
+}
+
+interface PremiseProps {
+  group: THREE.Group;
+  items: Map<string, THREE.Group>;
 }
 
 type CameraName = 'CAMERA_WIDE' | 'CAMERA_HOST' | 'CAMERA_GUEST';
@@ -99,7 +111,15 @@ function createCharacter(options: {
 
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.82, 2, 7), bodyMaterial);
   body.position.y = 1.85;
-  group.add(body);
+  const outlineMaterial = new THREE.MeshBasicMaterial({
+    color: 0x10161b,
+    side: THREE.BackSide,
+  });
+  const bodyOutline = new THREE.Mesh(body.geometry, outlineMaterial);
+  bodyOutline.position.copy(body.position);
+  bodyOutline.scale.setScalar(1.07);
+  bodyOutline.visible = false;
+  group.add(bodyOutline, body);
 
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.22, 0.34, 7), skinMaterial);
   neck.position.y = 3.02;
@@ -108,7 +128,11 @@ function createCharacter(options: {
   const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.62, 1), skinMaterial);
   head.scale.set(0.9, 1.08, 0.88);
   head.position.y = 3.68;
-  group.add(head);
+  const headOutline = new THREE.Mesh(head.geometry, outlineMaterial);
+  headOutline.position.copy(head.position);
+  headOutline.scale.copy(head.scale).multiplyScalar(1.09);
+  headOutline.visible = false;
+  group.add(headOutline, head);
 
   const hair = new THREE.Mesh(
     new THREE.SphereGeometry(0.57, 7, 4, 0, Math.PI * 2, 0, Math.PI * 0.55),
@@ -126,6 +150,11 @@ function createCharacter(options: {
     eyes.push(eye);
     group.add(eye);
   }
+  const thirdEye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 4), eyeMaterial);
+  thirdEye.position.set(0, 4.02, 0.51);
+  thirdEye.visible = false;
+  eyes.push(thirdEye);
+  group.add(thirdEye);
 
   const mouth = new THREE.Mesh(
     new THREE.BoxGeometry(0.25, 0.055, 0.03),
@@ -186,7 +215,9 @@ function createCharacter(options: {
   return {
     group,
     body,
+    bodyOutline,
     head,
+    headOutline,
     hair,
     eyes,
     mouth,
@@ -210,6 +241,8 @@ const characterBodies: THREE.BufferGeometry[] = [
   new THREE.BoxGeometry(1.35, 1.95, 0.86, 2, 2, 1),
   new THREE.SphereGeometry(0.92, 9, 6),
   new THREE.ConeGeometry(0.92, 2.15, 8),
+  new THREE.IcosahedronGeometry(0.98, 1),
+  new THREE.TorusKnotGeometry(0.62, 0.2, 32, 6),
 ];
 
 const characterHeads: THREE.BufferGeometry[] = [
@@ -217,6 +250,8 @@ const characterHeads: THREE.BufferGeometry[] = [
   new THREE.BoxGeometry(1.05, 1.05, 0.92, 2, 2, 1),
   new THREE.SphereGeometry(0.64, 10, 7),
   new THREE.ConeGeometry(0.67, 1.25, 8),
+  new THREE.IcosahedronGeometry(0.67, 1),
+  new THREE.CylinderGeometry(0.52, 0.72, 1.08, 7),
 ];
 
 const bodyColours = [0xa5374d, 0x3f68a4, 0xd28b32, 0x5c8b68, 0x8e4a96, 0x2f858b, 0xb35c35];
@@ -240,17 +275,70 @@ function configureCharacter(
   characterId: string,
   programmeId: string,
   index: number,
+  castArchetype: CastArchetype,
+  visualMedium: VisualMedium,
 ): void {
   const variant = stableHash(`${programmeId}:${characterId}`);
-  character.body.geometry = characterBodies[(variant + index) % characterBodies.length]!;
-  character.head.geometry = characterHeads[((variant >>> 3) + index * 2) % characterHeads.length]!;
+  const bodyIndex =
+    castArchetype === 'humanoid'
+      ? (variant + index) % 2
+      : castArchetype === 'talking_objects'
+        ? 1 + ((variant + index) % (characterBodies.length - 1))
+        : (variant + index) % characterBodies.length;
+  const headIndex =
+    castArchetype === 'humanoid'
+      ? [0, 2][(variant + index) % 2]!
+      : ((variant >>> 3) + index * 2) % characterHeads.length;
+  character.body.geometry = characterBodies[bodyIndex]!;
+  character.head.geometry = characterHeads[headIndex]!;
+  character.bodyOutline.geometry = character.body.geometry;
+  character.headOutline.geometry = character.head.geometry;
   character.bodyMaterial.color.setHex(bodyColours[(variant >>> 5) % bodyColours.length]!);
-  character.skinMaterial.color.setHex(skinColours[(variant >>> 8) % skinColours.length]!);
+  const skinIndex =
+    castArchetype === 'humanoid'
+      ? (variant >>> 8) % 6
+      : castArchetype === 'geometric_aliens' || castArchetype === 'talking_objects'
+        ? 6 + ((variant >>> 8) % (skinColours.length - 6))
+        : (variant >>> 8) % skinColours.length;
+  character.skinMaterial.color.setHex(skinColours[skinIndex]!);
   character.hairMaterial.color.setHex(hairColours[(variant >>> 11) % hairColours.length]!);
+  const emissive =
+    visualMedium === 'neon_wireframe' ||
+    visualMedium === 'signal_corruption' ||
+    visualMedium === 'thermal_camera'
+      ? bodyColours[(variant >>> 5) % bodyColours.length]!
+      : 0x000000;
+  character.bodyMaterial.emissive.setHex(emissive);
+  character.bodyMaterial.emissiveIntensity =
+    visualMedium === 'neon_wireframe' ? 0.52 : emissive === 0x000000 ? 0 : 0.22;
+  character.bodyMaterial.metalness = visualMedium === 'neon_wireframe' ? 0.32 : 0.05;
+  const isGraphicMedium = [
+    'cel_shaded',
+    'ink_monochrome',
+    'corporate_vector',
+    'hand_drawn',
+  ].includes(visualMedium);
+  character.bodyMaterial.roughness = isGraphicMedium || visualMedium === 'claymation' ? 1 : 0.75;
+  character.skinMaterial.roughness = isGraphicMedium || visualMedium === 'claymation' ? 1 : 0.75;
+  character.skinMaterial.emissive.setHex(visualMedium === 'neon_wireframe' ? 0x241238 : 0x000000);
+  character.skinMaterial.emissiveIntensity = visualMedium === 'neon_wireframe' ? 0.28 : 0;
+  character.hairMaterial.emissive.setHex(visualMedium === 'neon_wireframe' ? 0x142f38 : 0x000000);
+  character.hairMaterial.emissiveIntensity = visualMedium === 'neon_wireframe' ? 0.34 : 0;
+  character.bodyMaterial.wireframe = false;
+  character.skinMaterial.wireframe = false;
+  character.hairMaterial.wireframe = false;
 
   const width = 0.78 + ((variant >>> 14) % 6) * 0.065;
   const height = 0.78 + ((variant >>> 18) % 7) * 0.055;
   character.group.scale.set(width, height, width);
+  if (
+    ['paper_cutout', 'collage_zine', 'ink_monochrome', 'corporate_vector', 'hand_drawn'].includes(
+      visualMedium,
+    ) ||
+    castArchetype === 'paper_puppets'
+  ) {
+    character.group.scale.z = 0.16;
+  }
   character.body.scale.set(
     0.78 + ((variant >>> 21) % 5) * 0.12,
     0.82 + ((variant >>> 24) % 5) * 0.1,
@@ -261,18 +349,55 @@ function configureCharacter(
     0.82 + ((variant >>> 12) % 5) * 0.12,
     0.82 + ((variant >>> 16) % 4) * 0.1,
   );
+  character.bodyOutline.scale.copy(character.body.scale).multiplyScalar(1.07);
+  character.headOutline.scale.copy(character.head.scale).multiplyScalar(1.09);
+  character.bodyOutline.visible = isGraphicMedium;
+  character.headOutline.visible = isGraphicMedium;
   character.eyes.forEach((eye) => {
     eye.position.z = 0.78;
+    eye.visible = true;
   });
+  const eyeMode = variant % 7;
+  if (eyeMode === 0) {
+    character.eyes[0]!.position.set(0, 3.76, 0.78);
+    character.eyes[1]!.visible = false;
+    character.eyes[2]!.visible = false;
+  } else if (eyeMode === 1 && castArchetype !== 'humanoid') {
+    character.eyes[0]!.position.set(-0.22, 3.72, 0.78);
+    character.eyes[1]!.position.set(0.22, 3.72, 0.78);
+    character.eyes[2]!.position.set(0, 4.02, 0.78);
+  } else {
+    character.eyes[0]!.position.set(-0.2, 3.76, 0.78);
+    character.eyes[1]!.position.set(0.2, 3.76, 0.78);
+    character.eyes[2]!.visible = false;
+  }
   character.mouth.position.z = 0.79;
+  character.mouth.scale.x = 0.72 + (variant % 5) * 0.18;
+  character.mouth.rotation.z = (((variant >>> 5) % 3) - 1) * 0.08;
   character.glasses.position.z = 0.21;
-  character.hair.visible = variant % 5 !== 0;
-  character.hat.visible = variant % 7 === 0 || programmeId.includes('news');
-  character.glasses.visible = variant % 4 === 0 || programmeId.includes('bureau');
-  character.antenna.visible = variant % 11 === 0 || characterId.includes('buggy');
-  character.group.position.x = index === 0 ? -2.35 : 2.4;
-  character.group.position.y = index === 0 ? 0 : -0.08;
-  character.group.position.z = -0.4;
+  character.hair.visible =
+    castArchetype === 'humanoid' || (castArchetype === 'mixed' && variant % 5 !== 0);
+  character.hat.visible =
+    castArchetype !== 'talking_objects' && (variant % 7 === 0 || programmeId.includes('news'));
+  character.glasses.visible =
+    castArchetype !== 'geometric_aliens' && (variant % 4 === 0 || programmeId.includes('bureau'));
+  character.antenna.visible =
+    castArchetype === 'geometric_aliens' || variant % 11 === 0 || characterId.includes('buggy');
+  character.leftArm.visible = castArchetype !== 'talking_objects' || variant % 3 !== 0;
+  character.rightArm.visible = castArchetype !== 'talking_objects' || variant % 4 !== 0;
+  const positions = [
+    [-2.75, 0, -0.25],
+    [2.75, -0.08, -0.25],
+    [-0.95, 0.08, -1.25],
+    [0.95, -0.02, -1.3],
+    [-3.85, 0.12, -1.8],
+    [3.85, 0.04, -1.85],
+  ] as const;
+  const position = positions[index % positions.length] ?? positions[0];
+  character.group.position.set(position[0], position[1], position[2]);
+  if (index >= 2) {
+    character.group.scale.multiplyScalar(index >= 4 ? 0.67 : 0.78);
+  }
   character.baseY = character.group.position.y;
 }
 
@@ -476,6 +601,137 @@ function createLettersModel(): THREE.Group {
   return model;
 }
 
+function propGroup(name: string, ...meshes: THREE.Object3D[]): THREE.Group {
+  const group = new THREE.Group();
+  group.name = name;
+  group.add(...meshes);
+  group.visible = false;
+  return group;
+}
+
+function createPremiseProps(): PremiseProps {
+  const material = createMaterial(0xf0c565, 0.56);
+  const dark = createMaterial(0x20323b, 0.72);
+  const items = new Map<string, THREE.Group>();
+
+  const door = propGroup(
+    'door',
+    new THREE.Mesh(new THREE.BoxGeometry(1.5, 3.1, 0.22), material),
+    new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), dark),
+  );
+  door.children[1]!.position.set(0.48, 0, 0.18);
+  items.set('door', door);
+
+  const fridge = propGroup(
+    'fridge',
+    new THREE.Mesh(new THREE.BoxGeometry(1.7, 3.2, 1.15), createMaterial(0xc9dde0, 0.4)),
+    new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.25, 0.08), dark),
+  );
+  fridge.children[1]!.position.set(0.55, 0.45, 0.64);
+  items.set('fridge', fridge);
+
+  const umbrella = propGroup(
+    'umbrella',
+    new THREE.Mesh(
+      new THREE.SphereGeometry(1.1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      createMaterial(0xd14f6d, 0.7),
+    ),
+    new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.3, 6), dark),
+  );
+  umbrella.children[0]!.position.y = 0.9;
+  items.set('umbrella', umbrella);
+
+  const fish = propGroup(
+    'fish',
+    new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 7), createMaterial(0x69d2c4, 0.52)),
+    new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 3), createMaterial(0x4eaaa7, 0.6)),
+  );
+  fish.children[0]!.scale.set(1.6, 0.72, 0.52);
+  fish.children[1]!.position.x = -1.25;
+  fish.children[1]!.rotation.z = -Math.PI / 2;
+  items.set('fish', fish);
+
+  const clockFace = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.18, 18), material);
+  clockFace.rotation.x = Math.PI / 2;
+  const clockHand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.78, 0.08), dark);
+  clockHand.position.set(0.18, 0.15, 0.14);
+  clockHand.rotation.z = -0.55;
+  items.set('clock', propGroup('clock', clockFace, clockHand));
+
+  const house = propGroup(
+    'house',
+    new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.7, 1.4), createMaterial(0xb66855, 0.7)),
+    new THREE.Mesh(new THREE.ConeGeometry(1.65, 1.1, 4), createMaterial(0x563240, 0.8)),
+  );
+  house.children[1]!.position.y = 1.35;
+  house.children[1]!.rotation.y = Math.PI / 4;
+  items.set('house', house);
+
+  const cup = propGroup(
+    'cup',
+    new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.5, 1.25, 10), createMaterial(0x87cbd1, 0.4)),
+    new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.1, 7, 14), createMaterial(0x87cbd1, 0.4)),
+  );
+  cup.children[1]!.position.x = 0.58;
+  cup.children[1]!.rotation.y = Math.PI / 2;
+  items.set('cup', cup);
+
+  const cloud = propGroup(
+    'cloud',
+    ...[-0.7, 0, 0.72].map((x, index) => {
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(0.72, 9, 6),
+        createMaterial(0xd4e2de, 1),
+      );
+      puff.position.set(x, index === 1 ? 0.25 : 0, 0);
+      return puff;
+    }),
+  );
+  items.set('cloud', cloud);
+
+  const bin = propGroup(
+    'bin',
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(0.72, 0.58, 1.65, 10),
+      createMaterial(0x465b59, 0.82),
+    ),
+    new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.14, 10), dark),
+  );
+  bin.children[1]!.position.y = 0.9;
+  items.set('bin', bin);
+
+  const letter = propGroup(
+    'letter',
+    new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.08, 1.05), createMaterial(0xe4d4ac, 1)),
+    new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 0.04), dark),
+  );
+  letter.children[1]!.position.set(0, 0.08, 0.12);
+  items.set('letter', letter);
+
+  const staircase = new THREE.Group();
+  for (let index = 0; index < 6; index += 1) {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.2, 0.6), material);
+    step.position.set(index * 0.34, index * 0.24, 0);
+    staircase.add(step);
+  }
+  staircase.name = 'staircase';
+  staircase.visible = false;
+  items.set('staircase', staircase);
+
+  const abstract = propGroup(
+    'abstract',
+    new THREE.Mesh(new THREE.TorusKnotGeometry(0.7, 0.18, 36, 7), createMaterial(0xaf55c2, 0.28)),
+    new THREE.Mesh(new THREE.IcosahedronGeometry(0.72, 1), createMaterial(0x64d6bf, 0.35)),
+  );
+  abstract.children[1]!.position.set(1.35, -0.15, 0);
+  items.set('abstract', abstract);
+
+  const group = new THREE.Group();
+  group.add(...items.values());
+  group.position.set(0, 2.05, -1);
+  return { group, items };
+}
+
 export class BroadcastScene {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -489,6 +745,7 @@ export class BroadcastScene {
   private readonly cloud = createCloudModel();
   private readonly sitcomModel = createSitcomModel();
   private readonly lettersModel = createLettersModel();
+  private readonly premiseProps = createPremiseProps();
   private readonly desk = createDesk();
   private readonly wallMaterial = createMaterial(0x315b59, 1);
   private readonly floorMaterial = createMaterial(0x132527, 0.9);
@@ -506,6 +763,8 @@ export class BroadcastScene {
   private profile = 'public_access';
   private viewport: ProgrammeViewport = { ...defaultProgrammeViewport };
   private segmentStartedAt = 0;
+  private renderScale = 1;
+  private displayScale = 1;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -553,26 +812,19 @@ export class BroadcastScene {
       this.cloud.group,
       this.sitcomModel,
       this.lettersModel,
+      this.premiseProps.group,
     );
 
-    const presenter = createCharacter({
-      bodyColor: 0xa5374d,
-      skinColor: 0xc98d6a,
-      hairColor: 0x261c24,
-      x: -2.3,
-      phase: 0,
-    });
-    const official = createCharacter({
-      bodyColor: 0x506da0,
-      skinColor: 0xa76d4d,
-      hairColor: 0x18222c,
-      x: 2.4,
-      phase: 2.1,
-    });
-    official.group.scale.setScalar(0.86);
-    official.group.position.y = -0.08;
-    this.characters = [presenter, official];
-    this.scene.add(presenter.group, official.group);
+    this.characters = Array.from({ length: 6 }, (_, index) =>
+      createCharacter({
+        bodyColor: bodyColours[index % bodyColours.length]!,
+        skinColor: skinColours[index % skinColours.length]!,
+        hairColor: hairColours[index % hairColours.length]!,
+        x: index % 2 === 0 ? -2.3 : 2.4,
+        phase: index * 1.17,
+      }),
+    );
+    this.scene.add(...this.characters.map((character) => character.group));
 
     const ambient = new THREE.HemisphereLight(0xd8fff4, 0x263b3b, 1.8);
     const key = new THREE.DirectionalLight(0xffe2c5, 3.8);
@@ -590,6 +842,9 @@ export class BroadcastScene {
   }
 
   loadSegment(segment: SegmentPackage): void {
+    const productionDesign = resolveProductionDesign(segment);
+    this.renderScale = productionDesign.visualMedium === 'pixel_broadcast' ? 0.25 : 1;
+    this.updateRenderResolution();
     this.segmentStartedAt = this.clock.getElapsedTime();
     this.profile = segment.programme.format;
     this.viewport = { ...defaultProgrammeViewport };
@@ -604,6 +859,7 @@ export class BroadcastScene {
         this.characterIds.set(characterId, this.characterIds.size % this.characters.length);
       }
     }
+    const visibleCharacterCount = Math.min(4, Math.max(this.characterIds.size, 2));
 
     this.desk.visible = false;
     this.dreamModel.visible = false;
@@ -615,27 +871,75 @@ export class BroadcastScene {
     this.cloud.group.visible = false;
     this.sitcomModel.visible = false;
     this.lettersModel.visible = false;
+    this.premiseProps.items.forEach((item) => {
+      item.visible = false;
+    });
     this.stripes.forEach((stripe) => {
       stripe.visible = false;
     });
     this.characters.forEach((character, index) => {
-      character.group.visible = true;
+      character.group.visible = index < visibleCharacterCount;
       character.group.rotation.set(0, 0, 0);
       character.action = 'IDLE';
       character.actionUntil = 0;
       const characterId =
         [...this.characterIds.entries()].find((entry) => entry[1] === index)?.[0] ??
         `${segment.programme.id}_background_${index}`;
-      configureCharacter(character, characterId, segment.programme.id, index);
+      configureCharacter(
+        character,
+        characterId,
+        segment.programme.id,
+        index,
+        productionDesign.castArchetype,
+        productionDesign.visualMedium,
+      );
+    });
+    const formations: Record<number, readonly number[]> = {
+      2: [-2.7, 2.7],
+      3: [-3.25, 0, 3.25],
+      4: [-3.6, -1.25, 1.25, 3.6],
+    };
+    const formation = formations[visibleCharacterCount] ?? formations[2]!;
+    this.characters.slice(0, visibleCharacterCount).forEach((character, index) => {
+      character.group.position.x = formation[index] ?? 0;
+      character.group.position.z = index % 2 === 0 ? -0.4 : -0.62;
+      if (visibleCharacterCount >= 3) {
+        character.group.scale.multiplyScalar(visibleCharacterCount === 4 ? 0.72 : 0.8);
+      }
+      character.baseY = character.group.position.y;
     });
 
     const premise = segment.programme.premise.toLowerCase();
+    const propKeywords: Array<[string, RegExp]> = [
+      ['door', /\b(?:door|entrance|threshold)\b/u],
+      ['fridge', /\b(?:fridge|refrigerator|appliance)\b/u],
+      ['umbrella', /\b(?:umbrella|rain|weather)\b/u],
+      ['fish', /\b(?:fish|aquarium|tide|sea)\b/u],
+      ['clock', /\b(?:clock|time|minute|day|thursday)\b/u],
+      ['house', /\b(?:house|home|property|family)\b/u],
+      ['cup', /\b(?:cup|kettle|kitchen|ingredient)\b/u],
+      ['cloud', /\b(?:cloud|sky|sun|moon)\b/u],
+      ['bin', /\b(?:bin|rubbish|waste)\b/u],
+      ['letter', /\b(?:letter|receipt|manual|post|address)\b/u],
+      ['staircase', /\b(?:stair|floor|lift)\b/u],
+    ];
+    const matchingProps = propKeywords.filter(([, pattern]) => pattern.test(premise)).slice(0, 2);
+    this.premiseProps.group.position.set(0, 3.35, -3.25);
+    this.premiseProps.group.scale.setScalar(0.68);
+    matchingProps.forEach(([name], index) => {
+      const item = this.premiseProps.items.get(name);
+      if (item !== undefined) {
+        item.visible = true;
+        item.position.set(index === 0 ? -0.7 : 2.4, index === 0 ? 0 : -0.25, index * -0.4);
+        item.rotation.y = (stableHash(`${segment.segmentId}:${name}`) % 9) * 0.09 - 0.36;
+      }
+    });
     switch (segment.programme.format) {
       case 'news':
         this.useWideViewport();
         this.applyPalette(0x132a43, 0x08121e, 0xdb3d4b);
         this.desk.visible = true;
-        this.newsModel.visible = true;
+        this.newsModel.visible = /\b(?:roundabout|traffic|road)\b/u.test(premise);
         this.stripes.slice(0, 2).forEach((stripe) => {
           stripe.visible = true;
         });
@@ -648,11 +952,18 @@ export class BroadcastScene {
           segment.channel.number === 802 ? 0x07181f : 0x1b0b22,
           segment.channel.number === 802 ? 0x68e0d2 : 0xf3c858,
         );
-        this.shoppingModel.group.visible = true;
         if (premise.includes('doorbell')) {
+          this.shoppingModel.group.visible = true;
           this.shoppingModel.doorbell.visible = true;
-        } else {
+          this.premiseProps.items.forEach((item) => {
+            item.visible = false;
+          });
+        } else if (/\b(?:cup|mug|kettle)\b/u.test(premise)) {
+          this.shoppingModel.group.visible = true;
           this.shoppingModel.mug.visible = true;
+          this.premiseProps.items.forEach((item) => {
+            item.visible = false;
+          });
         }
         this.characters[0]!.group.position.x = -3.05;
         this.characters[1]!.group.position.x = 3.05;
@@ -670,11 +981,16 @@ export class BroadcastScene {
       case 'ident':
         this.useWideViewport();
         this.applyPalette(0x172743, 0x07101f, 0x9bcde2);
-        this.moon.group.visible = true;
-        this.cloud.group.visible = true;
-        this.characters.forEach((character) => {
-          character.group.visible = false;
-        });
+        if (/\b(?:moon|sun|planet|star|sky)\b/u.test(premise)) {
+          this.moon.group.visible = true;
+          this.cloud.group.visible = true;
+          this.characters.forEach((character) => {
+            character.group.visible = false;
+          });
+          this.premiseProps.items.forEach((item) => {
+            item.visible = false;
+          });
+        }
         break;
       case 'emergency':
         this.useWideViewport();
@@ -693,9 +1009,19 @@ export class BroadcastScene {
         if (premise.includes('dream')) {
           this.applyPalette(0x315b59, 0x132527, 0x89dfc2);
           this.dreamModel.visible = true;
-        } else {
+          this.premiseProps.items.forEach((item) => {
+            item.visible = false;
+          });
+        } else if (/\b(?:letter|receipt|post|address)\b/u.test(premise)) {
           this.applyPalette(0x514735, 0x211c16, 0xd8b272);
           this.lettersModel.visible = true;
+        } else {
+          const palette = stableHash(segment.segmentId);
+          this.applyPalette(
+            bodyColours[palette % bodyColours.length]!,
+            0x17121f,
+            skinColours[(palette >>> 4) % skinColours.length]!,
+          );
         }
         break;
     }
@@ -741,6 +1067,15 @@ export class BroadcastScene {
     }
     this.activeSpeaker = this.characterIds.get(characterId) ?? 0;
     this.activeSpeakerUntil = elapsed + durationMs / 1_000;
+    if (this.currentCamera !== 'CAMERA_WIDE') {
+      const character = this.characters[this.activeSpeaker];
+      if (character !== undefined) {
+        this.cameraPosition.set(character.group.position.x, 3.7, 8);
+        this.cameraTarget.set(character.group.position.x, 2.5, character.group.position.z);
+        this.camera.position.copy(this.cameraPosition);
+        this.camera.lookAt(this.cameraTarget);
+      }
+    }
   }
 
   performAction(characterId: string, action: CharacterAction): void {
@@ -779,14 +1114,22 @@ export class BroadcastScene {
   private readonly resize = (): void => {
     const canvas = this.renderer.domElement;
     const bounds = canvas.getBoundingClientRect();
-    const displayScale = Math.min(window.devicePixelRatio, 1.25);
+    this.displayScale = Math.min(window.devicePixelRatio, 1.25);
     if (bounds.width > 0 && bounds.height > 0) {
       canvas.style.width = `${bounds.width}px`;
       canvas.style.height = `${bounds.height}px`;
     }
-    this.renderer.setPixelRatio(displayScale);
-    this.renderer.setSize(streamWidth, streamHeight, false);
+    this.updateRenderResolution();
   };
+
+  private updateRenderResolution(): void {
+    this.renderer.setPixelRatio(this.renderScale < 1 ? 1 : this.displayScale);
+    this.renderer.setSize(
+      Math.round(streamWidth * this.renderScale),
+      Math.round(streamHeight * this.renderScale),
+      false,
+    );
+  }
 
   getRendererInfo(): { api: string; device: string; vendor: string } {
     const gl = this.renderer.getContext();
@@ -867,16 +1210,16 @@ export class BroadcastScene {
     this.renderer.setClearColor(0x030708, 1);
     this.renderer.clear();
     this.renderer.setViewport(
-      this.viewport.x,
-      this.viewport.y,
-      this.viewport.width,
-      this.viewport.height,
+      Math.round(this.viewport.x * this.renderScale),
+      Math.round(this.viewport.y * this.renderScale),
+      Math.round(this.viewport.width * this.renderScale),
+      Math.round(this.viewport.height * this.renderScale),
     );
     this.renderer.setScissor(
-      this.viewport.x,
-      this.viewport.y,
-      this.viewport.width,
-      this.viewport.height,
+      Math.round(this.viewport.x * this.renderScale),
+      Math.round(this.viewport.y * this.renderScale),
+      Math.round(this.viewport.width * this.renderScale),
+      Math.round(this.viewport.height * this.renderScale),
     );
     this.renderer.setScissorTest(true);
     this.renderer.render(this.scene, this.camera);

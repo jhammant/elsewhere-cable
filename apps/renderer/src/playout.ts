@@ -5,6 +5,7 @@ import {
   type SegmentEvent,
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
+import { resolveProductionDesign } from './production-design.js';
 
 interface PlayoutElements {
   broadcast: HTMLElement;
@@ -100,10 +101,23 @@ function segmentDirectory(packagePath: string): string {
   return separator === -1 ? '' : packagePath.slice(0, separator);
 }
 
+export function nextUnplayedIndex(
+  manifest: PlayoutManifest,
+  startIndex: number,
+  playedSegmentIds: ReadonlySet<string>,
+): number | null {
+  const offset = manifest.segments
+    .slice(startIndex)
+    .findIndex((candidate) => !playedSegmentIds.has(candidate.segmentId));
+  return offset === -1 ? null : startIndex + offset;
+}
+
 export class PlayoutEngine {
   private readonly ui = elements();
   private manifest: PlayoutManifest | null = null;
   private index = 0;
+  private readonly playedSegmentIds = new Set<string>();
+  private fallbackSequence = 0;
   private timers: Array<ReturnType<typeof setTimeout>> = [];
   private activeAudio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
@@ -144,7 +158,18 @@ export class PlayoutEngine {
   private enterFallback(reason: string): void {
     this.ui.status.textContent = 'Fallback signal';
     this.ui.mode.textContent = reason;
-    this.ui.lowerStatus.textContent = 'PROGRAMME ALREADY IN PROGRESS';
+    this.fallbackSequence += 1;
+    const searchChannel = 40_000_000 + this.fallbackSequence * 104_729;
+    const searchLabel = `SEARCHING CHANNEL ${searchChannel.toLocaleString('en-GB')}`;
+    this.ui.channelNumber.textContent = String(searchChannel);
+    this.ui.lowerChannelNumber.textContent = String(searchChannel);
+    this.ui.channelName.textContent = 'Signal Not Previously Received';
+    this.ui.programmeTitle.textContent = 'Scanning unbroadcast frequencies';
+    this.ui.nextTitle.textContent = 'No repeat transmission authorised';
+    this.ui.lowerProgrammeTitle.textContent = 'SEARCHING FOR NEW MATERIAL';
+    this.ui.lowerStatus.textContent = searchLabel;
+    this.ui.subtitle.textContent = 'This frequency has not been shown before.';
+    this.staticBurst(1_200);
     this.timer(() => void this.start(), 10_000);
   }
 
@@ -168,11 +193,13 @@ export class PlayoutEngine {
       return;
     }
     this.clearSchedule();
-    const entry = manifest.segments[this.index % manifest.segments.length];
-    if (entry === undefined) {
-      this.enterFallback('Queue index unavailable');
+    const nextIndex = nextUnplayedIndex(manifest, this.index, this.playedSegmentIds);
+    const entry = nextIndex === null ? undefined : manifest.segments[nextIndex];
+    if (nextIndex === null || entry === undefined) {
+      this.enterFallback('All prepared segments have aired once · awaiting new material');
       return;
     }
+    this.index = nextIndex;
 
     try {
       const response = await fetch(`/api/playout/segments/${encodeURIComponent(entry.segmentId)}`, {
@@ -183,13 +210,15 @@ export class PlayoutEngine {
       }
       const segment = segmentPackageSchema.parse(await response.json());
       this.showSegment(segment, entry.packagePath);
-      this.index = (this.index + 1) % manifest.segments.length;
+      this.playedSegmentIds.add(entry.segmentId);
+      this.index += 1;
       this.timer(() => void this.playCurrent(), segment.durationMs);
     } catch (error) {
       this.ui.status.textContent = 'Segment rejected';
       this.ui.lowerStatus.textContent =
         error instanceof Error ? error.message.slice(0, 80) : 'UNKNOWN SEGMENT ERROR';
-      this.index = (this.index + 1) % manifest.segments.length;
+      this.playedSegmentIds.add(entry.segmentId);
+      this.index += 1;
       this.staticBurst();
       this.timer(() => void this.playCurrent(), 2_000);
     }
@@ -200,21 +229,43 @@ export class PlayoutEngine {
     const nextEntry =
       manifest === null || manifest.segments.length === 0
         ? null
-        : manifest.segments[(this.index + 1) % manifest.segments.length];
+        : manifest.segments
+            .slice(this.index + 1)
+            .find((entry) => !this.playedSegmentIds.has(entry.segmentId));
     const channel = String(segment.channel.number);
+    const compactChannel = Number(segment.channel.number).toLocaleString('en-GB');
     this.ui.channelNumber.textContent = channel;
     this.ui.channelName.textContent = segment.channel.name;
     this.ui.programmeTitle.textContent = segment.programme.title;
     this.ui.realityId.textContent = segment.channel.realityId;
     this.ui.nextTitle.textContent = nextEntry?.programmeTitle ?? 'Signal origin disputed';
-    this.ui.lowerChannelNumber.textContent = channel;
+    this.ui.lowerChannelNumber.textContent = compactChannel;
     this.ui.lowerProgrammeTitle.textContent = segment.programme.title.toUpperCase();
     this.ui.lowerStatus.textContent = segment.programme.premise.toUpperCase().slice(0, 86);
     this.ui.subtitle.textContent = 'Programme already in progress.';
     this.ui.status.textContent = 'Signal locked';
+    const productionDesign = resolveProductionDesign(segment);
     this.ui.broadcast.dataset.format = segment.programme.format;
     this.ui.broadcast.dataset.programme = segment.programme.id;
     this.ui.broadcast.dataset.channel = String(segment.channel.number);
+    this.ui.broadcast.dataset.channelDigits = String(channel.length);
+    this.ui.channelNumber.style.fontSize =
+      channel.length >= 10
+        ? 'clamp(0.72rem, 1.42vw, 1.28rem)'
+        : channel.length >= 8
+          ? 'clamp(0.82rem, 1.8vw, 1.62rem)'
+          : channel.length >= 6
+            ? 'clamp(1rem, 2.25vw, 2rem)'
+            : '';
+    this.ui.lowerChannelNumber.style.fontSize =
+      channel.length >= 9
+        ? 'clamp(0.38rem, 0.72vw, 0.68rem)'
+        : channel.length >= 7
+          ? 'clamp(0.44rem, 0.86vw, 0.78rem)'
+          : '';
+    this.ui.broadcast.dataset.medium = productionDesign.visualMedium;
+    this.ui.broadcast.dataset.cast = productionDesign.castArchetype;
+    this.ui.broadcast.dataset.pacing = segment.pacing ?? 'conversational';
     this.ui.formatBug.textContent =
       segment.channel.number === 113
         ? "CHILDREN'S TELEVISION"
@@ -269,7 +320,20 @@ export class PlayoutEngine {
     if (isWarning) {
       this.staticBurst(280);
     }
-    this.timer(() => this.ui.graphic.classList.remove('is-visible'), isWarning ? 3_200 : 1_850);
+    const pacing = this.ui.broadcast.dataset.pacing ?? 'conversational';
+    const titleDuration =
+      {
+        frantic: 520,
+        staccato: 850,
+        conversational: 1_450,
+        slow_burn: 2_300,
+        interrupted: 920,
+        near_silent: 2_900,
+      }[pacing] ?? 1_450;
+    this.timer(
+      () => this.ui.graphic.classList.remove('is-visible'),
+      isWarning ? Math.min(3_200, titleDuration + 900) : titleDuration,
+    );
   }
 
   private playSpeech(url: string): void {

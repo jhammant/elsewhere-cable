@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, unlink } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
@@ -57,7 +57,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
               content: `${request.userPrompt}
 
 Use this structural example exactly:
-{"channelNumber":42,"channelName":"Example Channel","programmeTitle":"Example Programme","format":"public_access","realityId":"REALITY-42","visualStyle":"public_access_1991","premise":"One clear sentence.","tone":["dry","surreal"],"dialogue":[{"speaker":"Host Name","text":"A short opening line.","action":"IDLE"},{"speaker":"Guest Name","text":"A short response.","action":"REACTION_CONFUSED"},{"speaker":"Host Name","text":"The rule becomes clear.","action":"POINT_AT"},{"speaker":"Guest Name","text":"The rule escalates.","action":"REACTION_SHOCKED"},{"speaker":"Host Name","text":"The ending line.","action":"FREEZE"}],"continuityFact":"One proposed fictional fact.","endingBeat":"One visual ending."}
+{"channelNumber":4700219,"channelName":"Example Channel","programmeTitle":"Example Programme","format":"public_access","realityId":"REALITY-42","visualStyle":"public_access_1991","visualMedium":"public_access_vhs","castArchetype":"mixed","pacing":"interrupted","premise":"One clear sentence.","tone":["dry","surreal"],"dialogue":[{"speaker":"Host Name","text":"A short opening line.","action":"IDLE"},{"speaker":"Guest Name","text":"A short response.","action":"REACTION_CONFUSED"},{"speaker":"Third Presence","text":"The rule becomes clear.","action":"POINT_AT"},{"speaker":"Object Witness","text":"The rule escalates.","action":"REACTION_SHOCKED"},{"speaker":"Host Name","text":"The ending line.","action":"FREEZE"}],"continuityFact":"One proposed fictional fact.","endingBeat":"One visual ending."}
 ${repairInstruction}`,
             },
           ],
@@ -112,6 +112,7 @@ export interface SpeechRequest {
   speechId: string;
   text: string;
   voiceId: string;
+  speakingRate?: number;
   outputDirectory: string;
 }
 
@@ -123,6 +124,7 @@ export interface SpeechResult {
 
 export interface TtsProvider {
   readonly id: string;
+  readonly voiceIds?: readonly string[];
   synthesize(request: SpeechRequest): Promise<SpeechResult>;
 }
 
@@ -154,9 +156,14 @@ async function probeDurationMs(audioPath: string): Promise<number> {
 
 export class LocalCommandTtsProvider implements TtsProvider {
   readonly id: string;
+  readonly voiceIds: readonly string[];
 
   private constructor(private readonly backend: 'say' | 'espeak-ng' | 'silence') {
     this.id = `local-${backend}`;
+    this.voiceIds =
+      backend === 'say'
+        ? ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi', 'Tessa', 'Eddy', 'Flo']
+        : ['default'];
   }
 
   static async create(): Promise<LocalCommandTtsProvider> {
@@ -182,17 +189,25 @@ export class LocalCommandTtsProvider implements TtsProvider {
     const outputFile = path.join(audioDirectory, `${request.speechId}.m4a`);
 
     if (this.backend === 'say') {
+      const wordsPerMinute = Math.round(172 * (request.speakingRate ?? 1));
       await execFileAsync('say', [
         '-v',
         request.voiceId,
         '-r',
-        '172',
+        String(wordsPerMinute),
         '-o',
         sourceFile,
         request.text,
       ]);
     } else if (this.backend === 'espeak-ng') {
-      await execFileAsync('espeak-ng', ['-s', '165', '-w', sourceFile, request.text]);
+      const wordsPerMinute = Math.round(165 * (request.speakingRate ?? 1));
+      await execFileAsync('espeak-ng', [
+        '-s',
+        String(wordsPerMinute),
+        '-w',
+        sourceFile,
+        request.text,
+      ]);
     } else {
       const estimatedSeconds = Math.max(1, request.text.split(/\s+/u).length / 2.7);
       await execFileAsync('ffmpeg', [
@@ -231,6 +246,90 @@ export class LocalCommandTtsProvider implements TtsProvider {
       audioFile: path.posix.join('audio', path.basename(outputFile)),
       durationMs: await probeDurationMs(outputFile),
       provider: this.id,
+    };
+  }
+}
+
+export class OpenAiCompatibleTtsProvider implements TtsProvider {
+  readonly id = 'openai-compatible-tts';
+  readonly voiceIds: readonly string[];
+
+  constructor(
+    readonly model: string,
+    private readonly baseUrl: string,
+    private readonly apiKey = '',
+  ) {
+    this.voiceIds = model.toLowerCase().includes('qwen')
+      ? [
+          'Dry British woman, low calm register, precise diction, restrained irritation',
+          'Weary British man, gentle baritone, hesitant warmth, excellent deadpan timing',
+          'Bright northern English woman, brisk delivery, practical and quietly alarmed',
+          'Older Welsh man, textured voice, patient authority, faintly disappointed',
+          'Young London man, clipped confidence, fragile enthusiasm, conversational',
+          'Scottish woman, measured alto, civic authority, understated disbelief',
+          'Soft-spoken Irish man, warm tenor, careful pauses, private amusement',
+          'Midlands woman, clear contralto, officious composure, sudden vulnerability',
+        ]
+      : [
+          'bf_emma',
+          'bm_george',
+          'af_nova',
+          'am_echo',
+          'bf_isabella',
+          'bm_lewis',
+          'af_sky',
+          'am_adam',
+        ];
+  }
+
+  async synthesize(request: SpeechRequest): Promise<SpeechResult> {
+    const audioDirectory = path.join(request.outputDirectory, 'audio');
+    await mkdir(audioDirectory, { recursive: true });
+    const sourceFile = path.join(audioDirectory, `${request.speechId}.wav`);
+    const outputFile = path.join(audioDirectory, `${request.speechId}.m4a`);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.apiKey !== '') {
+      headers.Authorization = `Bearer ${this.apiKey}`;
+    }
+    const response = await fetch(`${this.baseUrl.replace(/\/$/u, '')}/audio/speech`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: this.model,
+        input: request.text,
+        voice: request.voiceId,
+        speed: request.speakingRate ?? 1,
+        response_format: 'wav',
+      }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!response.ok) {
+      throw new Error(`TTS request failed with HTTP ${response.status}`);
+    }
+    await writeFile(sourceFile, Buffer.from(await response.arrayBuffer()));
+    await execFileAsync('ffmpeg', [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-i',
+      sourceFile,
+      '-c:a',
+      'aac',
+      '-b:a',
+      '160k',
+      '-ar',
+      '48000',
+      '-y',
+      outputFile,
+    ]);
+    await unlink(sourceFile);
+
+    return {
+      audioFile: path.posix.join('audio', path.basename(outputFile)),
+      durationMs: await probeDurationMs(outputFile),
+      provider: `${this.id}:${this.model}`,
     };
   }
 }

@@ -23,6 +23,43 @@ export const transitionSchema = z.enum([
   'SIGNAL_LOSS',
 ]);
 
+export const visualMediumSchema = z.enum([
+  'cel_shaded',
+  'paper_cutout',
+  'pixel_broadcast',
+  'archive_film',
+  'neon_wireframe',
+  'public_access_vhs',
+  'signal_corruption',
+  'stop_motion',
+  'collage_zine',
+  'ink_monochrome',
+  'miniature_diorama',
+  'corporate_vector',
+  'claymation',
+  'shadow_theatre',
+  'hand_drawn',
+  'thermal_camera',
+]);
+
+export const castArchetypeSchema = z.enum([
+  'humanoid',
+  'geometric_aliens',
+  'talking_objects',
+  'celestial',
+  'paper_puppets',
+  'mixed',
+]);
+
+export const pacingSchema = z.enum([
+  'frantic',
+  'staccato',
+  'conversational',
+  'slow_burn',
+  'interrupted',
+  'near_silent',
+]);
+
 const timedEventSchema = z.object({
   atMs: z.number().int().min(0),
 });
@@ -68,7 +105,7 @@ export const segmentPackageSchema = z
     segmentId: z.string().regex(/^seg_[a-z0-9_]+$/u),
     channel: z.object({
       id: z.string().min(1),
-      number: z.number().int().min(-999).max(9_999),
+      number: z.number().int().min(-999).max(9_999_999_999),
       name: z.string().min(1).max(100),
       realityId: z.string().min(1).max(60),
     }),
@@ -88,6 +125,9 @@ export const segmentPackageSchema = z
     }),
     durationMs: z.number().int().min(5_000).max(300_000),
     visualStyle: z.string().min(1).max(80),
+    visualMedium: visualMediumSchema.optional(),
+    castArchetype: castArchetypeSchema.optional(),
+    pacing: pacingSchema.optional(),
     tone: z.array(z.string().min(1).max(40)).min(1).max(6),
     events: z.array(segmentEventSchema).min(1),
     continuityUpdates: z.array(
@@ -152,12 +192,15 @@ export const generatedDialogueSchema = z.object({
 });
 
 export const generatedSegmentDraftSchema = z.object({
-  channelNumber: z.number().int().min(1).max(999),
+  channelNumber: z.number().int().min(1).max(9_999_999_999),
   channelName: z.string().min(1).max(100),
   programmeTitle: z.string().min(1).max(120),
   format: z.enum(['advert', 'public_access', 'news', 'shopping', 'sitcom', 'emergency', 'ident']),
   realityId: z.string().min(1).max(60),
   visualStyle: z.string().min(1).max(80),
+  visualMedium: visualMediumSchema,
+  castArchetype: castArchetypeSchema,
+  pacing: pacingSchema.optional(),
   premise: z.string().min(1).max(500),
   tone: z.array(z.string().min(1).max(40)).min(1).max(6),
   dialogue: z.array(generatedDialogueSchema).min(4).max(12),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyVisualEvent, type PlayoutVisuals } from './playout.js';
+import type { PlayoutManifest } from '@elsewhere-cable/schemas';
+import { applyVisualEvent, nextUnplayedIndex, type PlayoutVisuals } from './playout.js';
 
 function visuals(): {
   target: PlayoutVisuals;
@@ -73,5 +74,29 @@ describe('applyVisualEvent', () => {
     expect(testVisuals.cameras).toEqual([]);
     expect(testVisuals.speakers).toEqual([]);
     expect(testVisuals.actions).toEqual([]);
+  });
+});
+
+describe('single-use playout selection', () => {
+  const manifest: PlayoutManifest = {
+    schemaVersion: 1,
+    generatedAt: '2026-07-28T10:00:00.000Z',
+    totalDurationMs: 30_000,
+    segments: ['one', 'two', 'three'].map((segmentId, index) => ({
+      segmentId,
+      packagePath: `${segmentId}/segment.json`,
+      durationMs: 10_000,
+      channelNumber: index + 1,
+      channelName: `Channel ${index + 1}`,
+      programmeTitle: `Programme ${index + 1}`,
+    })),
+  };
+
+  it('selects the next segment that has not aired', () => {
+    expect(nextUnplayedIndex(manifest, 0, new Set(['one']))).toBe(1);
+  });
+
+  it('does not wrap to the beginning after every segment has aired', () => {
+    expect(nextUnplayedIndex(manifest, 3, new Set(['one', 'two', 'three']))).toBeNull();
   });
 });

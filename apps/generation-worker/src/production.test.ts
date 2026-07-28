@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { playoutManifestSchema } from '@elsewhere-cable/schemas';
+import { playoutManifestSchema, segmentPackageSchema } from '@elsewhere-cable/schemas';
 import { demoDraft } from './creative.js';
 import { produceBatch } from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
@@ -66,5 +66,13 @@ describe('produceBatch', () => {
     expect(result.concurrency).toBe(2);
     expect(manifest.segments).toHaveLength(4);
     expect(new Set(manifest.segments.map((entry) => entry.segmentId)).size).toBe(4);
+    const firstEntry = manifest.segments[0]!;
+    const firstSegment = segmentPackageSchema.parse(
+      JSON.parse(
+        await readFile(path.join(outputRoot, firstEntry.segmentId, 'segment.json'), 'utf8'),
+      ),
+    );
+    expect(firstSegment.visualMedium).toBeDefined();
+    expect(firstSegment.castArchetype).toBeDefined();
   });
 });

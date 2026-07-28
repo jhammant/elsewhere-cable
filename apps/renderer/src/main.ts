@@ -1,7 +1,7 @@
 import './style.css';
 import { calculateFrameStats, type FrameStats } from './metrics.js';
+import { HybridBroadcastScene } from './hybrid-scene.js';
 import { PlayoutEngine } from './playout.js';
-import { BroadcastScene } from './scene.js';
 
 interface BenchmarkResult extends FrameStats {
   completed: boolean;
@@ -30,11 +30,12 @@ function requiredElement<T extends HTMLElement>(selector: string): T {
 }
 
 const canvas = requiredElement<HTMLCanvasElement>('#programme-canvas');
+const canvas2d = requiredElement<HTMLCanvasElement>('#programme-2d-canvas');
 const broadcast = requiredElement<HTMLElement>('#broadcast');
 const fpsValue = requiredElement<HTMLElement>('#fps-value');
 const rendererApi = requiredElement<HTMLElement>('#renderer-api');
 const broadcastTime = requiredElement<HTMLTimeElement>('#broadcast-time');
-const scene = new BroadcastScene(canvas);
+const scene = new HybridBroadcastScene(canvas, canvas2d);
 const renderer = scene.getRendererInfo();
 const params = new URLSearchParams(window.location.search);
 const benchmarkMode = params.has('benchmark');
