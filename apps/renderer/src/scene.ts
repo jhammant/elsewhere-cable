@@ -3,18 +3,42 @@ import type { SegmentPackage } from '@elsewhere-cable/schemas';
 
 const streamWidth = 1280;
 const streamHeight = 720;
-const programmeViewport = {
+const defaultProgrammeViewport = {
   x: 34,
   y: 30,
   width: 880,
   height: 660,
 } as const;
 
+const wideProgrammeViewport = {
+  x: 34,
+  y: 30,
+  width: 1_212,
+  height: 660,
+} as const;
+
+interface ProgrammeViewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface CharacterRig {
   group: THREE.Group;
+  body: THREE.Mesh;
+  head: THREE.Mesh;
+  hair: THREE.Mesh;
+  eyes: THREE.Mesh[];
   mouth: THREE.Mesh;
   leftArm: THREE.Group;
   rightArm: THREE.Group;
+  bodyMaterial: THREE.MeshStandardMaterial;
+  skinMaterial: THREE.MeshStandardMaterial;
+  hairMaterial: THREE.MeshStandardMaterial;
+  hat: THREE.Group;
+  glasses: THREE.Group;
+  antenna: THREE.Group;
   baseY: number;
   phase: number;
   action: CharacterAction;
@@ -24,6 +48,17 @@ interface CharacterRig {
 interface MoonRig {
   group: THREE.Group;
   mouth: THREE.Mesh;
+}
+
+interface CloudRig {
+  group: THREE.Group;
+  mouth: THREE.Mesh;
+}
+
+interface ShoppingRig {
+  group: THREE.Group;
+  doorbell: THREE.Group;
+  mug: THREE.Group;
 }
 
 type CameraName = 'CAMERA_WIDE' | 'CAMERA_HOST' | 'CAMERA_GUEST';
@@ -58,41 +93,37 @@ function createCharacter(options: {
 }): CharacterRig {
   const group = new THREE.Group();
   group.position.set(options.x, 0, -0.4);
+  const bodyMaterial = createMaterial(options.bodyColor);
+  const skinMaterial = createMaterial(options.skinColor);
+  const hairMaterial = createMaterial(options.hairColor, 0.95);
 
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.62, 0.82, 2, 7),
-    createMaterial(options.bodyColor),
-  );
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.82, 2, 7), bodyMaterial);
   body.position.y = 1.85;
   group.add(body);
 
-  const neck = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.19, 0.22, 0.34, 7),
-    createMaterial(options.skinColor),
-  );
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.22, 0.34, 7), skinMaterial);
   neck.position.y = 3.02;
   group.add(neck);
 
-  const head = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(0.62, 1),
-    createMaterial(options.skinColor, 0.9),
-  );
+  const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.62, 1), skinMaterial);
   head.scale.set(0.9, 1.08, 0.88);
   head.position.y = 3.68;
   group.add(head);
 
   const hair = new THREE.Mesh(
     new THREE.SphereGeometry(0.57, 7, 4, 0, Math.PI * 2, 0, Math.PI * 0.55),
-    createMaterial(options.hairColor, 0.95),
+    hairMaterial,
   );
   hair.position.set(0, 3.98, 0);
   hair.scale.set(0.92, 0.62, 0.9);
   group.add(hair);
 
   const eyeMaterial = createMaterial(0x182025, 0.5);
+  const eyes: THREE.Mesh[] = [];
   for (const x of [-0.2, 0.2]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 4), eyeMaterial);
     eye.position.set(x, 3.76, 0.51);
+    eyes.push(eye);
     group.add(eye);
   }
 
@@ -106,15 +137,9 @@ function createCharacter(options: {
   function addArm(side: -1 | 1): THREE.Group {
     const arm = new THREE.Group();
     arm.position.set(side * 0.67, 2.55, 0);
-    const sleeve = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.17, 0.2, 1.15, 6),
-      createMaterial(options.bodyColor),
-    );
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 1.15, 6), bodyMaterial);
     sleeve.position.y = -0.5;
-    const hand = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.22, 0),
-      createMaterial(options.skinColor),
-    );
+    const hand = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22, 0), skinMaterial);
     hand.position.y = -1.12;
     arm.add(sleeve, hand);
     group.add(arm);
@@ -123,18 +148,132 @@ function createCharacter(options: {
 
   const leftArm = addArm(-1);
   const rightArm = addArm(1);
+
+  const hat = new THREE.Group();
+  const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.08, 12), bodyMaterial);
+  const hatCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.58, 0.55, 9), bodyMaterial);
+  hatBrim.position.y = 4.18;
+  hatCrown.position.y = 4.46;
+  hat.add(hatBrim, hatCrown);
+  hat.visible = false;
+  group.add(hat);
+
+  const glasses = new THREE.Group();
+  const glassesMaterial = createMaterial(0x11191d, 0.35);
+  for (const x of [-0.22, 0.22]) {
+    const lens = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.025, 6, 14), glassesMaterial);
+    lens.position.set(x, 3.76, 0.57);
+    glasses.add(lens);
+  }
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.025, 0.025), glassesMaterial);
+  bridge.position.set(0, 3.76, 0.57);
+  glasses.add(bridge);
+  glasses.visible = false;
+  group.add(glasses);
+
+  const antenna = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.7, 6), hairMaterial);
+  stem.position.y = 4.45;
+  stem.rotation.z = -0.18;
+  const tip = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), bodyMaterial);
+  tip.position.set(0.07, 4.8, 0);
+  antenna.add(stem, tip);
+  antenna.visible = false;
+  group.add(antenna);
+
   group.scale.setScalar(0.92);
 
   return {
     group,
+    body,
+    head,
+    hair,
+    eyes,
     mouth,
     leftArm,
     rightArm,
+    bodyMaterial,
+    skinMaterial,
+    hairMaterial,
+    hat,
+    glasses,
+    antenna,
     baseY: group.position.y,
     phase: options.phase,
     action: 'IDLE',
     actionUntil: 0,
   };
+}
+
+const characterBodies: THREE.BufferGeometry[] = [
+  new THREE.CylinderGeometry(0.62, 0.82, 2, 7),
+  new THREE.BoxGeometry(1.35, 1.95, 0.86, 2, 2, 1),
+  new THREE.SphereGeometry(0.92, 9, 6),
+  new THREE.ConeGeometry(0.92, 2.15, 8),
+];
+
+const characterHeads: THREE.BufferGeometry[] = [
+  new THREE.DodecahedronGeometry(0.62, 1),
+  new THREE.BoxGeometry(1.05, 1.05, 0.92, 2, 2, 1),
+  new THREE.SphereGeometry(0.64, 10, 7),
+  new THREE.ConeGeometry(0.67, 1.25, 8),
+];
+
+const bodyColours = [0xa5374d, 0x3f68a4, 0xd28b32, 0x5c8b68, 0x8e4a96, 0x2f858b, 0xb35c35];
+const skinColours = [
+  0xc98d6a, 0x9e654a, 0xe1b087, 0x794936, 0xb97958, 0xd0a27f, 0x7dbb95, 0x799fc4, 0xb983bb,
+  0xd0bd69,
+];
+const hairColours = [0x261c24, 0x18222c, 0x6b3e24, 0xd3c0a0, 0x491d28, 0x202018];
+
+function stableHash(value: string): number {
+  let hash = 2_166_136_261;
+  for (const character of value) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function configureCharacter(
+  character: CharacterRig,
+  characterId: string,
+  programmeId: string,
+  index: number,
+): void {
+  const variant = stableHash(`${programmeId}:${characterId}`);
+  character.body.geometry = characterBodies[(variant + index) % characterBodies.length]!;
+  character.head.geometry = characterHeads[((variant >>> 3) + index * 2) % characterHeads.length]!;
+  character.bodyMaterial.color.setHex(bodyColours[(variant >>> 5) % bodyColours.length]!);
+  character.skinMaterial.color.setHex(skinColours[(variant >>> 8) % skinColours.length]!);
+  character.hairMaterial.color.setHex(hairColours[(variant >>> 11) % hairColours.length]!);
+
+  const width = 0.78 + ((variant >>> 14) % 6) * 0.065;
+  const height = 0.78 + ((variant >>> 18) % 7) * 0.055;
+  character.group.scale.set(width, height, width);
+  character.body.scale.set(
+    0.78 + ((variant >>> 21) % 5) * 0.12,
+    0.82 + ((variant >>> 24) % 5) * 0.1,
+    0.82 + ((variant >>> 27) % 4) * 0.1,
+  );
+  character.head.scale.set(
+    0.78 + ((variant >>> 9) % 5) * 0.11,
+    0.82 + ((variant >>> 12) % 5) * 0.12,
+    0.82 + ((variant >>> 16) % 4) * 0.1,
+  );
+  character.eyes.forEach((eye) => {
+    eye.position.z = 0.78;
+  });
+  character.mouth.position.z = 0.79;
+  character.glasses.position.z = 0.21;
+  character.hair.visible = variant % 5 !== 0;
+  character.hat.visible = variant % 7 === 0 || programmeId.includes('news');
+  character.glasses.visible = variant % 4 === 0 || programmeId.includes('bureau');
+  character.antenna.visible = variant % 11 === 0 || characterId.includes('buggy');
+  character.group.position.x = index === 0 ? -2.35 : 2.4;
+  character.group.position.y = index === 0 ? 0 : -0.08;
+  character.group.position.z = -0.4;
+  character.baseY = character.group.position.y;
 }
 
 function createDesk(): THREE.Group {
@@ -197,7 +336,7 @@ function createNewsModel(): THREE.Group {
   return model;
 }
 
-function createShoppingModel(): THREE.Group {
+function createShoppingModel(): ShoppingRig {
   const model = new THREE.Group();
   const pedestal = new THREE.Mesh(
     new THREE.CylinderGeometry(1.15, 1.35, 1.25, 8),
@@ -206,6 +345,7 @@ function createShoppingModel(): THREE.Group {
   pedestal.position.set(0, 0.62, 0.2);
   model.add(pedestal);
 
+  const doorbell = new THREE.Group();
   const product = new THREE.Mesh(
     new THREE.BoxGeometry(1.35, 1.55, 0.42),
     createMaterial(0xf2c875, 0.4),
@@ -219,8 +359,20 @@ function createShoppingModel(): THREE.Group {
   );
   button.rotation.x = Math.PI / 2;
   button.position.set(0, 2.02, 0.45);
-  model.add(button);
-  return model;
+  doorbell.add(product, button);
+  model.add(doorbell);
+
+  const mug = new THREE.Group();
+  const mugMaterial = createMaterial(0x8cd0cf, 0.3);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.5, 1.25, 9), mugMaterial);
+  cup.position.set(0, 1.85, 0.2);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.1, 7, 14), mugMaterial);
+  handle.position.set(0.56, 1.85, 0.2);
+  handle.rotation.y = Math.PI / 2;
+  mug.add(cup, handle);
+  mug.visible = false;
+  model.add(mug);
+  return { group: model, doorbell, mug };
 }
 
 function createMoonModel(): MoonRig {
@@ -253,6 +405,32 @@ function createMoonModel(): MoonRig {
     model.add(cloud);
   }
   return { group: model, mouth };
+}
+
+function createCloudModel(): CloudRig {
+  const group = new THREE.Group();
+  const cloudMaterial = createMaterial(0xbdd9de, 1);
+  for (const [x, y, scale] of [
+    [-0.5, 0, 0.82],
+    [0.1, 0.15, 1],
+    [0.68, -0.02, 0.72],
+  ] as const) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.72, 9, 6), cloudMaterial);
+    puff.position.set(x, y, 0);
+    puff.scale.setScalar(scale);
+    group.add(puff);
+  }
+  const faceMaterial = createMaterial(0x263a45, 0.6);
+  for (const x of [-0.18, 0.28]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.065, 7, 5), faceMaterial);
+    eye.position.set(x, 0.17, 0.64);
+    group.add(eye);
+  }
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.055, 0.035), faceMaterial);
+  mouth.position.set(0.05, -0.16, 0.67);
+  group.add(mouth);
+  group.position.set(3.05, 3, -0.35);
+  return { group, mouth };
 }
 
 function createSitcomModel(): THREE.Group {
@@ -308,21 +486,26 @@ export class BroadcastScene {
   private readonly newsModel = createNewsModel();
   private readonly shoppingModel = createShoppingModel();
   private readonly moon = createMoonModel();
+  private readonly cloud = createCloudModel();
   private readonly sitcomModel = createSitcomModel();
   private readonly lettersModel = createLettersModel();
   private readonly desk = createDesk();
   private readonly wallMaterial = createMaterial(0x315b59, 1);
   private readonly floorMaterial = createMaterial(0x132527, 0.9);
   private readonly stripeMaterial = new THREE.MeshBasicMaterial({ color: 0x89dfc2 });
+  private readonly stripes: THREE.Mesh[] = [];
   private readonly warningLight: THREE.PointLight;
   private readonly characterIds = new Map<string, number>();
   private activeSpeaker = 0;
   private activeSpeakerUntil = 0;
   private moonSpeakerUntil = 0;
+  private cloudSpeakerUntil = 0;
   private currentCamera: CameraName = 'CAMERA_WIDE';
   private cameraPosition = new THREE.Vector3(0, 4.2, 12.8);
   private cameraTarget = new THREE.Vector3(0, 2.15, 0);
   private profile = 'public_access';
+  private viewport: ProgrammeViewport = { ...defaultProgrammeViewport };
+  private segmentStartedAt = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -357,6 +540,7 @@ export class BroadcastScene {
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 10, 0.06), this.stripeMaterial);
       stripe.position.set(index * 3.5, 5, -4);
       stripe.rotation.z = index % 2 === 0 ? 0.08 : -0.08;
+      this.stripes.push(stripe);
       this.scene.add(stripe);
     }
 
@@ -364,8 +548,9 @@ export class BroadcastScene {
       this.desk,
       this.dreamModel,
       this.newsModel,
-      this.shoppingModel,
+      this.shoppingModel.group,
       this.moon.group,
+      this.cloud.group,
       this.sitcomModel,
       this.lettersModel,
     );
@@ -405,7 +590,11 @@ export class BroadcastScene {
   }
 
   loadSegment(segment: SegmentPackage): void {
+    this.segmentStartedAt = this.clock.getElapsedTime();
     this.profile = segment.programme.format;
+    this.viewport = { ...defaultProgrammeViewport };
+    this.camera.aspect = this.viewport.width / this.viewport.height;
+    this.camera.updateProjectionMatrix();
     this.characterIds.clear();
     const speakingCharacters = segment.events
       .filter((event) => event.type === 'speech.play')
@@ -419,37 +608,57 @@ export class BroadcastScene {
     this.desk.visible = false;
     this.dreamModel.visible = false;
     this.newsModel.visible = false;
-    this.shoppingModel.visible = false;
+    this.shoppingModel.group.visible = false;
+    this.shoppingModel.doorbell.visible = false;
+    this.shoppingModel.mug.visible = false;
     this.moon.group.visible = false;
+    this.cloud.group.visible = false;
     this.sitcomModel.visible = false;
     this.lettersModel.visible = false;
+    this.stripes.forEach((stripe) => {
+      stripe.visible = false;
+    });
     this.characters.forEach((character, index) => {
       character.group.visible = true;
-      character.group.position.x = index === 0 ? -2.35 : 2.4;
-      character.group.position.y = index === 0 ? 0 : -0.08;
-      character.group.position.z = -0.4;
-      character.baseY = character.group.position.y;
       character.group.rotation.set(0, 0, 0);
-      character.group.scale.setScalar(index === 0 ? 0.92 : 0.86);
       character.action = 'IDLE';
       character.actionUntil = 0;
+      const characterId =
+        [...this.characterIds.entries()].find((entry) => entry[1] === index)?.[0] ??
+        `${segment.programme.id}_background_${index}`;
+      configureCharacter(character, characterId, segment.programme.id, index);
     });
 
     const premise = segment.programme.premise.toLowerCase();
     switch (segment.programme.format) {
       case 'news':
+        this.useWideViewport();
         this.applyPalette(0x132a43, 0x08121e, 0xdb3d4b);
         this.desk.visible = true;
         this.newsModel.visible = true;
+        this.stripes.slice(0, 2).forEach((stripe) => {
+          stripe.visible = true;
+        });
         break;
       case 'shopping':
       case 'advert':
-        this.applyPalette(0x54204e, 0x1b0b22, 0xf3c858);
-        this.shoppingModel.visible = true;
+        this.useWideViewport();
+        this.applyPalette(
+          segment.channel.number === 802 ? 0x123945 : 0x54204e,
+          segment.channel.number === 802 ? 0x07181f : 0x1b0b22,
+          segment.channel.number === 802 ? 0x68e0d2 : 0xf3c858,
+        );
+        this.shoppingModel.group.visible = true;
+        if (premise.includes('doorbell')) {
+          this.shoppingModel.doorbell.visible = true;
+        } else {
+          this.shoppingModel.mug.visible = true;
+        }
         this.characters[0]!.group.position.x = -3.05;
         this.characters[1]!.group.position.x = 3.05;
         break;
       case 'sitcom':
+        this.useWideViewport();
         this.applyPalette(0x74513f, 0x2b1a1d, 0xf3b56b);
         this.sitcomModel.visible = true;
         this.characters[0]!.group.position.x = -1.55;
@@ -459,23 +668,33 @@ export class BroadcastScene {
         });
         break;
       case 'ident':
+        this.useWideViewport();
         this.applyPalette(0x172743, 0x07101f, 0x9bcde2);
         this.moon.group.visible = true;
-        this.characters[0]!.group.visible = false;
-        this.characters[1]!.group.position.x = 3.15;
-        this.characters[1]!.group.scale.setScalar(0.6);
+        this.cloud.group.visible = true;
+        this.characters.forEach((character) => {
+          character.group.visible = false;
+        });
         break;
       case 'emergency':
+        this.useWideViewport();
         this.applyPalette(0x42131a, 0x150407, 0xff3a42);
         this.desk.visible = true;
+        this.stripes.forEach((stripe) => {
+          stripe.visible = true;
+        });
         break;
       case 'public_access':
       default:
-        this.applyPalette(0x315b59, 0x132527, 0x89dfc2);
+        this.stripes.forEach((stripe) => {
+          stripe.visible = true;
+        });
         this.desk.visible = true;
         if (premise.includes('dream')) {
+          this.applyPalette(0x315b59, 0x132527, 0x89dfc2);
           this.dreamModel.visible = true;
         } else {
+          this.applyPalette(0x514735, 0x211c16, 0xd8b272);
           this.lettersModel.visible = true;
         }
         break;
@@ -516,6 +735,10 @@ export class BroadcastScene {
       this.moonSpeakerUntil = elapsed + durationMs / 1_000;
       return;
     }
+    if (characterId.toLowerCase().includes('cloud')) {
+      this.cloudSpeakerUntil = elapsed + durationMs / 1_000;
+      return;
+    }
     this.activeSpeaker = this.characterIds.get(characterId) ?? 0;
     this.activeSpeakerUntil = elapsed + durationMs / 1_000;
   }
@@ -545,6 +768,12 @@ export class BroadcastScene {
     this.wallMaterial.color.setHex(background);
     this.floorMaterial.color.setHex(floor);
     this.stripeMaterial.color.setHex(accent);
+  }
+
+  private useWideViewport(): void {
+    this.viewport = { ...wideProgrammeViewport };
+    this.camera.aspect = this.viewport.width / this.viewport.height;
+    this.camera.updateProjectionMatrix();
   }
 
   private readonly resize = (): void => {
@@ -617,11 +846,16 @@ export class BroadcastScene {
     this.dreamModel.rotation.y = -0.35 + Math.sin(elapsed * 0.45) * 0.12;
     this.dreamModel.position.y = 1.72 + Math.sin(elapsed * 0.8) * 0.025;
     this.newsModel.rotation.z = Math.sin(elapsed * 0.35) * 0.025;
-    this.shoppingModel.rotation.y = Math.sin(elapsed * 0.85) * 0.18;
+    this.shoppingModel.group.rotation.y = Math.sin(elapsed * 0.85) * 0.18;
+    this.shoppingModel.doorbell.scale.setScalar(1 + Math.max(0, Math.sin(elapsed * 3)) * 0.025);
+    this.shoppingModel.mug.position.y = -Math.min(0.28, (elapsed - this.segmentStartedAt) * 0.009);
     this.lettersModel.position.y = Math.sin(elapsed * 0.7) * 0.025;
     this.moon.group.rotation.z = Math.sin(elapsed * 0.22) * 0.035;
     this.moon.mouth.scale.y =
       elapsed < this.moonSpeakerUntil ? 0.5 + Math.abs(Math.sin(elapsed * 10)) * 5 : 1;
+    this.cloud.group.position.y = 3 + Math.sin(elapsed * 0.8) * 0.18;
+    this.cloud.mouth.scale.y =
+      elapsed < this.cloudSpeakerUntil ? 0.6 + Math.abs(Math.sin(elapsed * 12)) * 4 : 1;
     this.warningLight.intensity =
       Math.floor(elapsed) % 17 === 14 ? Math.max(0, Math.sin(elapsed * 18)) * 2.5 : 0;
     this.camera.position.copy(this.cameraPosition);
@@ -633,16 +867,16 @@ export class BroadcastScene {
     this.renderer.setClearColor(0x030708, 1);
     this.renderer.clear();
     this.renderer.setViewport(
-      programmeViewport.x,
-      programmeViewport.y,
-      programmeViewport.width,
-      programmeViewport.height,
+      this.viewport.x,
+      this.viewport.y,
+      this.viewport.width,
+      this.viewport.height,
     );
     this.renderer.setScissor(
-      programmeViewport.x,
-      programmeViewport.y,
-      programmeViewport.width,
-      programmeViewport.height,
+      this.viewport.x,
+      this.viewport.y,
+      this.viewport.width,
+      this.viewport.height,
     );
     this.renderer.setScissorTest(true);
     this.renderer.render(this.scene, this.camera);

@@ -167,6 +167,64 @@ body {
   display: flex;
 }
 
+.broadcast:is(
+    [data-format='news'],
+    [data-format='shopping'],
+    [data-format='advert'],
+    [data-format='sitcom'],
+    [data-format='ident'],
+    [data-format='emergency']
+  )
+  .programme-mask {
+  right: 2.65%;
+  left: 2.65%;
+  width: auto;
+}
+
+.broadcast:is(
+    [data-format='news'],
+    [data-format='advert'],
+    [data-format='sitcom'],
+    [data-format='ident'],
+    [data-format='emergency']
+  )
+  .channel-panel {
+  display: none;
+}
+
+.broadcast:is(
+    [data-format='news'],
+    [data-format='advert'],
+    [data-format='sitcom'],
+    [data-format='ident'],
+    [data-format='emergency']
+  )
+  .network-header {
+  right: 5.2%;
+}
+
+.broadcast:is(
+    [data-format='news'],
+    [data-format='advert'],
+    [data-format='sitcom'],
+    [data-format='ident'],
+    [data-format='emergency']
+  )
+  .subtitle {
+  right: 7%;
+}
+
+.broadcast:is(
+    [data-format='news'],
+    [data-format='advert'],
+    [data-format='sitcom'],
+    [data-format='ident'],
+    [data-format='emergency']
+  )
+  .broadcast-clock {
+  right: 5%;
+}
+
 .broadcast[data-format='news'] .format-bug,
 .broadcast[data-format='news'] .lower-third {
   color: #fff;
@@ -180,8 +238,17 @@ body {
 
 .broadcast[data-format='shopping'] .channel-panel,
 .broadcast[data-format='advert'] .channel-panel {
+  top: 11%;
+  right: 4%;
+  bottom: 10%;
+  width: 20%;
   border-color: rgba(255, 220, 102, 0.55);
-  background: linear-gradient(145deg, rgba(88, 23, 79, 0.98), rgba(25, 7, 34, 0.98));
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 221, 105, 0.2), transparent 32%),
+    linear-gradient(145deg, rgba(88, 23, 79, 0.98), rgba(25, 7, 34, 0.98));
+  box-shadow:
+    0.8rem 0.8rem 0 #ffd466,
+    inset 0 0 4rem rgba(255, 211, 102, 0.08);
 }
 
 .broadcast[data-format='shopping'] .format-bug,
@@ -198,6 +265,33 @@ body {
   background: #5d2058;
 }
 
+.broadcast[data-channel='802'] .channel-panel {
+  border-color: rgba(104, 224, 210, 0.58);
+  background:
+    repeating-linear-gradient(
+      -24deg,
+      transparent 0,
+      transparent 1rem,
+      rgba(104, 224, 210, 0.035) 1rem,
+      rgba(104, 224, 210, 0.035) 2rem
+    ),
+    linear-gradient(145deg, rgba(10, 66, 76, 0.98), rgba(3, 20, 27, 0.99));
+  box-shadow:
+    0.8rem 0.8rem 0 #68e0d2,
+    inset 0 0 4rem rgba(104, 224, 210, 0.08);
+}
+
+.broadcast[data-channel='802'] .format-bug,
+.broadcast[data-channel='802'] .lower-third {
+  color: #06252c;
+  background: #68e0d2;
+}
+
+.broadcast[data-channel='802'] .lower-third-channel {
+  color: #68e0d2;
+  background: #082a34;
+}
+
 .broadcast[data-format='sitcom'] .channel-panel {
   border-color: rgba(255, 194, 118, 0.44);
   background: linear-gradient(150deg, rgba(77, 49, 39, 0.98), rgba(28, 16, 19, 0.98));
@@ -209,9 +303,65 @@ body {
   background: #f2b36d;
 }
 
+.broadcast[data-format='sitcom'] .lower-third {
+  opacity: 0;
+}
+
+.broadcast[data-format='sitcom'] .format-bug {
+  border-radius: 999px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  letter-spacing: 0.03em;
+}
+
+.broadcast[data-format='sitcom'] .subtitle {
+  right: 16%;
+  left: 16%;
+  border-radius: 0.7rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(0.52rem, 1.12vw, 1rem);
+}
+
 .broadcast[data-format='ident'] .channel-panel {
   border-color: rgba(150, 203, 228, 0.35);
   background: linear-gradient(160deg, rgba(20, 42, 72, 0.98), rgba(5, 13, 28, 0.98));
+}
+
+.broadcast[data-format='ident'] .lower-third {
+  display: none;
+}
+
+.broadcast[data-format='ident'] .format-bug {
+  top: 12%;
+  left: auto;
+  right: 6%;
+  border-radius: 1rem;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+}
+
+.broadcast[data-format='ident'] .subtitle {
+  right: 18%;
+  bottom: 9%;
+  left: 18%;
+  border-radius: 2rem;
+  color: #1b3046;
+  background: rgba(218, 239, 242, 0.92);
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+  text-shadow: none;
+}
+
+.broadcast[data-format='ident'] .programme-graphic {
+  top: 23%;
+  left: 19%;
+  width: 62%;
+  border-radius: 2rem;
+  border-color: #a4d6e9;
+  text-align: center;
+  transform: translateY(-8%) rotate(-1deg);
+}
+
+.broadcast[data-format='ident'] .programme-graphic.is-visible {
+  transform: translateY(0) rotate(-1deg);
 }
 
 .broadcast[data-format='ident'] .format-bug,
@@ -223,6 +373,26 @@ body {
 .broadcast[data-format='emergency'] .channel-panel {
   border-color: rgba(255, 75, 83, 0.55);
   background: linear-gradient(155deg, rgba(70, 13, 23, 0.98), rgba(15, 2, 5, 0.98));
+}
+
+.broadcast[data-format='emergency'] .programme-graphic {
+  top: 20%;
+  left: 12%;
+  width: 76%;
+  border-width: 0.8rem;
+  text-align: center;
+}
+
+.broadcast[data-programme='the_bureau_of_unsent_letters'] .channel-panel {
+  border-color: rgba(225, 191, 128, 0.35);
+  background: linear-gradient(155deg, rgba(72, 61, 43, 0.97), rgba(25, 20, 15, 0.99));
+}
+
+.broadcast[data-programme='the_bureau_of_unsent_letters'] .format-bug,
+.broadcast[data-programme='the_bureau_of_unsent_letters'] .lower-third {
+  color: #2b2015;
+  background: #dfbd7b;
+  font-family: Georgia, 'Times New Roman', serif;
 }
 
 .broadcast[data-format='emergency'] .format-bug,

@@ -109,6 +109,10 @@ export class PlayoutEngine {
   private audioUnlocked = false;
 
   constructor(private readonly visuals: PlayoutVisuals) {
+    const requestedStart = Number(new URLSearchParams(window.location.search).get('start') ?? 0);
+    if (Number.isInteger(requestedStart) && requestedStart >= 0) {
+      this.index = requestedStart;
+    }
     const unlock = (): void => {
       this.audioUnlocked = true;
       this.ui.status.textContent = 'Signal locked';
@@ -209,7 +213,12 @@ export class PlayoutEngine {
     this.ui.subtitle.textContent = 'Programme already in progress.';
     this.ui.status.textContent = 'Signal locked';
     this.ui.broadcast.dataset.format = segment.programme.format;
-    this.ui.formatBug.textContent = segment.programme.format.replaceAll('_', ' ').toUpperCase();
+    this.ui.broadcast.dataset.programme = segment.programme.id;
+    this.ui.broadcast.dataset.channel = String(segment.channel.number);
+    this.ui.formatBug.textContent =
+      segment.channel.number === 113
+        ? "CHILDREN'S TELEVISION"
+        : segment.programme.format.replaceAll('_', ' ').toUpperCase();
     this.ui.tickerText.textContent = segment.programme.premise;
     this.ui.graphic.classList.remove('is-visible', 'is-warning');
     this.visuals.loadSegment(segment);
