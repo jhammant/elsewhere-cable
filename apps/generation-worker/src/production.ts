@@ -186,7 +186,7 @@ interface ProduceOptions {
   historyRoots?: readonly string[];
 }
 
-const semanticSimilarityLimit = 0.7;
+const semanticSimilarityLimit = 0.76;
 
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
   if (left.length === 0 || left.length !== right.length) {

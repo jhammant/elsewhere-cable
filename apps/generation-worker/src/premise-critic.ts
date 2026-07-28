@@ -23,6 +23,11 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   const lineLengths = draft.dialogue.map((line) => words(line.text).length);
   const disconnectedLanguage = /\b(?:random|wacky|nonsense|for no reason|anything can happen)\b/iu;
   const actionLines = draft.dialogue.filter((line) => line.action !== 'IDLE').length;
+  const genericPerilLanguage =
+    /\b(?:warn|warning|careful|danger|safe|safety|too late|keep .{0,20} away|forbidden zone|must not|do not touch|it'?s spreading)\b/iu;
+  const genericPerilLines = draft.dialogue.filter((line) =>
+    genericPerilLanguage.test(line.text),
+  ).length;
 
   if (draft.channelName.trim().toLowerCase() === 'elsewhere cable') {
     reasons.push('Elsewhere Cable is the network identity and cannot be a channel name');
@@ -41,6 +46,9 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   }
   if (disconnectedLanguage.test(JSON.stringify(draft))) {
     reasons.push('proposal describes randomness instead of a consistent comic mechanism');
+  }
+  if (genericPerilLines >= Math.ceil(draft.dialogue.length / 2)) {
+    reasons.push('dialogue is dominated by generic warnings or peril rather than comic conflict');
   }
   if (words(draft.endingBeat).length < 4) {
     reasons.push('ending needs a concrete visual payoff');

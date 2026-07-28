@@ -33,4 +33,19 @@ describe('premise critic', () => {
     expect(critique.accepted).toBe(false);
     expect(critique.reasons.some((reason) => reason.includes('network identity'))).toBe(true);
   });
+
+  it('rejects warning dialogue without a comic disagreement', () => {
+    const warningLoop = demoDraft(0);
+    warningLoop.dialogue = warningLoop.dialogue.map((line, index) => ({
+      ...line,
+      text:
+        index % 2 === 0
+          ? 'Careful, the forbidden zone is spreading!'
+          : 'It is too late, stay safe and keep away!',
+    }));
+
+    expect(critiquePremise(warningLoop).reasons).toEqual(
+      expect.arrayContaining([expect.stringContaining('generic warnings or peril')]),
+    );
+  });
 });
