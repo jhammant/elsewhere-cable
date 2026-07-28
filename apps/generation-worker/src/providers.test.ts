@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { OpenAiCompatibleTtsProvider } from './providers.js';
+import { maximumPlausibleSpeechDurationMs, OpenAiCompatibleTtsProvider } from './providers.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -16,6 +16,20 @@ afterEach(async () => {
 });
 
 describe('OpenAiCompatibleTtsProvider', () => {
+  it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
+    expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(7_000);
+    expect(
+      maximumPlausibleSpeechDurationMs(
+        'The municipal staircase has requested a private meeting after lunch.',
+      ),
+    ).toBe(10_500);
+    expect(
+      maximumPlausibleSpeechDurationMs(
+        'This intentionally long continuity announcement contains enough words to reach the hard broadcast ceiling without ever allowing an unbounded speech file onto the channel.',
+      ),
+    ).toBe(18_000);
+  });
+
   it('uses stable named speakers for Qwen CustomVoice models', () => {
     const provider = new OpenAiCompatibleTtsProvider(
       'mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit',

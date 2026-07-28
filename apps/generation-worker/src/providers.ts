@@ -244,6 +244,11 @@ async function probeDurationMs(audioPath: string): Promise<number> {
   return Math.ceil(seconds * 1_000);
 }
 
+export function maximumPlausibleSpeechDurationMs(text: string): number {
+  const wordCount = text.trim().split(/\s+/u).filter(Boolean).length;
+  return Math.min(18_000, Math.max(7_000, wordCount * 800 + 2_500));
+}
+
 export class LocalCommandTtsProvider implements TtsProvider {
   readonly id: string;
   readonly voiceIds: readonly string[];
@@ -421,13 +426,11 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
         }
         await writeFile(sourceFile, Buffer.from(await candidate.arrayBuffer()));
         const durationMs = await probeDurationMs(sourceFile);
-        const wordCount = request.text.trim().split(/\s+/u).length;
-        const maximumPlausibleDurationMs = Math.min(
-          30_000,
-          Math.max(12_000, Math.round((wordCount / 1.2) * 1_000 + 5_000)),
-        );
+        const maximumPlausibleDurationMs = maximumPlausibleSpeechDurationMs(request.text);
         if (durationMs > maximumPlausibleDurationMs) {
-          failures.push(`${baseUrl}: implausible ${durationMs}ms audio for ${wordCount} words`);
+          failures.push(
+            `${baseUrl}: implausible ${durationMs}ms audio for ${request.text.trim().split(/\s+/u).length} words`,
+          );
           await unlink(sourceFile);
           continue;
         }
@@ -446,6 +449,8 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
       'error',
       '-i',
       sourceFile,
+      '-af',
+      'loudnorm=I=-16:LRA=7:TP=-1.5',
       '-c:a',
       'aac',
       '-b:a',
@@ -459,7 +464,7 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
 
     return {
       audioFile: path.posix.join('audio', path.basename(outputFile)),
-      durationMs: sourceDurationMs,
+      durationMs: await probeDurationMs(outputFile),
       provider: `${this.id}:${this.model}`,
     };
   }

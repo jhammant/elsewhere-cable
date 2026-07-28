@@ -23,6 +23,7 @@
     "generate:batch": "pnpm --filter @elsewhere-cable/generation-worker generate",
     "generate:live:bootstrap": "tsx infra/scripts/bootstrap-live-queue.ts",
     "reservoir:status": "tsx infra/scripts/reservoir-status.ts",
+    "reservoir:audit": "tsx infra/scripts/audit-reservoir.ts",
     "generate:live": "sh infra/scripts/generate-ghost-live.sh once",
     "generate:live:loop": "sh infra/scripts/generate-ghost-live.sh loop",
     "llm:bulk:start": "sh infra/scripts/start-ghost-bulk-llm.sh",
