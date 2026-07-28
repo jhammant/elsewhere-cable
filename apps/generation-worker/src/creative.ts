@@ -397,9 +397,8 @@ export function userPrompt(
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
   const pacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
   return `Create batch segment ${index + 1} using the ${format} format.
-Avoid these recent titles: ${recentTitles.join(', ') || 'none'}.
-Do not reuse or lightly paraphrase these premises: ${recentPremises.join(' | ') || 'none'}.
-${rejectionReasons.length > 0 ? `The previous attempt was rejected for novelty: ${rejectionReasons.join('; ')}.` : ''}
+This proposal will be compared semantically with ${recentTitles.length} recent programme titles, ${recentPremises.length} recent premises and the complete broadcast catalogue. Do not rely on familiar Elsewhere Cable motifs.
+${rejectionReasons.length > 0 ? 'The previous attempt collided with an existing concept. Change its setting nouns, physical mechanism, character objective and type of escalation completely; do not paraphrase that attempt.' : ''}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.
 - Comic engine: ${comicEngine}.
@@ -419,5 +418,5 @@ export function scriptPrompt(
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast and pacing. Add 6–12 dialogue entries only. Every line must contain 3–22 words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
-${rejectionReasons.length === 0 ? '' : `The previous script was rejected for: ${rejectionReasons.join('; ')}.`}`;
+${rejectionReasons.length === 0 ? '' : 'The previous dialogue collided with existing material or failed a production rule. Write entirely new lines while preserving this approved premise.'}`;
 }

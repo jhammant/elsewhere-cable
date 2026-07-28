@@ -47,6 +47,16 @@ function similarity(left: string, right: string): number {
   return intersection / union.size;
 }
 
+function sharedPhrase(left: string, right: string, width = 5): string | null {
+  const rightPhrases = shingles(right, width);
+  for (const phrase of shingles(left, width)) {
+    if (rightPhrases.has(phrase)) {
+      return phrase;
+    }
+  }
+  return null;
+}
+
 export function recordFromDraft(draft: GeneratedSegmentDraft): CreativeRecord {
   return {
     title: draft.programmeTitle,
@@ -89,6 +99,10 @@ export function conceptNoveltyIssues(
     }
     if (premise === normalise(previous.premise) || similarity(premise, previous.premise) >= 0.7) {
       issues.push(`premise resembles "${previous.premise}"`);
+    }
+    const repeatedPhrase = sharedPhrase(premise, previous.premise);
+    if (repeatedPhrase !== null) {
+      issues.push(`premise reuses the phrase "${repeatedPhrase}"`);
     }
   }
 

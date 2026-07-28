@@ -23,6 +23,9 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Cast structure:');
       expect(prompt).toContain('Visual medium:');
       expect(prompt).toContain('Pacing:');
+      expect(prompt).not.toContain('Previous Programme');
+      expect(prompt).not.toContain('A previous premise');
+      expect(prompt).not.toContain('premise semantically repeats');
     }
   });
 

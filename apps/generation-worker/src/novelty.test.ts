@@ -63,4 +63,20 @@ describe('creative novelty', () => {
 
     expect(noveltyIssues(fresh, [recordFromDraft(previous)])).toEqual([]);
   });
+
+  it('rejects the same joke mechanism moved into a different setting', () => {
+    const previous = candidate({
+      premise:
+        'Island shoppers receive an award for preventing the event currently happening on their ferry.',
+    });
+    const relocated = candidate({
+      programmeTitle: 'A Different Award',
+      premise:
+        'Factory trainees hold a trophy for preventing the event currently happening on their loading dock.',
+    });
+
+    expect(noveltyIssues(relocated, [recordFromDraft(previous)])).toEqual(
+      expect.arrayContaining([expect.stringContaining('premise reuses the phrase')]),
+    );
+  });
 });
