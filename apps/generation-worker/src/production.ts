@@ -426,6 +426,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       }
     : await readManifest(options.outputRoot);
   const startingSegmentCount = manifest.segments.length;
+  const creativeSerialBase = options.demo
+    ? startingSegmentCount
+    : Number.parseInt(randomUUID().replaceAll('-', '').slice(0, 8), 16);
   const creativeHistory = await readCreativeHistory(options.outputRoot, manifest);
   for (const historyRoot of options.historyRoots ?? []) {
     if (path.resolve(historyRoot) === path.resolve(options.outputRoot)) {
@@ -456,7 +459,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
           const recent = creativeHistory.slice(-24);
           const prompt = userPrompt(
-            startingSegmentCount + index + attempt * options.count,
+            creativeSerialBase + index + attempt * options.count,
             recent.map((record) => record.title),
             recent.map((record) => record.premise),
             rejectionReasons,
