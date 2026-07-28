@@ -249,6 +249,19 @@ export function maximumPlausibleSpeechDurationMs(text: string): number {
   return Math.min(18_000, Math.max(7_000, wordCount * 800 + 2_500));
 }
 
+export function speechTempoCorrection(text: string, durationMs: number): number | null {
+  const maximumDurationMs = maximumPlausibleSpeechDurationMs(text);
+  if (durationMs > maximumDurationMs * 1.6) {
+    return null;
+  }
+  if (durationMs <= maximumDurationMs) {
+    return 1;
+  }
+  // Leave room for AAC encoder padding and ffprobe rounding so the independently audited
+  // package remains below the same hard ceiling.
+  return durationMs / (maximumDurationMs - 400);
+}
+
 export class LocalCommandTtsProvider implements TtsProvider {
   readonly id: string;
   readonly voiceIds: readonly string[];
@@ -404,6 +417,7 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
     const firstBaseUrl = this.nextBaseUrl;
     this.nextBaseUrl = (this.nextBaseUrl + 1) % this.baseUrls.length;
     let sourceDurationMs: number | undefined;
+    let tempoCorrection = 1;
     const failures: string[] = [];
     for (let offset = 0; offset < this.baseUrls.length; offset += 1) {
       const baseUrl = this.baseUrls[(firstBaseUrl + offset) % this.baseUrls.length]!;
@@ -427,14 +441,16 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
         await writeFile(sourceFile, Buffer.from(await candidate.arrayBuffer()));
         const durationMs = await probeDurationMs(sourceFile);
         const maximumPlausibleDurationMs = maximumPlausibleSpeechDurationMs(request.text);
-        if (durationMs > maximumPlausibleDurationMs) {
+        const candidateTempoCorrection = speechTempoCorrection(request.text, durationMs);
+        if (candidateTempoCorrection === null) {
           failures.push(
-            `${baseUrl}: implausible ${durationMs}ms audio for ${request.text.trim().split(/\s+/u).length} words`,
+            `${baseUrl}: implausible ${durationMs}ms audio for ${request.text.trim().split(/\s+/u).length} words (maximum recoverable ${Math.round(maximumPlausibleDurationMs * 1.6)}ms)`,
           );
           await unlink(sourceFile);
           continue;
         }
         sourceDurationMs = durationMs;
+        tempoCorrection = candidateTempoCorrection;
         break;
       } catch (error) {
         failures.push(`${baseUrl}: ${error instanceof Error ? error.message : String(error)}`);
@@ -450,7 +466,7 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
       '-i',
       sourceFile,
       '-af',
-      'loudnorm=I=-16:LRA=7:TP=-1.5',
+      `${tempoCorrection > 1 ? `atempo=${tempoCorrection.toFixed(4)},` : ''}loudnorm=I=-16:LRA=7:TP=-1.5`,
       '-c:a',
       'aac',
       '-b:a',

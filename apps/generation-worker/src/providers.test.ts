@@ -2,7 +2,11 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { maximumPlausibleSpeechDurationMs, OpenAiCompatibleTtsProvider } from './providers.js';
+import {
+  maximumPlausibleSpeechDurationMs,
+  OpenAiCompatibleTtsProvider,
+  speechTempoCorrection,
+} from './providers.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -28,6 +32,13 @@ describe('OpenAiCompatibleTtsProvider', () => {
         'This intentionally long continuity announcement contains enough words to reach the hard broadcast ceiling without ever allowing an unbounded speech file onto the channel.',
       ),
     ).toBe(18_000);
+  });
+
+  it('tempo-corrects a near miss but rejects severely rambling speech', () => {
+    const text = 'One two three four five six seven eight';
+    expect(maximumPlausibleSpeechDurationMs(text)).toBe(8_900);
+    expect(speechTempoCorrection(text, 9_280)).toBeCloseTo(1.092, 3);
+    expect(speechTempoCorrection(text, 20_000)).toBeNull();
   });
 
   it('uses stable named speakers for Qwen CustomVoice models', () => {

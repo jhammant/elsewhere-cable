@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -167,6 +167,36 @@ describe('produceBatch', () => {
     expect(manifest.segments).toHaveLength(1);
   });
 
+  it('removes incomplete package directories after speech preparation fails', async () => {
+    const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-failed-speech-'));
+    temporaryDirectories.push(outputRoot);
+    const tts: TtsProvider = {
+      id: 'failed-test-tts',
+      parallelism: 2,
+      synthesize() {
+        return Promise.reject(new Error('synthetic speech failure'));
+      },
+    };
+
+    await expect(
+      produceBatch({
+        count: 1,
+        concurrency: 1,
+        outputRoot,
+        demo: true,
+        llm: null,
+        tts,
+        embeddingProvider: null,
+      }),
+    ).rejects.toThrow('Batch produced no approved segment packages');
+
+    expect(
+      (await readdir(outputRoot, { withFileTypes: true })).filter(
+        (entry) => entry.isDirectory() && entry.name.startsWith('seg_'),
+      ),
+    ).toHaveLength(0);
+  });
+
   it('screens a premise before requesting its full script', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-two-stage-'));
     temporaryDirectories.push(outputRoot);
@@ -260,5 +290,23 @@ describe('produceBatch', () => {
     );
 
     expect(issue).toContain('semantically repeats');
+  });
+
+  it('allows thematic overlap when the comic mechanism is not a close paraphrase', () => {
+    const issue = semanticNoveltyIssue(
+      'A boxing coach loses access to the ring whenever the audience applauds.',
+      [0.8, 0.6, 0],
+      [
+        {
+          title: 'Tiny Exit',
+          premise:
+            'In a boxing gym, anyone who exits must re-enter through an impossibly small door.',
+          dialogue: [],
+        },
+      ],
+      [[1, 0, 0]],
+    );
+
+    expect(issue).toBeNull();
   });
 });

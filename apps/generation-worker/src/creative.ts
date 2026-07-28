@@ -284,39 +284,93 @@ const settings = [
   'a breakfast terrace carried through a canyon by a flock of balloons',
 ] as const;
 
-const comicEngines = [
-  'the set tilts five degrees whenever anyone says the sponsor name',
-  'the scoreboard awards points for hesitation and removes them for confidence',
-  'anything shown in close-up becomes physically smaller after the camera cuts away',
-  'audience applause makes the nearest performer progressively heavier',
-  'the quietest participant grows until they block the most important exit',
-  'every successful demonstration removes half of the remaining floor',
-  'complimenting a costume makes it jump onto a different performer',
-  'the finish line retreats from whoever celebrates too early',
-  'criticising the food makes it grow more elaborate and harder to contain',
-  'each obvious lie pulls the painted background one metre closer',
-  'the studio lights attract loose scenery into orbit around the presenter',
-  'touching the wrong colour causes it to spread across the entire cast',
-  'microphones translate certainty into increasingly specific animal noises',
-  'every camera cut swaps the physical positions of host and guest',
-  'the fastest route visibly lengthens whenever somebody points at it',
-  'a musical note causes every matching shape in the set to vibrate',
-  'the smallest prop becomes the only thing strong enough to hold the set together',
-  'each attempt to whisper launches a visible gust across the room',
-  'standing perfectly still makes the surrounding scenery move instead',
-  'the prize doubles in size whenever a contestant refuses it',
-  'every ingredient added to a recipe removes a wall from the studio',
-  'the floor becomes more slippery in direct proportion to the host’s composure',
-  'a spotlight follows the least relevant participant and enlarges their gestures',
-  'each correct answer rotates the entire location by a quarter turn',
-  'the performer who exits re-enters instantly through an impossible smaller doorway',
-  'every spoken number produces that many tiny physical obstacles',
-  'a countdown makes the central platform rise instead of reducing the available time',
-  'the scenery copies the last pose held by any cast member',
-  'the loudest sound turns one solid surface briefly transparent',
-  'each attempt to tidy the set causes props to arrange themselves into a larger creature',
-  'the winning move can only be performed while every spectator looks elsewhere',
-  'the location physically echoes actions rather than sounds',
+const comicTriggers = [
+  'someone completes a sentence with a concrete noun',
+  'a presenter makes direct eye contact with the main camera',
+  'a prop crosses a painted boundary',
+  'two performers sincerely agree',
+  'the music stops without warning',
+  'the host demonstrates an object correctly',
+  'a guest uses both hands at once',
+  'applause begins',
+  'the camera cuts during a physical action',
+  'someone enters from the left',
+  'a named colour is touched',
+  'a bell rings',
+  'the scoreboard changes',
+  'the cast forms a straight line',
+  'an object is placed at the exact centre of the set',
+  'the studio lights dim',
+  'a question receives an honest answer',
+  'the presenter walks backwards',
+  'someone points above the horizon',
+  'the smallest character speaks',
+  'the audience laughs',
+  'a performer removes part of their costume',
+  'a countdown reaches an odd number',
+  'a door closes completely',
+  'the announcer names the physical location',
+  'two unrelated props touch',
+  'someone whispers',
+  'the cast moves in unison',
+  'a character tries to explain the rule',
+  'someone attempts to leave the set',
+  'the prize is revealed',
+  'the scene becomes completely silent',
+] as const;
+
+const physicalConsequences = [
+  'the nearest exit relocates to the highest visible surface',
+  'one section of floor folds upward into a narrow staircase',
+  'the smallest prop splits into three differently scaled copies',
+  'every costume exchanges one component clockwise',
+  'the set gains a new level directly beneath the nearest sceptic',
+  'all loose objects slide into an immaculate but obstructive queue',
+  'the background advances until it becomes usable furniture',
+  'the largest object becomes light enough to drift away',
+  'a practical doorway shrinks while an impractical doorway grows',
+  'the nearest horizontal surface slowly becomes vertical',
+  'one character and one prop exchange their apparent sizes',
+  'the floor marks redraw themselves around the least prepared performer',
+  'a transparent duplicate of the action continues after everyone stops',
+  'the ceiling lowers only above the person currently in charge',
+  'a new obstacle arrives disguised as part of the studio branding',
+  'every wheel on set turns ninety degrees sideways',
+  'the scenery develops an extra joint and bends around the cast',
+  'the central platform drifts toward whoever denies anything changed',
+  'all handles move to the opposite side of their objects',
+  'the most useful prop becomes attached to the least useful one',
+  'a soft object becomes rigid while a rigid object becomes soft',
+  'the set divides into two unequal halves with the cast on the smaller one',
+  'every arrow rotates to indicate a different but equally plausible route',
+  'the nearest container becomes shallower and dramatically wider',
+  'one wall turns into a slowly moving walkway',
+  'the cast’s shadows detach and perform the next movement first',
+  'all furniture rises by one seat-height except the occupied chair',
+  'the brightest object becomes physically heavier',
+  'a painted object becomes solid while its real counterpart flattens',
+  'the safest route acquires an additional unnecessary corner',
+  'the room gains a duplicate centre and every prop chooses the wrong one',
+  'the location rotates around one character who remains perfectly upright',
+] as const;
+
+const comicConflicts = [
+  'one character needs the trigger to finish the broadcast while another must prevent it to keep their place on set',
+  'the host treats the consequence as a feature while the guest needs the room restored before an imminent demonstration',
+  'one performer gains status from every escalation while their assistant loses the equipment needed to continue',
+  'the least qualified character understands the rule and refuses to help the expert',
+  'two rivals need opposite versions of the set to be considered the winner',
+  'the authority figure denies the change while a junior character quietly profits from it',
+  'one character is desperate to leave while another can succeed only if everyone stays',
+  'the presenter must maintain professional calm while the guest deliberately repeats the trigger',
+  'one character wants to hide the consequence while another is broadcasting measurements of it',
+  'the cast must complete a simple task while disagreeing about who is physically causing the rule',
+  'the apparent victim discovers the consequence is useful and begins defending it from the host',
+  'one performer keeps solving the immediate obstruction in ways that make the next escalation worse',
+  'the referee rewards compliance while the contestants discover that cheating briefly restores the set',
+  'one character needs the audience to notice the change while their partner’s job depends on nobody noticing',
+  'the host insists on continuing the scheduled format while every other character tries to renegotiate the rules',
+  'two characters cooperate on the task but compete to avoid occupying the most dangerous part of the set',
 ] as const;
 
 const castStructures = [
@@ -392,7 +446,10 @@ export function userPrompt(
   const serial = Math.abs(index);
   const format = formats[axisIndex(serial, 0x16b2c79, formats.length)] ?? 'advert';
   const setting = settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
-  const comicEngine = comicEngines[serial % comicEngines.length]!;
+  const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
+  const physicalConsequence =
+    physicalConsequences[axisIndex(serial, 0x51ac93f, physicalConsequences.length)]!;
+  const comicConflict = comicConflicts[axisIndex(serial, 0x6d092e5, comicConflicts.length)]!;
   const cast = castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
   const pacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
@@ -401,11 +458,13 @@ This proposal will be compared semantically with ${recentTitles.length} recent p
 ${rejectionReasons.length > 0 ? 'The previous attempt collided with an existing concept. Change its setting nouns, physical mechanism, character objective and type of escalation completely; do not paraphrase that attempt.' : ''}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.
-- Comic engine: ${comicEngine}.
+- Comic trigger: ${comicTrigger}.
+- Physical consequence: ${physicalConsequence}.
+- Character conflict: ${comicConflict}.
 - Cast structure: ${cast}.
 - Visual medium: ${visualMedium}.
 - Pacing: ${pacing}.
-Use all five coordinates directly and visibly; do not replace them with dreams, memory products, emotional weather, household litigation, identity deletion or generic bureaucracy.
+Fuse the trigger, consequence and conflict into one simple comic rule. Use all seven coordinates directly and visibly; do not replace them with dreams, memory products, emotional weather, household litigation, identity deletion or generic bureaucracy.
 For this batch, memory, dreams, identity, feelings, apologies, household objects and official paperwork cannot be the subject of the premise. Keep the comic problem physical, active and specific to the assigned location.
 Select a very high, memorable channel number. Make the scene unlike the immediately preceding material.`;
 }

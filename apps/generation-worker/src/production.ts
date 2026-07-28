@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   generatedSegmentProposalSchema,
@@ -187,7 +187,11 @@ interface ProduceOptions {
   historyRoots?: readonly string[];
 }
 
-const semanticSimilarityLimit = 0.73;
+// Premises deliberately reuse television formats and physical sets. Lower thresholds mostly
+// measure that shared scenery rather than a repeated comic mechanism. Lexical shingles separately
+// reject exact and near-exact wording, while this higher semantic threshold catches paraphrased
+// versions of the same joke without exhausting a set after one appearance.
+const semanticSimilarityLimit = 0.84;
 
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
   if (left.length === 0 || left.length !== right.length) {
@@ -254,165 +258,176 @@ async function buildSegment(
   const segmentDirectory = path.join(outputRoot, segmentId);
   await mkdir(segmentDirectory, { recursive: true });
 
-  const pacing = pacingFor(draft);
-  const speech = new Array<{
-    line: GeneratedSegmentDraft['dialogue'][number];
-    speechId: string;
-    voiceId: string;
-    result: Awaited<ReturnType<TtsProvider['synthesize']>>;
-  }>(draft.dialogue.length);
-  let nextSpeechIndex = 0;
-  const speechWorker = async (): Promise<void> => {
-    while (nextSpeechIndex < draft.dialogue.length) {
-      const index = nextSpeechIndex;
-      nextSpeechIndex += 1;
-      const line = draft.dialogue[index]!;
-      const speechId = `speech_${index.toString().padStart(2, '0')}`;
-      const voiceId = voiceFor(line.speaker, tts);
-      const result = await tts.synthesize({
-        speechId,
-        text: line.text,
-        voiceId,
-        speakingRate: speakingRateFor(pacing, line.speaker),
-        outputDirectory: segmentDirectory,
-      });
-      speech[index] = { line, speechId, voiceId, result };
+  try {
+    const pacing = pacingFor(draft);
+    const speech = new Array<{
+      line: GeneratedSegmentDraft['dialogue'][number];
+      speechId: string;
+      voiceId: string;
+      result: Awaited<ReturnType<TtsProvider['synthesize']>>;
+    }>(draft.dialogue.length);
+    let nextSpeechIndex = 0;
+    const speechWorker = async (): Promise<void> => {
+      while (nextSpeechIndex < draft.dialogue.length) {
+        const index = nextSpeechIndex;
+        nextSpeechIndex += 1;
+        const line = draft.dialogue[index]!;
+        const speechId = `speech_${index.toString().padStart(2, '0')}`;
+        const voiceId = voiceFor(line.speaker, tts);
+        const result = await tts.synthesize({
+          speechId,
+          text: line.text,
+          voiceId,
+          speakingRate: speakingRateFor(pacing, line.speaker),
+          outputDirectory: segmentDirectory,
+        });
+        speech[index] = { line, speechId, voiceId, result };
+      }
+    };
+    const speechWorkerResults = await Promise.allSettled(
+      Array.from(
+        {
+          length: Math.min(Math.max(1, tts.parallelism ?? 1), draft.dialogue.length),
+        },
+        async () => speechWorker(),
+      ),
+    );
+    const failedSpeechWorker = speechWorkerResults.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failedSpeechWorker !== undefined) {
+      throw failedSpeechWorker.reason;
     }
-  };
-  await Promise.all(
-    Array.from(
-      {
-        length: Math.min(Math.max(1, tts.parallelism ?? 1), draft.dialogue.length),
-      },
-      async () => speechWorker(),
-    ),
-  );
 
-  const events: SegmentEvent[] = [
-    { atMs: 0, type: 'transition.play', transition: 'STATIC_BURST' },
-    { atMs: 300, type: 'camera.cut', camera: 'CAMERA_WIDE' },
-    {
-      atMs: 550,
-      type: 'graphic.show',
-      graphic: 'LOWER_THIRD',
-      text: draft.programmeTitle,
-    },
-  ];
-  const timing = {
-    frantic: { openingMs: 420, lineGapMs: 90, endingHoldMs: 900 },
-    staccato: { openingMs: 700, lineGapMs: 280, endingHoldMs: 1_250 },
-    conversational: { openingMs: 1_200, lineGapMs: 650, endingHoldMs: 2_000 },
-    slow_burn: { openingMs: 2_000, lineGapMs: 1_800, endingHoldMs: 3_200 },
-    interrupted: { openingMs: 650, lineGapMs: 520, endingHoldMs: 1_100 },
-    near_silent: { openingMs: 3_200, lineGapMs: 2_700, endingHoldMs: 4_200 },
-  }[pacing];
-  let cursorMs = timing.openingMs;
-  speech.forEach(({ line, speechId, voiceId, result }, index) => {
-    const characterId = `character_${slug(line.speaker)}`;
-    events.push({
-      atMs: cursorMs,
-      type: 'camera.cut',
-      camera: index % 2 === 0 ? 'CAMERA_HOST' : 'CAMERA_GUEST',
-    });
-    events.push({
-      atMs: cursorMs,
-      type: 'character.action',
-      characterId,
-      action: line.action,
-    });
-    events.push({
-      atMs: cursorMs + 120,
-      type: 'speech.play',
-      speechId,
-      characterId,
-      characterName: line.speaker,
-      voiceId,
-      subtitle: line.text,
-      audioFile: result.audioFile,
-      durationMs: result.durationMs,
-    });
-    if (pacing === 'frantic' && result.durationMs > 1_400) {
+    const events: SegmentEvent[] = [
+      { atMs: 0, type: 'transition.play', transition: 'STATIC_BURST' },
+      { atMs: 300, type: 'camera.cut', camera: 'CAMERA_WIDE' },
+      {
+        atMs: 550,
+        type: 'graphic.show',
+        graphic: 'LOWER_THIRD',
+        text: draft.programmeTitle,
+      },
+    ];
+    const timing = {
+      frantic: { openingMs: 420, lineGapMs: 90, endingHoldMs: 900 },
+      staccato: { openingMs: 700, lineGapMs: 280, endingHoldMs: 1_250 },
+      conversational: { openingMs: 1_200, lineGapMs: 650, endingHoldMs: 2_000 },
+      slow_burn: { openingMs: 2_000, lineGapMs: 1_800, endingHoldMs: 3_200 },
+      interrupted: { openingMs: 650, lineGapMs: 520, endingHoldMs: 1_100 },
+      near_silent: { openingMs: 3_200, lineGapMs: 2_700, endingHoldMs: 4_200 },
+    }[pacing];
+    let cursorMs = timing.openingMs;
+    speech.forEach(({ line, speechId, voiceId, result }, index) => {
+      const characterId = `character_${slug(line.speaker)}`;
       events.push({
-        atMs: cursorMs + Math.floor(result.durationMs * 0.58),
+        atMs: cursorMs,
         type: 'camera.cut',
-        camera: index % 2 === 0 ? 'CAMERA_GUEST' : 'CAMERA_HOST',
-      });
-    }
-    if (pacing === 'interrupted' && index < speech.length - 1 && index % 2 === 0) {
-      events.push({
-        atMs: cursorMs + result.durationMs + 120,
-        type: 'audio.static',
-        durationMs: 360,
+        camera: index % 2 === 0 ? 'CAMERA_HOST' : 'CAMERA_GUEST',
       });
       events.push({
-        atMs: cursorMs + result.durationMs + 120,
-        type: 'transition.play',
-        transition: 'SIGNAL_LOSS',
+        atMs: cursorMs,
+        type: 'character.action',
+        characterId,
+        action: line.action,
       });
-    }
-    cursorMs += result.durationMs + timing.lineGapMs;
-  });
-  events.push({
-    atMs: cursorMs,
-    type: 'graphic.show',
-    graphic: 'WARNING',
-    text: draft.endingBeat,
-  });
-  events.push({
-    atMs: cursorMs + timing.endingHoldMs,
-    type: 'transition.play',
-    transition: 'STATIC_BURST',
-  });
-  const durationMs = Math.max(8_000, cursorMs + timing.endingHoldMs + 700);
-
-  const segment = segmentPackageSchema.parse({
-    schemaVersion: 1,
-    segmentId,
-    channel: {
-      id: `channel_${draft.channelNumber}`,
-      number: draft.channelNumber,
-      name: draft.channelName,
-      realityId: draft.realityId,
-    },
-    programme: {
-      id: slug(draft.programmeTitle),
-      title: draft.programmeTitle,
-      format: draft.format,
-      premise: draft.premise,
-    },
-    durationMs,
-    visualStyle: draft.visualStyle,
-    visualMedium: draft.visualMedium,
-    castArchetype: draft.castArchetype,
-    pacing,
-    tone: draft.tone,
-    events,
-    continuityUpdates: [
-      {
-        type: 'fact.proposed',
-        subjectId: slug(draft.channelName),
-        value: draft.continuityFact,
-      },
-    ],
-    suggestedExit: {
-      earliestMs: Math.max(0, durationMs - 3_000),
-      preferredMs: durationMs,
+      events.push({
+        atMs: cursorMs + 120,
+        type: 'speech.play',
+        speechId,
+        characterId,
+        characterName: line.speaker,
+        voiceId,
+        subtitle: line.text,
+        audioFile: result.audioFile,
+        durationMs: result.durationMs,
+      });
+      if (pacing === 'frantic' && result.durationMs > 1_400) {
+        events.push({
+          atMs: cursorMs + Math.floor(result.durationMs * 0.58),
+          type: 'camera.cut',
+          camera: index % 2 === 0 ? 'CAMERA_GUEST' : 'CAMERA_HOST',
+        });
+      }
+      if (pacing === 'interrupted' && index < speech.length - 1 && index % 2 === 0) {
+        events.push({
+          atMs: cursorMs + result.durationMs + 120,
+          type: 'audio.static',
+          durationMs: 360,
+        });
+        events.push({
+          atMs: cursorMs + result.durationMs + 120,
+          type: 'transition.play',
+          transition: 'SIGNAL_LOSS',
+        });
+      }
+      cursorMs += result.durationMs + timing.lineGapMs;
+    });
+    events.push({
+      atMs: cursorMs,
+      type: 'graphic.show',
+      graphic: 'WARNING',
+      text: draft.endingBeat,
+    });
+    events.push({
+      atMs: cursorMs + timing.endingHoldMs,
+      type: 'transition.play',
       transition: 'STATIC_BURST',
-    },
-    production: {
-      generatedAt: new Date().toISOString(),
-      generator,
-      model,
-      safetyStatus: 'approved-for-local-preview',
-      audioPrepared: true,
-    },
-  });
-  await writeFile(
-    path.join(segmentDirectory, 'segment.json'),
-    `${JSON.stringify(segment, null, 2)}\n`,
-    'utf8',
-  );
-  return segment;
+    });
+    const durationMs = Math.max(8_000, cursorMs + timing.endingHoldMs + 700);
+
+    const segment = segmentPackageSchema.parse({
+      schemaVersion: 1,
+      segmentId,
+      channel: {
+        id: `channel_${draft.channelNumber}`,
+        number: draft.channelNumber,
+        name: draft.channelName,
+        realityId: draft.realityId,
+      },
+      programme: {
+        id: slug(draft.programmeTitle),
+        title: draft.programmeTitle,
+        format: draft.format,
+        premise: draft.premise,
+      },
+      durationMs,
+      visualStyle: draft.visualStyle,
+      visualMedium: draft.visualMedium,
+      castArchetype: draft.castArchetype,
+      pacing,
+      tone: draft.tone,
+      events,
+      continuityUpdates: [
+        {
+          type: 'fact.proposed',
+          subjectId: slug(draft.channelName),
+          value: draft.continuityFact,
+        },
+      ],
+      suggestedExit: {
+        earliestMs: Math.max(0, durationMs - 3_000),
+        preferredMs: durationMs,
+        transition: 'STATIC_BURST',
+      },
+      production: {
+        generatedAt: new Date().toISOString(),
+        generator,
+        model,
+        safetyStatus: 'approved-for-local-preview',
+        audioPrepared: true,
+      },
+    });
+    await writeFile(
+      path.join(segmentDirectory, 'segment.json'),
+      `${JSON.stringify(segment, null, 2)}\n`,
+      'utf8',
+    );
+    return segment;
+  } catch (error) {
+    await rm(segmentDirectory, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 export async function produceBatch(options: ProduceOptions): Promise<BatchResult> {

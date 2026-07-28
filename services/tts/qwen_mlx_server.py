@@ -67,9 +67,10 @@ class Handler(BaseHTTPRequestHandler):
             instruction = f"{voice}. {delivery_instruction(speed)}"
             # Qwen's upstream default is 4,096 audio tokens, which can produce
             # several minutes of audio if a sampled line misses its stop token.
-            # Dialogue lines are intentionally short, so keep a generous but
-            # broadcast-safe ceiling based on their word count.
-            max_tokens = max(96, min(320, len(text.split()) * 12 + 48))
+            # At 12 audio tokens per second, this follows the TypeScript broadcast
+            # ceiling closely enough to stop rambling samples before a slow retry.
+            # Dialogue lines are capped at 22 words upstream.
+            max_tokens = max(72, min(216, len(text.split()) * 7 + 60))
             with self.server.generation_lock:
                 if self.server.custom_voice:
                     chunks = list(
