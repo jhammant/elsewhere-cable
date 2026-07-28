@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { SegmentPackage } from '@elsewhere-cable/schemas';
 
 const streamWidth = 1280;
 const streamHeight = 720;
@@ -16,7 +17,28 @@ interface CharacterRig {
   rightArm: THREE.Group;
   baseY: number;
   phase: number;
+  action: CharacterAction;
+  actionUntil: number;
 }
+
+interface MoonRig {
+  group: THREE.Group;
+  mouth: THREE.Mesh;
+}
+
+type CameraName = 'CAMERA_WIDE' | 'CAMERA_HOST' | 'CAMERA_GUEST';
+type CharacterAction =
+  | 'IDLE'
+  | 'ENTER'
+  | 'EXIT'
+  | 'LOOK_AT'
+  | 'POINT_AT'
+  | 'REACTION_NEUTRAL'
+  | 'REACTION_CONFUSED'
+  | 'REACTION_SHOCKED'
+  | 'REACTION_ANGRY'
+  | 'PAUSE'
+  | 'FREEZE';
 
 function createMaterial(color: number, roughness = 0.75): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
@@ -110,6 +132,8 @@ function createCharacter(options: {
     rightArm,
     baseY: group.position.y,
     phase: options.phase,
+    action: 'IDLE',
+    actionUntil: 0,
   };
 }
 
@@ -151,6 +175,129 @@ function createDreamModel(): THREE.Group {
   return model;
 }
 
+function createNewsModel(): THREE.Group {
+  const model = new THREE.Group();
+  const board = new THREE.Mesh(new THREE.BoxGeometry(3.9, 2.25, 0.16), createMaterial(0x13263d));
+  board.position.set(0, 3.55, -2.95);
+  model.add(board);
+
+  const roundabout = new THREE.Mesh(
+    new THREE.TorusGeometry(0.72, 0.12, 8, 24),
+    createMaterial(0xf3bf63, 0.45),
+  );
+  roundabout.position.set(0, 3.55, -2.82);
+  model.add(roundabout);
+
+  for (let index = 0; index < 4; index += 1) {
+    const road = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.18, 0.05), createMaterial(0x8ca4b8));
+    road.position.set(0, 3.55, -2.79);
+    road.rotation.z = (index * Math.PI) / 2;
+    model.add(road);
+  }
+  return model;
+}
+
+function createShoppingModel(): THREE.Group {
+  const model = new THREE.Group();
+  const pedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.15, 1.35, 1.25, 8),
+    createMaterial(0x6e315e),
+  );
+  pedestal.position.set(0, 0.62, 0.2);
+  model.add(pedestal);
+
+  const product = new THREE.Mesh(
+    new THREE.BoxGeometry(1.35, 1.55, 0.42),
+    createMaterial(0xf2c875, 0.4),
+  );
+  product.position.set(0, 1.95, 0.2);
+  model.add(product);
+
+  const button = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.24, 0.24, 0.12, 14),
+    createMaterial(0xb52e4d, 0.35),
+  );
+  button.rotation.x = Math.PI / 2;
+  button.position.set(0, 2.02, 0.45);
+  model.add(button);
+  return model;
+}
+
+function createMoonModel(): MoonRig {
+  const model = new THREE.Group();
+  const moon = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(2.05, 2),
+    createMaterial(0xd6d0ad, 0.95),
+  );
+  moon.position.set(0, 3.5, -1.9);
+  model.add(moon);
+
+  const eyeMaterial = createMaterial(0x28323c, 0.6);
+  for (const x of [-0.55, 0.55]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), eyeMaterial);
+    eye.position.set(x, 3.78, -0.02);
+    model.add(eye);
+  }
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.1, 0.08), eyeMaterial);
+  mouth.position.set(0, 2.95, 0.02);
+  model.add(mouth);
+
+  for (const [x, y, scale] of [
+    [-2.8, 4.9, 0.75],
+    [2.6, 2.3, 0.55],
+    [3, 5.3, 0.42],
+  ] as const) {
+    const cloud = new THREE.Mesh(new THREE.SphereGeometry(0.72, 8, 5), createMaterial(0xc3d7d7, 1));
+    cloud.position.set(x, y, -2.6);
+    cloud.scale.set(1.65 * scale, 0.58 * scale, scale);
+    model.add(cloud);
+  }
+  return { group: model, mouth };
+}
+
+function createSitcomModel(): THREE.Group {
+  const model = new THREE.Group();
+  const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(4.7, 1.05, 1.4), createMaterial(0x8a4c38));
+  sofaBase.position.set(0, 0.65, 0.4);
+  model.add(sofaBase);
+
+  const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(4.9, 1.35, 0.45), createMaterial(0x9d5c43));
+  sofaBack.position.set(0, 1.48, -0.13);
+  model.add(sofaBack);
+
+  const lampPost = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.08, 3.1, 7),
+    createMaterial(0x58432d),
+  );
+  lampPost.position.set(3.35, 1.55, -0.4);
+  model.add(lampPost);
+  const shade = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.48, 0.82, 0.9, 8, 1, true),
+    createMaterial(0xe0ba6d),
+  );
+  shade.position.set(3.35, 3.15, -0.4);
+  model.add(shade);
+  return model;
+}
+
+function createLettersModel(): THREE.Group {
+  const model = new THREE.Group();
+  for (let index = 0; index < 9; index += 1) {
+    const letter = new THREE.Mesh(
+      new THREE.BoxGeometry(1.15, 0.04, 0.72),
+      createMaterial(index % 3 === 0 ? 0xd8b78a : 0xebe0c5, 1),
+    );
+    letter.position.set(
+      ((index % 3) - 1) * 0.42,
+      1.58 + Math.floor(index / 3) * 0.08,
+      0.75 + (index % 2) * 0.06,
+    );
+    letter.rotation.y = (index - 4) * 0.045;
+    model.add(letter);
+  }
+  return model;
+}
+
 export class BroadcastScene {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -158,7 +305,24 @@ export class BroadcastScene {
   private readonly clock = new THREE.Clock();
   private readonly characters: CharacterRig[];
   private readonly dreamModel = createDreamModel();
+  private readonly newsModel = createNewsModel();
+  private readonly shoppingModel = createShoppingModel();
+  private readonly moon = createMoonModel();
+  private readonly sitcomModel = createSitcomModel();
+  private readonly lettersModel = createLettersModel();
+  private readonly desk = createDesk();
+  private readonly wallMaterial = createMaterial(0x315b59, 1);
+  private readonly floorMaterial = createMaterial(0x132527, 0.9);
+  private readonly stripeMaterial = new THREE.MeshBasicMaterial({ color: 0x89dfc2 });
   private readonly warningLight: THREE.PointLight;
+  private readonly characterIds = new Map<string, number>();
+  private activeSpeaker = 0;
+  private activeSpeakerUntil = 0;
+  private moonSpeakerUntil = 0;
+  private currentCamera: CameraName = 'CAMERA_WIDE';
+  private cameraPosition = new THREE.Vector3(0, 4.2, 12.8);
+  private cameraTarget = new THREE.Vector3(0, 2.15, 0);
+  private profile = 'public_access';
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -179,26 +343,32 @@ export class BroadcastScene {
     this.camera.position.set(0, 4.2, 12.8);
     this.camera.lookAt(0, 2.15, 0);
 
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(24, 13), createMaterial(0x315b59, 1));
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(24, 13), this.wallMaterial);
     wall.position.set(0, 5.4, -4.1);
     this.scene.add(wall);
 
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 18), createMaterial(0x132527, 0.9));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 18), this.floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.05;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    const stripeMaterial = new THREE.MeshBasicMaterial({ color: 0x89dfc2 });
     for (let index = -2; index <= 2; index += 1) {
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 10, 0.06), stripeMaterial);
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 10, 0.06), this.stripeMaterial);
       stripe.position.set(index * 3.5, 5, -4);
       stripe.rotation.z = index % 2 === 0 ? 0.08 : -0.08;
       this.scene.add(stripe);
     }
 
-    this.scene.add(createDesk());
-    this.scene.add(this.dreamModel);
+    this.scene.add(
+      this.desk,
+      this.dreamModel,
+      this.newsModel,
+      this.shoppingModel,
+      this.moon.group,
+      this.sitcomModel,
+      this.lettersModel,
+    );
 
     const presenter = createCharacter({
       bodyColor: 0xa5374d,
@@ -232,6 +402,149 @@ export class BroadcastScene {
 
     window.addEventListener('resize', this.resize);
     this.resize();
+  }
+
+  loadSegment(segment: SegmentPackage): void {
+    this.profile = segment.programme.format;
+    this.characterIds.clear();
+    const speakingCharacters = segment.events
+      .filter((event) => event.type === 'speech.play')
+      .map((event) => event.characterId);
+    for (const characterId of speakingCharacters) {
+      if (!this.characterIds.has(characterId)) {
+        this.characterIds.set(characterId, this.characterIds.size % this.characters.length);
+      }
+    }
+
+    this.desk.visible = false;
+    this.dreamModel.visible = false;
+    this.newsModel.visible = false;
+    this.shoppingModel.visible = false;
+    this.moon.group.visible = false;
+    this.sitcomModel.visible = false;
+    this.lettersModel.visible = false;
+    this.characters.forEach((character, index) => {
+      character.group.visible = true;
+      character.group.position.x = index === 0 ? -2.35 : 2.4;
+      character.group.position.y = index === 0 ? 0 : -0.08;
+      character.group.position.z = -0.4;
+      character.baseY = character.group.position.y;
+      character.group.rotation.set(0, 0, 0);
+      character.group.scale.setScalar(index === 0 ? 0.92 : 0.86);
+      character.action = 'IDLE';
+      character.actionUntil = 0;
+    });
+
+    const premise = segment.programme.premise.toLowerCase();
+    switch (segment.programme.format) {
+      case 'news':
+        this.applyPalette(0x132a43, 0x08121e, 0xdb3d4b);
+        this.desk.visible = true;
+        this.newsModel.visible = true;
+        break;
+      case 'shopping':
+      case 'advert':
+        this.applyPalette(0x54204e, 0x1b0b22, 0xf3c858);
+        this.shoppingModel.visible = true;
+        this.characters[0]!.group.position.x = -3.05;
+        this.characters[1]!.group.position.x = 3.05;
+        break;
+      case 'sitcom':
+        this.applyPalette(0x74513f, 0x2b1a1d, 0xf3b56b);
+        this.sitcomModel.visible = true;
+        this.characters[0]!.group.position.x = -1.55;
+        this.characters[1]!.group.position.x = 1.6;
+        this.characters.forEach((character) => {
+          character.group.position.z = 0.25;
+        });
+        break;
+      case 'ident':
+        this.applyPalette(0x172743, 0x07101f, 0x9bcde2);
+        this.moon.group.visible = true;
+        this.characters[0]!.group.visible = false;
+        this.characters[1]!.group.position.x = 3.15;
+        this.characters[1]!.group.scale.setScalar(0.6);
+        break;
+      case 'emergency':
+        this.applyPalette(0x42131a, 0x150407, 0xff3a42);
+        this.desk.visible = true;
+        break;
+      case 'public_access':
+      default:
+        this.applyPalette(0x315b59, 0x132527, 0x89dfc2);
+        this.desk.visible = true;
+        if (premise.includes('dream')) {
+          this.dreamModel.visible = true;
+        } else {
+          this.lettersModel.visible = true;
+        }
+        break;
+    }
+    this.cutCamera('CAMERA_WIDE');
+  }
+
+  cutCamera(camera: CameraName): void {
+    this.currentCamera = camera;
+    if (this.profile === 'ident') {
+      if (camera === 'CAMERA_GUEST') {
+        this.cameraPosition.set(2.35, 3.25, 8.5);
+        this.cameraTarget.set(2.85, 2.7, 0);
+      } else if (camera === 'CAMERA_HOST') {
+        this.cameraPosition.set(0, 3.8, 7.25);
+        this.cameraTarget.set(0, 3.45, -1.9);
+      } else {
+        this.cameraPosition.set(0, 4.2, 12.8);
+        this.cameraTarget.set(0, 2.9, -0.8);
+      }
+    } else if (camera === 'CAMERA_HOST') {
+      this.cameraPosition.set(-2.4, 3.7, 8);
+      this.cameraTarget.set(-2.15, 2.5, 0);
+    } else if (camera === 'CAMERA_GUEST') {
+      this.cameraPosition.set(2.4, 3.7, 8);
+      this.cameraTarget.set(2.15, 2.5, 0);
+    } else {
+      this.cameraPosition.set(0, 4.2, 12.8);
+      this.cameraTarget.set(0, 2.15, 0);
+    }
+    this.camera.position.copy(this.cameraPosition);
+    this.camera.lookAt(this.cameraTarget);
+  }
+
+  speak(characterId: string, durationMs: number): void {
+    const elapsed = this.clock.getElapsedTime();
+    if (characterId.toLowerCase().includes('moon')) {
+      this.moonSpeakerUntil = elapsed + durationMs / 1_000;
+      return;
+    }
+    this.activeSpeaker = this.characterIds.get(characterId) ?? 0;
+    this.activeSpeakerUntil = elapsed + durationMs / 1_000;
+  }
+
+  performAction(characterId: string, action: CharacterAction): void {
+    const index = this.characterIds.get(characterId) ?? 0;
+    const character = this.characters[index];
+    if (character === undefined) {
+      return;
+    }
+    const elapsed = this.clock.getElapsedTime();
+    character.action = action;
+    character.actionUntil = elapsed + (action === 'FREEZE' ? 2.4 : 1.4);
+    if (action === 'ENTER') {
+      character.group.visible = true;
+    }
+    if (action === 'EXIT') {
+      character.group.visible = false;
+    }
+  }
+
+  private applyPalette(background: number, floor: number, accent: number): void {
+    this.scene.background = new THREE.Color(background);
+    if (this.scene.fog instanceof THREE.Fog) {
+      this.scene.fog.color.setHex(background);
+    }
+    this.wallMaterial.color.setHex(background);
+    this.floorMaterial.color.setHex(floor);
+    this.stripeMaterial.color.setHex(accent);
   }
 
   private readonly resize = (): void => {
@@ -269,26 +582,52 @@ export class BroadcastScene {
 
   render(): void {
     const elapsed = this.clock.getElapsedTime();
-    const activeSpeaker = Math.floor(elapsed / 4.8) % this.characters.length;
 
     this.characters.forEach((character, index) => {
       const speech =
-        index === activeSpeaker ? Math.abs(Math.sin(elapsed * 11 + character.phase)) : 0;
+        index === this.activeSpeaker && elapsed < this.activeSpeakerUntil
+          ? Math.abs(Math.sin(elapsed * 13 + character.phase))
+          : 0;
       character.mouth.scale.y = 0.45 + speech * 4;
+      if (character.action === 'FREEZE' && elapsed < character.actionUntil) {
+        return;
+      }
       character.group.position.y =
         character.baseY + Math.sin(elapsed * 1.2 + character.phase) * 0.028;
       character.group.rotation.y = Math.sin(elapsed * 0.45 + character.phase) * 0.035;
-      character.leftArm.rotation.z = 0.18 + Math.sin(elapsed * 0.8 + character.phase) * 0.08;
+      character.group.rotation.z =
+        character.action === 'REACTION_CONFUSED' && elapsed < character.actionUntil
+          ? Math.sin(elapsed * 3) * 0.12
+          : character.action === 'REACTION_SHOCKED' && elapsed < character.actionUntil
+            ? Math.sin(elapsed * 18) * 0.025
+            : 0;
+      character.leftArm.rotation.z =
+        character.action === 'REACTION_ANGRY' && elapsed < character.actionUntil
+          ? -0.8
+          : 0.18 + Math.sin(elapsed * 0.8 + character.phase) * 0.08;
       character.rightArm.rotation.z =
-        -0.18 - (index === activeSpeaker ? Math.sin(elapsed * 1.9) * 0.3 : 0);
+        character.action === 'POINT_AT' && elapsed < character.actionUntil
+          ? -1.05
+          : -0.18 -
+            (index === this.activeSpeaker && elapsed < this.activeSpeakerUntil
+              ? Math.sin(elapsed * 1.9) * 0.3
+              : 0);
     });
 
     this.dreamModel.rotation.y = -0.35 + Math.sin(elapsed * 0.45) * 0.12;
     this.dreamModel.position.y = 1.72 + Math.sin(elapsed * 0.8) * 0.025;
+    this.newsModel.rotation.z = Math.sin(elapsed * 0.35) * 0.025;
+    this.shoppingModel.rotation.y = Math.sin(elapsed * 0.85) * 0.18;
+    this.lettersModel.position.y = Math.sin(elapsed * 0.7) * 0.025;
+    this.moon.group.rotation.z = Math.sin(elapsed * 0.22) * 0.035;
+    this.moon.mouth.scale.y =
+      elapsed < this.moonSpeakerUntil ? 0.5 + Math.abs(Math.sin(elapsed * 10)) * 5 : 1;
     this.warningLight.intensity =
       Math.floor(elapsed) % 17 === 14 ? Math.max(0, Math.sin(elapsed * 18)) * 2.5 : 0;
-    this.camera.position.x = Math.sin(elapsed * 0.13) * 0.08;
-    this.camera.lookAt(0, 2.15, 0);
+    this.camera.position.copy(this.cameraPosition);
+    this.camera.position.x +=
+      Math.sin(elapsed * 0.13) * (this.currentCamera === 'CAMERA_WIDE' ? 0.08 : 0.025);
+    this.camera.lookAt(this.cameraTarget);
 
     this.renderer.setScissorTest(false);
     this.renderer.setClearColor(0x030708, 1);

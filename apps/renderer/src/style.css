@@ -63,6 +63,174 @@ body {
   z-index: 3;
 }
 
+.format-bug {
+  position: absolute;
+  top: 14.5%;
+  left: 5.2%;
+  z-index: 7;
+  padding: 0.35% 0.7%;
+  color: #071010;
+  background: #9bebd0;
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: clamp(0.32rem, 0.62vw, 0.58rem);
+  letter-spacing: 0.1em;
+}
+
+.programme-graphic {
+  position: absolute;
+  top: 28%;
+  left: 8%;
+  z-index: 8;
+  display: grid;
+  width: 56%;
+  min-height: 28%;
+  align-content: center;
+  padding: 3.5%;
+  border: 0.42rem solid #9bebd0;
+  color: #eafff8;
+  background: rgba(8, 23, 23, 0.94);
+  box-shadow:
+    1.2rem 1.2rem 0 rgba(4, 10, 11, 0.5),
+    inset 0 0 4rem rgba(140, 238, 205, 0.09);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8%) skewX(-3deg);
+  transition:
+    opacity 90ms linear,
+    transform 160ms cubic-bezier(0.12, 0.8, 0.28, 1);
+}
+
+.programme-graphic.is-visible {
+  opacity: 1;
+  transform: translateX(0) skewX(-3deg);
+}
+
+.programme-graphic.is-warning {
+  border-color: #ff5362;
+  color: #fff7e8;
+  background: rgba(63, 8, 18, 0.95);
+  box-shadow:
+    1.2rem 1.2rem 0 rgba(20, 0, 5, 0.58),
+    inset 0 0 4rem rgba(255, 40, 70, 0.18);
+}
+
+.programme-graphic span {
+  margin-bottom: 2%;
+  color: #98d8c5;
+  font-size: clamp(0.34rem, 0.64vw, 0.6rem);
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.programme-graphic strong {
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: clamp(1rem, 2.55vw, 2.3rem);
+  font-weight: 400;
+  line-height: 0.94;
+  text-transform: uppercase;
+}
+
+.news-ticker {
+  position: absolute;
+  right: 31.2%;
+  bottom: 17.4%;
+  left: 3.8%;
+  z-index: 7;
+  display: none;
+  min-height: 5.4%;
+  align-items: center;
+  overflow: hidden;
+  color: #f7fbff;
+  background: #172a47;
+  font-size: clamp(0.3rem, 0.58vw, 0.54rem);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.news-ticker strong {
+  align-self: stretch;
+  display: grid;
+  min-width: 19%;
+  place-items: center;
+  padding: 0 1%;
+  background: #d63749;
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-weight: 400;
+}
+
+.news-ticker span {
+  padding-left: 2%;
+  animation: ticker-drift 9s linear infinite;
+}
+
+.broadcast[data-format='news'] .news-ticker {
+  display: flex;
+}
+
+.broadcast[data-format='news'] .format-bug,
+.broadcast[data-format='news'] .lower-third {
+  color: #fff;
+  background: #d63749;
+}
+
+.broadcast[data-format='news'] .lower-third-channel {
+  color: #fff;
+  background: #172a47;
+}
+
+.broadcast[data-format='shopping'] .channel-panel,
+.broadcast[data-format='advert'] .channel-panel {
+  border-color: rgba(255, 220, 102, 0.55);
+  background: linear-gradient(145deg, rgba(88, 23, 79, 0.98), rgba(25, 7, 34, 0.98));
+}
+
+.broadcast[data-format='shopping'] .format-bug,
+.broadcast[data-format='shopping'] .lower-third,
+.broadcast[data-format='advert'] .format-bug,
+.broadcast[data-format='advert'] .lower-third {
+  color: #34102e;
+  background: #ffd466;
+}
+
+.broadcast[data-format='shopping'] .lower-third-channel,
+.broadcast[data-format='advert'] .lower-third-channel {
+  color: #ffd466;
+  background: #5d2058;
+}
+
+.broadcast[data-format='sitcom'] .channel-panel {
+  border-color: rgba(255, 194, 118, 0.44);
+  background: linear-gradient(150deg, rgba(77, 49, 39, 0.98), rgba(28, 16, 19, 0.98));
+}
+
+.broadcast[data-format='sitcom'] .format-bug,
+.broadcast[data-format='sitcom'] .lower-third {
+  color: #341c17;
+  background: #f2b36d;
+}
+
+.broadcast[data-format='ident'] .channel-panel {
+  border-color: rgba(150, 203, 228, 0.35);
+  background: linear-gradient(160deg, rgba(20, 42, 72, 0.98), rgba(5, 13, 28, 0.98));
+}
+
+.broadcast[data-format='ident'] .format-bug,
+.broadcast[data-format='ident'] .lower-third {
+  color: #102136;
+  background: #a4d6e9;
+}
+
+.broadcast[data-format='emergency'] .channel-panel {
+  border-color: rgba(255, 75, 83, 0.55);
+  background: linear-gradient(155deg, rgba(70, 13, 23, 0.98), rgba(15, 2, 5, 0.98));
+}
+
+.broadcast[data-format='emergency'] .format-bug,
+.broadcast[data-format='emergency'] .lower-third {
+  color: #fff;
+  background: #ef3349;
+}
+
 .network-header {
   position: absolute;
   top: 7%;
@@ -439,6 +607,15 @@ h1 {
   }
   66% {
     transform: translate(1px, -1px);
+  }
+}
+
+@keyframes ticker-drift {
+  0% {
+    transform: translateX(8%);
+  }
+  100% {
+    transform: translateX(-18%);
   }
 }
 

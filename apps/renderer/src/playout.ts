@@ -10,15 +10,59 @@ interface PlayoutElements {
   broadcast: HTMLElement;
   channelNumber: HTMLElement;
   channelName: HTMLElement;
+  formatBug: HTMLElement;
+  graphic: HTMLElement;
+  graphicKicker: HTMLElement;
+  graphicText: HTMLElement;
   programmeTitle: HTMLElement;
   realityId: HTMLElement;
   nextTitle: HTMLElement;
+  tickerText: HTMLElement;
   lowerChannelNumber: HTMLElement;
   lowerProgrammeTitle: HTMLElement;
   lowerStatus: HTMLElement;
   subtitle: HTMLElement;
   status: HTMLElement;
   mode: HTMLElement;
+}
+
+export interface PlayoutVisuals {
+  loadSegment(segment: SegmentPackage): void;
+  cutCamera(camera: 'CAMERA_WIDE' | 'CAMERA_HOST' | 'CAMERA_GUEST'): void;
+  speak(characterId: string, durationMs: number): void;
+  performAction(
+    characterId: string,
+    action:
+      | 'IDLE'
+      | 'ENTER'
+      | 'EXIT'
+      | 'LOOK_AT'
+      | 'POINT_AT'
+      | 'REACTION_NEUTRAL'
+      | 'REACTION_CONFUSED'
+      | 'REACTION_SHOCKED'
+      | 'REACTION_ANGRY'
+      | 'PAUSE'
+      | 'FREEZE',
+  ): void;
+}
+
+export function applyVisualEvent(event: SegmentEvent, visuals: PlayoutVisuals): void {
+  switch (event.type) {
+    case 'speech.play':
+      visuals.speak(event.characterId, event.durationMs);
+      break;
+    case 'camera.cut':
+      visuals.cutCamera(event.camera);
+      break;
+    case 'character.action':
+      visuals.performAction(event.characterId, event.action);
+      break;
+    case 'graphic.show':
+    case 'audio.static':
+    case 'transition.play':
+      break;
+  }
 }
 
 function requiredElement(selector: string): HTMLElement {
@@ -34,9 +78,14 @@ function elements(): PlayoutElements {
     broadcast: requiredElement('#broadcast'),
     channelNumber: requiredElement('#channel-number-value'),
     channelName: requiredElement('#channel-name'),
+    formatBug: requiredElement('#format-bug'),
+    graphic: requiredElement('#programme-graphic'),
+    graphicKicker: requiredElement('#programme-graphic-kicker'),
+    graphicText: requiredElement('#programme-graphic-text'),
     programmeTitle: requiredElement('#programme-title'),
     realityId: requiredElement('#reality-id'),
     nextTitle: requiredElement('#next-title'),
+    tickerText: requiredElement('#ticker-text'),
     lowerChannelNumber: requiredElement('#lower-channel-number'),
     lowerProgrammeTitle: requiredElement('#lower-programme-title'),
     lowerStatus: requiredElement('#lower-status'),
@@ -59,7 +108,7 @@ export class PlayoutEngine {
   private activeAudio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
 
-  constructor() {
+  constructor(private readonly visuals: PlayoutVisuals) {
     const unlock = (): void => {
       this.audioUnlocked = true;
       this.ui.status.textContent = 'Signal locked';
@@ -159,6 +208,12 @@ export class PlayoutEngine {
     this.ui.lowerStatus.textContent = segment.programme.premise.toUpperCase().slice(0, 86);
     this.ui.subtitle.textContent = 'Programme already in progress.';
     this.ui.status.textContent = 'Signal locked';
+    this.ui.broadcast.dataset.format = segment.programme.format;
+    this.ui.formatBug.textContent = segment.programme.format.replaceAll('_', ' ').toUpperCase();
+    this.ui.tickerText.textContent = segment.programme.premise;
+    this.ui.graphic.classList.remove('is-visible', 'is-warning');
+    this.visuals.loadSegment(segment);
+    this.staticBurst(620);
 
     const baseDirectory = segmentDirectory(packagePath);
     for (const event of segment.events) {
@@ -167,15 +222,15 @@ export class PlayoutEngine {
   }
 
   private runEvent(event: SegmentEvent, baseDirectory: string): void {
+    applyVisualEvent(event, this.visuals);
     switch (event.type) {
       case 'speech.play':
         this.ui.subtitle.textContent = event.subtitle;
+        this.ui.lowerStatus.textContent = `${event.characterName.toUpperCase()} · LIVE FROM ${this.ui.realityId.textContent ?? 'ELSEWHERE'}`;
         this.playSpeech(`/segments/${baseDirectory}/${event.audioFile}`);
         break;
       case 'graphic.show':
-        if (event.graphic === 'WARNING') {
-          this.ui.lowerStatus.textContent = event.text.toUpperCase();
-        }
+        this.showGraphic(event.graphic, event.text);
         break;
       case 'audio.static':
         this.staticBurst(event.durationMs);
@@ -187,9 +242,25 @@ export class PlayoutEngine {
         break;
       case 'camera.cut':
       case 'character.action':
-        // The Milestone 0 set is deliberately limited; unsupported scene detail is ignored safely.
         break;
     }
+  }
+
+  private showGraphic(graphic: 'LOWER_THIRD' | 'WARNING' | 'TITLE_CARD', text: string): void {
+    const isWarning = graphic === 'WARNING';
+    this.ui.graphicKicker.textContent = isWarning
+      ? 'Signal event detected'
+      : graphic === 'TITLE_CARD'
+        ? 'The following programme has not yet happened'
+        : 'Programme already in progress';
+    this.ui.graphicText.textContent = text;
+    this.ui.graphic.classList.toggle('is-warning', isWarning);
+    this.ui.graphic.classList.add('is-visible');
+    this.ui.lowerStatus.textContent = text.toUpperCase().slice(0, 100);
+    if (isWarning) {
+      this.staticBurst(280);
+    }
+    this.timer(() => this.ui.graphic.classList.remove('is-visible'), isWarning ? 3_200 : 1_850);
   }
 
   private playSpeech(url: string): void {

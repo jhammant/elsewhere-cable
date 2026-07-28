@@ -100,7 +100,7 @@ requestAnimationFrame((now) => {
 });
 
 if (!benchmarkMode) {
-  const playout = new PlayoutEngine();
+  const playout = new PlayoutEngine(scene);
   void playout.start();
 }
 
