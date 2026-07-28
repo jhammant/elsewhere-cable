@@ -30,6 +30,8 @@
     "tts:qwen:start": ".venv-tts/bin/python services/tts/qwen_mlx_server.py",
     "tts:qwen:bulk:a": ".venv-tts/bin/python services/tts/qwen_mlx_server.py --port 8880 --model mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit",
     "tts:qwen:bulk:b": ".venv-tts/bin/python services/tts/qwen_mlx_server.py --port 8881 --model mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit",
+    "tts:qwen:bulk:c": ".venv-tts/bin/python services/tts/qwen_mlx_server.py --port 8882 --model mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit",
+    "tts:qwen:bulk:d": ".venv-tts/bin/python services/tts/qwen_mlx_server.py --port 8883 --model mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit",
     "seed:ghost-quality": "pnpm --filter @elsewhere-cable/generation-worker generate -- --demo --fresh --count 32 --concurrency 1 --tts-base-url http://127.0.0.1:8878/v1 --tts-model mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
     "benchmark:renderer": "tsx infra/scripts/benchmark-renderer.ts",
     "benchmark:encoder": "tsx infra/scripts/benchmark-encoder.ts",

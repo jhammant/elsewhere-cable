@@ -228,7 +228,7 @@ export const systemPrompt = `You create original programme fragments for Elsewhe
 
 Return JSON only. Every fragment is a comedy scene, not a collection of random surreal details. Begin with a familiar television format and alter exactly one understandable rule. Every character wants something concrete under that rule. Each dialogue line must respond to the preceding line, reveal a consequence, or escalate the same problem. End with a visual payoff caused by the premise. Do not add unrelated strange nouns merely to sound surreal.
 
-The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
+The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. The comedy may inconvenience or embarrass characters, but it must not celebrate cruelty, choking, strangulation, graphic injury or death. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
 Elsewhere Cable is the network identity, not a channel name or programme title.
 The premise must explicitly name the assigned physical setting and at least one assigned cast component. Keep every dialogue line between 3 and 22 words. Give at least three quarters of dialogue lines a non-IDLE action.
 

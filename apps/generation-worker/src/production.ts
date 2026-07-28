@@ -33,6 +33,7 @@ const forbiddenPatterns = [
   /\b(?:disney|netflix|marvel|star wars|rick and morty)\b/iu,
   /\b(?:donald trump|elon musk|taylor swift)\b/iu,
   /\bignore (?:all|previous) instructions\b/iu,
+  /\b(?:chok(?:e|es|ed|ing)|strangl(?:e|es|ed|ing)|suffocat(?:e|es|ed|ing)|windpipe|decapitat(?:e|es|ed|ing)|dismember(?:s|ed|ing)?|drops?\s+dead|dropped\s+dead)\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
@@ -87,7 +88,7 @@ function speakingRateFor(
   return Number((base + (variation - 3) * 0.018).toFixed(3));
 }
 
-function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
+export function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
   const content = JSON.stringify(draft);
   const violation = forbiddenPatterns.find((pattern) => pattern.test(content));
   if (violation !== undefined) {
@@ -234,6 +235,7 @@ export interface BatchResult {
   addedDurationMs: number;
   wallTimeMs: number;
   realtimeFactor: number;
+  rejectionReasons: string[];
   outputRoot: string;
   ttsProvider: string;
 }
@@ -644,6 +646,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     addedDurationMs,
     wallTimeMs: Math.round(wallTimeMs),
     realtimeFactor: Number((addedDurationMs / wallTimeMs).toFixed(2)),
+    rejectionReasons: failures.filter((failure): failure is string => failure !== undefined),
     outputRoot: options.outputRoot,
     ttsProvider: options.tts.id,
   };

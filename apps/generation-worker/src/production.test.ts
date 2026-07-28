@@ -9,6 +9,7 @@ import {
 } from '@elsewhere-cable/schemas';
 import { demoDraft } from './creative.js';
 import {
+  assertPreviewSafe,
   produceBatch,
   repairNetworkIdentityCollision,
   semanticNoveltyIssue,
@@ -26,6 +27,13 @@ afterEach(async () => {
 });
 
 describe('produceBatch', () => {
+  it('rejects cruel or graphic harm before preparing speech', () => {
+    const draft = demoDraft(0);
+    draft.dialogue[0]!.text = 'The harness is choking the contestant until they drop dead.';
+
+    expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
   it('derives a channel name when a provider confuses the network identity for a channel', () => {
     const draft = demoDraft(0);
     draft.channelName = 'Elsewhere Cable';
