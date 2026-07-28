@@ -89,6 +89,22 @@ segments into the new playout queue.
 Do not run separate batch processes against the same segment directory. Use the built-in
 `--concurrency` option so manifest writes remain serialized.
 
+Once the initial `data/segments-live` queue exists, generate another 24 quality segments and
+atomically publish the enlarged queue to Endor with:
+
+```bash
+pnpm generate:live
+```
+
+To keep Ghost producing and publishing batches until stopped with `Ctrl-C`:
+
+```bash
+pnpm generate:live:loop
+```
+
+The sync uses hard links to the previous Endor release for unchanged packages, so publishing a
+larger manifest does not duplicate every existing audio file.
+
 ## Verification
 
 ```bash

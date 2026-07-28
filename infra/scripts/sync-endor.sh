@@ -25,7 +25,9 @@ ssh "$remote_host" "
   mkdir -p '$remote_incoming'
 "
 
-rsync -a --checksum "$source_directory/" "$remote_host:$remote_incoming/"
+rsync -a --checksum \
+  --link-dest="$remote_root/content/current" \
+  "$source_directory/" "$remote_host:$remote_incoming/"
 
 ssh "$remote_host" "python3 - '$remote_incoming/manifest.json' '$remote_incoming' '$remote_release' '$remote_root/content'" <<'PY'
 import json

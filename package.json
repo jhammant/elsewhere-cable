@@ -21,6 +21,8 @@
     "diagnose": "tsx infra/scripts/diagnose.ts --output data/system-profile.json",
     "seed": "pnpm --filter @elsewhere-cable/generation-worker generate -- --demo --if-empty --count 4",
     "generate:batch": "pnpm --filter @elsewhere-cable/generation-worker generate",
+    "generate:live": "sh infra/scripts/generate-ghost-live.sh once",
+    "generate:live:loop": "sh infra/scripts/generate-ghost-live.sh loop",
     "tts:qwen:setup": "sh infra/scripts/setup-ghost-tts.sh",
     "tts:qwen:start": ".venv-tts/bin/python services/tts/qwen_mlx_server.py",
     "seed:ghost-quality": "pnpm --filter @elsewhere-cable/generation-worker generate -- --demo --fresh --count 32 --concurrency 1 --tts-base-url http://127.0.0.1:8878/v1 --tts-model mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
