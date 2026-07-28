@@ -395,7 +395,8 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       nextIndex += 1;
       let draft: GeneratedSegmentDraft | undefined;
       let rejectionReasons: string[] = [];
-      for (let attempt = 0; attempt < 6; attempt += 1) {
+      const maximumProposalAttempts = 14;
+      for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
         const recent = creativeHistory.slice(-24);
         const candidate = repairNetworkIdentityCollision(
           options.demo
@@ -403,7 +404,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             : await options.llm!.generateStructured({
                 systemPrompt,
                 userPrompt: userPrompt(
-                  index,
+                  index + attempt * options.count,
                   recent.map((record) => record.title),
                   recent.map((record) => record.premise),
                   rejectionReasons,
@@ -440,7 +441,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       }
       if (draft === undefined) {
         throw new Error(
-          `Could not produce a novel segment after six attempts: ${rejectionReasons.join('; ')}`,
+          `Could not produce a novel segment after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
         );
       }
       const segment = await buildSegment(
