@@ -11,7 +11,11 @@ if [ -n "$(git status --short)" ]; then
 fi
 
 ssh "$remote_host" "
-  mkdir -p '$remote_root/source' '$remote_root/secrets' '$remote_root/recordings'
+  sudo -n install -d -o truenas_admin -g truenas_admin -m 750 \
+    '$remote_root' \
+    '$remote_root/source' \
+    '$remote_root/secrets' \
+    '$remote_root/recordings'
   if [ ! -e '$remote_root/secrets/youtube-stream-key' ]; then
     install -m 600 /dev/null '$remote_root/secrets/youtube-stream-key'
   fi

@@ -14,8 +14,16 @@ release_id="$(date -u +%Y%m%dT%H%M%SZ)-$(git rev-parse --short HEAD)"
 remote_incoming="$remote_root/content/incoming/$release_id"
 remote_release="$remote_root/content/releases/$release_id"
 
-ssh "$remote_host" \
-  "mkdir -p '$remote_incoming' '$remote_root/content/releases' '$remote_root/recordings' '$remote_root/secrets'"
+ssh "$remote_host" "
+  sudo -n install -d -o truenas_admin -g truenas_admin -m 750 \
+    '$remote_root' \
+    '$remote_root/content' \
+    '$remote_root/content/incoming' \
+    '$remote_root/content/releases' \
+    '$remote_root/recordings' \
+    '$remote_root/secrets'
+  mkdir -p '$remote_incoming'
+"
 
 rsync -a --checksum "$source_directory/" "$remote_host:$remote_incoming/"
 
