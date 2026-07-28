@@ -46,7 +46,7 @@ ssh endor
 read -rs STREAM_KEY
 printf '%s' "$STREAM_KEY" > /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key
 unset STREAM_KEY
-chmod 600 /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key
+chmod 640 /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key
 ```
 
 ## Start the unlisted broadcast

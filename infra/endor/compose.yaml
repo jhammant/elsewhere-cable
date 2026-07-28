@@ -21,6 +21,7 @@ services:
     group_add:
       - '44'
       - '107'
+      - '950'
     ports:
       - 127.0.0.1:4174:4174
     volumes:
@@ -28,7 +29,7 @@ services:
       - /mnt/tank/apps/elsewhere-cable/recordings:/recordings
       - /mnt/tank/apps/elsewhere-cable/secrets/youtube-stream-key:/run/secrets/youtube_stream_key:ro
     tmpfs:
-      - /tmp:size=1g,mode=1777
+      - /dev/shm:size=1g,mode=1777
     mem_limit: 3g
     cpus: 8
     security_opt:

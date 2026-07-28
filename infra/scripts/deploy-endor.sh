@@ -17,8 +17,9 @@ ssh "$remote_host" "
     '$remote_root/secrets' \
     '$remote_root/recordings'
   if [ ! -e '$remote_root/secrets/youtube-stream-key' ]; then
-    install -m 600 /dev/null '$remote_root/secrets/youtube-stream-key'
+    install -m 640 /dev/null '$remote_root/secrets/youtube-stream-key'
   fi
+  chmod 640 '$remote_root/secrets/youtube-stream-key'
 "
 
 if ! ssh "$remote_host" "test -d '$remote_root/source/repository/.git'"; then

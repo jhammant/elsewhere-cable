@@ -39,6 +39,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* \
   && useradd --create-home --uid 10001 --gid users \
     --groups audio,video broadcast \
+  && mkdir -p /tmp/.X11-unix \
+  && chmod 1777 /tmp/.X11-unix \
   && corepack enable
 
 WORKDIR /app
