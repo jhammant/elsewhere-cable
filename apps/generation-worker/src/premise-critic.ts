@@ -24,7 +24,7 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   const disconnectedLanguage = /\b(?:random|wacky|nonsense|for no reason|anything can happen)\b/iu;
   const actionLines = draft.dialogue.filter((line) => line.action !== 'IDLE').length;
   const genericPerilLanguage =
-    /\b(?:warn|warning|careful|danger|safe|safety|too late|keep .{0,20} away|forbidden zone|must not|do not touch|it'?s spreading)\b/iu;
+    /\b(?:warn|warning|careful|danger|safe|safety|too late|keep .{0,20} away|forbidden zone|must not|do not touch|it'?s spreading|emergency hatch|only exit|cannot move|breaking)\b/iu;
   const genericPerilLines = draft.dialogue.filter((line) =>
     genericPerilLanguage.test(line.text),
   ).length;

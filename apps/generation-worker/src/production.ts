@@ -34,6 +34,7 @@ const forbiddenPatterns = [
   /\b(?:donald trump|elon musk|taylor swift)\b/iu,
   /\bignore (?:all|previous) instructions\b/iu,
   /\b(?:chok(?:e|es|ed|ing)|strangl(?:e|es|ed|ing)|suffocat(?:e|es|ed|ing)|windpipe|decapitat(?:e|es|ed|ing)|dismember(?:s|ed|ing)?|drops?\s+dead|dropped\s+dead)\b/iu,
+  /\b(?:bleed(?:s|ing)?|blood(?:y)?|chew(?:s|ed|ing)?\s+through|crush(?:es|ed|ing)?\s+(?:a\s+)?(?:throat|vocal cords?|bones?|body))\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
@@ -186,7 +187,7 @@ interface ProduceOptions {
   historyRoots?: readonly string[];
 }
 
-const semanticSimilarityLimit = 0.76;
+const semanticSimilarityLimit = 0.73;
 
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
   if (left.length === 0 || left.length !== right.length) {
@@ -448,6 +449,20 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
   const produced = new Array<SegmentPackage | undefined>(options.count);
   const failures = new Array<string | undefined>(options.count);
   let nextIndex = 0;
+  let noveltyGate = Promise.resolve();
+  const withNoveltyGate = async <T>(operation: () => T): Promise<T> => {
+    const previous = noveltyGate;
+    let release = (): void => undefined;
+    noveltyGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return operation();
+    } finally {
+      release();
+    }
+  };
 
   const worker = async (): Promise<void> => {
     while (nextIndex < options.count) {
@@ -482,29 +497,32 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             options.embeddingProvider === null
               ? null
               : (await options.embeddingProvider.embed([generated.premise]))[0];
-          const semanticIssue =
-            candidateEmbedding === null || candidateEmbedding === undefined
-              ? null
-              : semanticNoveltyIssue(
-                  generated.premise,
-                  candidateEmbedding,
-                  creativeHistory,
-                  semanticHistory,
-                );
-          rejectionReasons = [
-            ...conceptNoveltyIssues(generated, creativeHistory),
-            ...(semanticIssue === null ? [] : [semanticIssue]),
-            ...(useProposalStage
-              ? proposalQualityIssues(generated)
-              : [
-                  ...dialogueNoveltyIssues(
-                    (generated as GeneratedSegmentDraft).dialogue,
+          const accepted = await withNoveltyGate(() => {
+            const semanticIssue =
+              candidateEmbedding === null || candidateEmbedding === undefined
+                ? null
+                : semanticNoveltyIssue(
+                    generated.premise,
+                    candidateEmbedding,
                     creativeHistory,
-                  ),
-                  ...critiquePremise(generated as GeneratedSegmentDraft).reasons,
-                ]),
-          ];
-          if (rejectionReasons.length === 0) {
+                    semanticHistory,
+                  );
+            rejectionReasons = [
+              ...conceptNoveltyIssues(generated, creativeHistory),
+              ...(semanticIssue === null ? [] : [semanticIssue]),
+              ...(useProposalStage
+                ? proposalQualityIssues(generated)
+                : [
+                    ...dialogueNoveltyIssues(
+                      (generated as GeneratedSegmentDraft).dialogue,
+                      creativeHistory,
+                    ),
+                    ...critiquePremise(generated as GeneratedSegmentDraft).reasons,
+                  ]),
+            ];
+            if (rejectionReasons.length !== 0) {
+              return false;
+            }
             const record: CreativeRecord = {
               title: generated.programmeTitle,
               premise: generated.premise,
@@ -522,6 +540,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             } else {
               drafts[index] = generated as GeneratedSegmentDraft;
             }
+            return true;
+          });
+          if (accepted) {
             break;
           }
         }

@@ -228,7 +228,7 @@ export const systemPrompt = `You create original programme fragments for Elsewhe
 
 Return JSON only. Every fragment is a comedy scene, not a collection of random surreal details. Begin with a familiar television format and alter exactly one understandable rule. Every character wants something concrete under that rule. Give at least two characters incompatible goals, and let one character sincerely benefit from or defend the absurd rule. Dialogue must be comic disagreement and status play, not a sequence of warnings or explanations. Each line must respond to the preceding line, reveal a consequence, or escalate the same problem. End with a reversal, humiliation or visual payoff caused by the premise. Do not add unrelated strange nouns merely to sound surreal.
 
-The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. The comedy may inconvenience or embarrass characters, but it must not celebrate cruelty, choking, strangulation, graphic injury or death. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
+The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. The comedy may inconvenience or embarrass characters, but it must not celebrate cruelty, choking, strangulation, bleeding, crushed bodies, graphic injury or death. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
 Elsewhere Cable is the network identity, not a channel name or programme title.
 The premise must explicitly name the assigned physical setting and at least one assigned cast component. Keep every dialogue line between 3 and 22 words. Give at least three quarters of dialogue lines a non-IDLE action.
 
@@ -392,7 +392,7 @@ export function userPrompt(
   const serial = Math.abs(index);
   const format = formats[axisIndex(serial, 0x16b2c79, formats.length)] ?? 'advert';
   const setting = settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
-  const comicEngine = comicEngines[axisIndex(serial, 0x48a91d3, comicEngines.length)]!;
+  const comicEngine = comicEngines[serial % comicEngines.length]!;
   const cast = castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
   const pacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
@@ -417,6 +417,6 @@ export function scriptPrompt(
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
-Preserve every proposal field exactly, including title, channel, premise, medium, cast and pacing. Add 6–12 dialogue entries only. Every line must contain 3–22 words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
+Preserve every proposal field exactly, including title, channel, premise, medium, cast and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. Add 6–12 dialogue entries only. Every line must contain 3–22 words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
 ${rejectionReasons.length === 0 ? '' : 'The previous dialogue collided with existing material or failed a production rule. Write entirely new lines while preserving this approved premise.'}`;
 }
