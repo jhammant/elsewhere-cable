@@ -59,9 +59,9 @@ chromium \
   --disable-dev-shm-usage \
   --disable-features=TranslateUI \
   --autoplay-policy=no-user-gesture-required \
-  --enable-unsafe-swiftshader \
+  --enable-features=Vulkan \
   --ignore-gpu-blocklist \
-  --use-angle=swiftshader \
+  --use-angle=vulkan \
   --use-gl=angle \
   --user-data-dir=/tmp/chromium-profile \
   --window-position=0,0 \
