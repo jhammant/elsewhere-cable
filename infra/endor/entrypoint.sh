@@ -18,6 +18,11 @@ trap cleanup EXIT INT TERM
 mkdir -p "$XDG_RUNTIME_DIR" /tmp/chromium-profile /recordings
 chmod 0700 "$XDG_RUNTIME_DIR"
 
+# A failed encoder start can leave Xvfb's lock files in the container's
+# writable layer. Removing only this private display's files makes restarts
+# deterministic without touching any host display.
+rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
+
 Xvfb "$DISPLAY" -screen 0 1280x720x24 -nolisten tcp -ac &
 display_pid=$!
 
@@ -54,6 +59,10 @@ chromium \
   --disable-dev-shm-usage \
   --disable-features=TranslateUI \
   --autoplay-policy=no-user-gesture-required \
+  --enable-unsafe-swiftshader \
+  --ignore-gpu-blocklist \
+  --use-angle=swiftshader \
+  --use-gl=angle \
   --user-data-dir=/tmp/chromium-profile \
   --window-position=0,0 \
   --window-size=1280,720 \
