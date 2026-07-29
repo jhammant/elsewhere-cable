@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -69,6 +69,8 @@ describe('produceBatch', () => {
     let draftIndex = 0;
     let completedGenerations = 0;
     let ttsOverlappedGeneration = false;
+    let activeTts = 0;
+    let peakActiveTts = 0;
 
     const llm: LlmProvider = {
       id: 'test-llm',
@@ -91,15 +93,19 @@ describe('produceBatch', () => {
     };
     const tts: TtsProvider = {
       id: 'test-tts',
-      synthesize(request: SpeechRequest): Promise<SpeechResult> {
+      async synthesize(request: SpeechRequest): Promise<SpeechResult> {
         if (completedGenerations < 4) {
           ttsOverlappedGeneration = true;
         }
-        return Promise.resolve({
+        activeTts += 1;
+        peakActiveTts = Math.max(peakActiveTts, activeTts);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        activeTts -= 1;
+        return {
           audioFile: `audio/${request.speechId}.m4a`,
           durationMs: 1_000,
           provider: 'test-tts',
-        });
+        };
       },
     };
 
@@ -117,6 +123,7 @@ describe('produceBatch', () => {
     );
 
     expect(peakActive).toBe(2);
+    expect(peakActiveTts).toBe(2);
     expect(ttsOverlappedGeneration).toBe(false);
     expect(result.segmentCount).toBe(4);
     expect(result.concurrency).toBe(2);
@@ -139,6 +146,72 @@ describe('produceBatch', () => {
     expect(endingGraphic?.type === 'graphic.show' ? endingGraphic.text.endsWith('…') : false).toBe(
       true,
     );
+  });
+
+  it('preserves manifest entries published while a batch is being produced', async () => {
+    const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-concurrent-manifest-'));
+    temporaryDirectories.push(outputRoot);
+    let releaseSpeech = (): void => undefined;
+    const speechReleased = new Promise<void>((resolve) => {
+      releaseSpeech = resolve;
+    });
+    let signalSpeechStarted = (): void => undefined;
+    const speechStarted = new Promise<void>((resolve) => {
+      signalSpeechStarted = resolve;
+    });
+    let firstSpeech = true;
+    const tts: TtsProvider = {
+      id: 'controlled-test-tts',
+      async synthesize(request: SpeechRequest): Promise<SpeechResult> {
+        if (firstSpeech) {
+          firstSpeech = false;
+          signalSpeechStarted();
+          await speechReleased;
+        }
+        return {
+          audioFile: `audio/${request.speechId}.m4a`,
+          durationMs: 1_000,
+          provider: 'controlled-test-tts',
+        };
+      },
+    };
+    const production = produceBatch({
+      count: 1,
+      concurrency: 1,
+      outputRoot,
+      demo: true,
+      llm: null,
+      tts,
+      embeddingProvider: null,
+    });
+    await speechStarted;
+    await writeFile(
+      path.join(outputRoot, 'manifest.json'),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        totalDurationMs: 1_234,
+        segments: [
+          {
+            segmentId: 'seg_external_recovery',
+            packagePath: 'seg_external_recovery/segment.json',
+            durationMs: 1_234,
+            channelNumber: 999_999_999,
+            channelName: 'External Recovery',
+            programmeTitle: 'External Recovery Programme',
+          },
+        ],
+      })}\n`,
+      'utf8',
+    );
+    releaseSpeech();
+    await production;
+
+    const manifest = playoutManifestSchema.parse(
+      JSON.parse(await readFile(path.join(outputRoot, 'manifest.json'), 'utf8')),
+    );
+    expect(manifest.segments.map((entry) => entry.segmentId)).toContain('seg_external_recovery');
+    expect(manifest.segments).toHaveLength(2);
   });
 
   it('commits completed novel segments when another batch slot is exhausted', async () => {

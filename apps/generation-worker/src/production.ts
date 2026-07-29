@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   generatedSegmentProposalSchema,
@@ -185,11 +185,18 @@ async function readCreativeHistory(
 }
 
 async function writeManifest(root: string, manifest: PlayoutManifest): Promise<void> {
-  await writeFile(
-    path.join(root, 'manifest.json'),
-    `${JSON.stringify(playoutManifestSchema.parse(manifest), null, 2)}\n`,
-    'utf8',
-  );
+  const manifestPath = path.join(root, 'manifest.json');
+  const nextManifestPath = `${manifestPath}.${process.pid}.${randomUUID()}.next`;
+  try {
+    await writeFile(
+      nextManifestPath,
+      `${JSON.stringify(playoutManifestSchema.parse(manifest), null, 2)}\n`,
+      'utf8',
+    );
+    await rename(nextManifestPath, manifestPath);
+  } finally {
+    await rm(nextManifestPath, { force: true });
+  }
 }
 
 interface ProduceOptions {
@@ -668,7 +675,11 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       }
     }
   };
-  await productionWorker();
+  await Promise.all(
+    Array.from({ length: Math.min(options.concurrency, drafts.length) }, async () =>
+      productionWorker(),
+    ),
+  );
 
   const completedSegments = produced.filter(
     (segment): segment is SegmentPackage => segment !== undefined,
@@ -680,9 +691,14 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     );
   }
 
+  const outputManifest = options.fresh ? manifest : await readManifest(options.outputRoot);
+  const existingSegmentIds = new Set(outputManifest.segments.map((entry) => entry.segmentId));
   for (const segment of completedSegments) {
+    if (existingSegmentIds.has(segment.segmentId)) {
+      continue;
+    }
     addedDurationMs += segment.durationMs;
-    manifest.segments.push({
+    outputManifest.segments.push({
       segmentId: segment.segmentId,
       packagePath: path.posix.join(segment.segmentId, 'segment.json'),
       durationMs: segment.durationMs,
@@ -690,10 +706,11 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       channelName: segment.channel.name,
       programmeTitle: segment.programme.title,
     });
-    manifest.totalDurationMs += segment.durationMs;
+    outputManifest.totalDurationMs += segment.durationMs;
+    existingSegmentIds.add(segment.segmentId);
   }
-  manifest.generatedAt = new Date().toISOString();
-  await writeManifest(options.outputRoot, manifest);
+  outputManifest.generatedAt = new Date().toISOString();
+  await writeManifest(options.outputRoot, outputManifest);
 
   const wallTimeMs = performance.now() - startedAt;
   return {
