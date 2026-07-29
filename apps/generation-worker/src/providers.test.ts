@@ -53,7 +53,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
   });
 
   it('can route editorial criticism to a smaller independent model', async () => {
-    const requests: Array<{ url: string; model: string }> = [];
+    const requests: Array<{ url: string; model: string; systemPrompt: string }> = [];
     vi.stubGlobal(
       'fetch',
       vi.fn((input: string | URL | Request, init?: RequestInit) => {
@@ -62,8 +62,15 @@ describe('OpenAiCompatibleTtsProvider', () => {
         if (typeof init?.body !== 'string') {
           throw new Error('Expected a JSON request body');
         }
-        const body = JSON.parse(init.body) as { model: string };
-        requests.push({ url, model: body.model });
+        const body = JSON.parse(init.body) as {
+          model: string;
+          messages?: Array<{ role?: string; content?: string }>;
+        };
+        requests.push({
+          url,
+          model: body.model,
+          systemPrompt: body.messages?.find(({ role }) => role === 'system')?.content ?? '',
+        });
         return Promise.resolve(
           Response.json({
             choices: [
@@ -100,12 +107,14 @@ describe('OpenAiCompatibleTtsProvider', () => {
       accepted: true,
       coherence: 8,
     });
-    expect(requests).toEqual([
-      {
-        url: 'http://critic.test/v1/chat/completions',
-        model: 'critic-model',
-      },
-    ]);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      url: 'http://critic.test/v1/chat/completions',
+      model: 'critic-model',
+    });
+    expect(requests[0]?.systemPrompt).toContain(
+      'A character may naturally state a first-person intention',
+    );
   });
 
   it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
