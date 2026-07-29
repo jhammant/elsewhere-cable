@@ -189,6 +189,8 @@ interface DeliveryProbe {
   freezeRatio: number | null;
 }
 
+const deliverySampleSeconds = 60;
+
 function clampRatio(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
@@ -239,14 +241,14 @@ async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryPro
         'error',
         '-y',
         '-t',
-        '20',
+        String(deliverySampleSeconds),
         '-i',
         streamUrl,
         '-c',
         'copy',
         samplePath,
       ],
-      { timeout: 90_000, maxBuffer: 2 * 1024 * 1024 },
+      { timeout: 120_000, maxBuffer: 2 * 1024 * 1024 },
     );
     const audio = await execFileAsync(
       'ffmpeg',
@@ -289,8 +291,8 @@ async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryPro
     return {
       isLive,
       concurrentViewers,
-      silenceRatio: clampRatio(silenceSeconds / 20),
-      freezeRatio: clampRatio(freezeSeconds / 20),
+      silenceRatio: clampRatio(silenceSeconds / deliverySampleSeconds),
+      freezeRatio: clampRatio(freezeSeconds / deliverySampleSeconds),
     };
   } catch {
     return { isLive, concurrentViewers, silenceRatio: null, freezeRatio: null };
