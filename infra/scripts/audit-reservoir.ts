@@ -1,4 +1,4 @@
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile, realpath, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {
@@ -35,6 +35,20 @@ const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestP
 const accepted: PlayoutManifest['segments'] = [];
 const rejected: Array<{ segmentId: string; reasons: string[] }> = [];
 const firstAuditedIndex = Math.max(0, manifest.segments.length - recent);
+const audioQualityCache = new Map<string, Promise<string | null>>();
+
+async function cachedAudioQualityIssue(audioPath: string): Promise<string | null> {
+  const canonicalPath = await realpath(audioPath);
+  const cached = audioQualityCache.get(canonicalPath);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const inspection = inspectSpeechAudio(canonicalPath).then((quality) =>
+    speechAudioQualityIssue(quality),
+  );
+  audioQualityCache.set(canonicalPath, inspection);
+  return inspection;
+}
 
 for (const [entryIndex, entry] of manifest.segments.entries()) {
   if (entryIndex < firstAuditedIndex) {
@@ -60,8 +74,7 @@ for (const [entryIndex, entry] of manifest.segments.entries()) {
       }
       const audioPath = path.join(path.dirname(segmentPath), event.audioFile);
       try {
-        await readFile(audioPath);
-        const qualityIssue = speechAudioQualityIssue(await inspectSpeechAudio(audioPath));
+        const qualityIssue = await cachedAudioQualityIssue(audioPath);
         if (qualityIssue !== null) {
           reasons.push(`${event.speechId} ${qualityIssue}`);
         }

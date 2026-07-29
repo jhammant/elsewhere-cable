@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rename, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {
@@ -7,6 +7,12 @@ import {
   type PlayoutManifest,
   type SegmentPackage,
 } from '../../packages/schemas/src/index.js';
+import { containsSpokenStageDirection } from '../../apps/generation-worker/src/dialogue-quality.js';
+import {
+  inspectSpeechAudio,
+  maximumPlausibleSpeechDurationMs,
+  speechAudioQualityIssue,
+} from '../../apps/generation-worker/src/providers.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -26,12 +32,39 @@ const candidates: Array<{
   entry: PlayoutManifest['segments'][number];
   segment: SegmentPackage;
 }> = [];
+const audioQualityCache = new Map<string, Promise<string | null>>();
+
+async function audioQualityIssue(audioPath: string): Promise<string | null> {
+  const canonicalPath = await realpath(audioPath);
+  const cached = audioQualityCache.get(canonicalPath);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const inspection = inspectSpeechAudio(canonicalPath).then((quality) =>
+    speechAudioQualityIssue(quality),
+  );
+  audioQualityCache.set(canonicalPath, inspection);
+  return inspection;
+}
+
 for (const entry of manifest.segments) {
   try {
-    const segment = segmentPackageSchema.parse(
-      JSON.parse(await readFile(path.join(segmentsRoot, entry.packagePath), 'utf8')),
-    );
-    if (segment.production.generator !== 'emergency-recovery-alias') {
+    const segmentPath = path.join(segmentsRoot, entry.packagePath);
+    const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
+    let eligible = segment.production.generator !== 'emergency-recovery-alias';
+    for (const event of segment.events) {
+      if (!eligible || event.type !== 'speech.play') {
+        continue;
+      }
+      if (
+        containsSpokenStageDirection(event.subtitle) ||
+        event.durationMs > maximumPlausibleSpeechDurationMs(event.subtitle) ||
+        (await audioQualityIssue(path.join(path.dirname(segmentPath), event.audioFile))) !== null
+      ) {
+        eligible = false;
+      }
+    }
+    if (eligible) {
       candidates.push({ entry, segment });
     }
   } catch {
