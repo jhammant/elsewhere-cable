@@ -83,6 +83,11 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
     /\b(?:childhood trauma|tragic backstory|orphanage fire|parents? died|dead family|terminal illness)\b/iu.test(
       JSON.stringify(draft),
     );
+  const highStakesEmergency =
+    draft.format === 'emergency' &&
+    /\b(?:catastroph\w*|collaps\w*|evacuat\w*|extinction|life[- ]threatening|mass casualty|surviv\w*|star system.{0,24}dissolv\w*|planet.{0,24}destroy\w*)\b/iu.test(
+      JSON.stringify(draft),
+    );
   const genericFearEnding =
     /\b(?:in horror|panic(?:s|ked|king)?|scream(?:s|ed|ing)?|stares? in horror|terrified|trembl(?:e|es|ed|ing))\b/iu.test(
       draft.endingBeat,
@@ -138,6 +143,9 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   }
   if (unearnedTragedy) {
     reasons.push('segment uses unearned tragedy as a shortcut for comic stakes');
+  }
+  if (highStakesEmergency) {
+    reasons.push('emergency comedy must use harmless administrative stakes, not catastrophe');
   }
   if (genericFearEnding) {
     reasons.push('ending defaults to generic fear instead of a comic decision or status reversal');

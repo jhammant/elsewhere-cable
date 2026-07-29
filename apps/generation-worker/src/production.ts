@@ -147,8 +147,20 @@ export function repairNetworkIdentityCollision<
 export function proposalQualityIssues(proposal: GeneratedSegmentProposal): string[] {
   const issues: string[] = [];
   const premiseWordCount = proposal.premise.trim().split(/\s+/u).filter(Boolean).length;
+  const highStakesEmergencyLanguage =
+    /\b(?:catastroph\w*|collaps\w*|evacuat\w*|extinction|life[- ]threatening|mass casualty|surviv\w*|star system.{0,24}dissolv\w*|planet.{0,24}destroy\w*)\b/iu;
   if (premiseWordCount < 8 || premiseWordCount > 48) {
     issues.push('premise must state one legible comic rule in 8–48 words');
+  }
+  if (!/^(?:at|during|in|inside|on)\b/iu.test(proposal.premise.trim())) {
+    issues.push('premise must begin with the physical setting so the renderer can stage it');
+  }
+  const titleLetters = proposal.programmeTitle.replace(/[^\p{L}]/gu, '');
+  if (
+    titleLetters.length >= 4 &&
+    proposal.programmeTitle === proposal.programmeTitle.toUpperCase()
+  ) {
+    issues.push('programme title must use readable title case rather than all capitals');
   }
   if (/\b(?:random|wacky|nonsense|for no reason|anything can happen)\b/iu.test(proposal.premise)) {
     issues.push('proposal describes randomness instead of a consistent comic mechanism');
@@ -190,6 +202,12 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   }[proposal.format];
   if (!formatAlignment.test(`${proposal.programmeTitle} ${proposal.premise}`)) {
     issues.push(`premise does not behave like the assigned ${proposal.format} television format`);
+  }
+  if (
+    proposal.format === 'emergency' &&
+    highStakesEmergencyLanguage.test(`${proposal.premise} ${proposal.endingBeat}`)
+  ) {
+    issues.push('emergency fragments must concern harmless fictional administrative stakes');
   }
   if (
     proposal.storyMode !== undefined &&
@@ -237,6 +255,13 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
     )
   ) {
     issues.push('ending defaults to generic fear instead of a comic decision or status reversal');
+  }
+  if (
+    /\b(?:accidentally|suddenly|unexpectedly)\b.{0,100}\b(?:new|another|second)\s+\w+/iu.test(
+      proposal.endingBeat,
+    )
+  ) {
+    issues.push('ending introduces an unearned second object or mechanism');
   }
   const introducedEndingMechanisms = unearnedEndingMechanisms(
     proposal.premise,

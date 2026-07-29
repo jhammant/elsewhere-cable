@@ -94,6 +94,48 @@ describe('produceBatch', () => {
     );
   });
 
+  it('requires a stageable physical setting at the start of every premise', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      premise:
+        'A host wants to sell a service package, but the customer refuses because its receipt claims decision authority.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toContain(
+      'premise must begin with the physical setting so the renderer can stage it',
+    );
+  });
+
+  it('rejects realistic catastrophe stakes and alarm-style titles from emergency comedy', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      format: 'emergency',
+      programmeTitle: 'URGENT EVACUATION ALERT',
+      storyMode: 'service_mismatch',
+      premise:
+        'During an emergency service bulletin, an official wants a customer to evacuate before a star system collapses, but the customer refuses.',
+      endingBeat: 'The official grants the customer a delayed service appointment.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toEqual(
+      expect.arrayContaining([
+        'programme title must use readable title case rather than all capitals',
+        'emergency fragments must concern harmless fictional administrative stakes',
+      ]),
+    );
+  });
+
+  it('rejects an ending that invents an accidental second mechanism', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      endingBeat: 'The host accidentally activates another contract beneath the product.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toContain(
+      'ending introduces an unearned second object or mechanism',
+    );
+  });
+
   it('rejects cruel or graphic harm before preparing speech', () => {
     const draft = demoDraft(0);
     draft.dialogue[0]!.text = 'The harness is choking the contestant until they drop dead.';
