@@ -15,6 +15,8 @@ embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 reservoir_target_hours=${ELSEWHERE_RESERVOIR_TARGET_HOURS:-72}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
 recovery_refill_count=${ELSEWHERE_RECOVERY_REFILL_COUNT:-0}
+package_prepared_scripts=${ELSEWHERE_PACKAGE_PREPARED_SCRIPTS:-0}
+script_queue=${ELSEWHERE_SCRIPT_QUEUE_DIR:-data/script-reservoir}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
@@ -50,10 +52,17 @@ if [ "$recovery_refill_count" -lt 0 ] || [ "$recovery_refill_count" -gt 100 ]; t
   echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
   exit 64
 fi
+if [ "$package_prepared_scripts" != "0" ] && [ "$package_prepared_scripts" != "1" ]; then
+  echo "ELSEWHERE_PACKAGE_PREPARED_SCRIPTS must be 0 or 1." >&2
+  exit 64
+fi
 
 pnpm exec tsx infra/scripts/bootstrap-live-queue.ts \
   --base "$history_root" \
   --output "$output_root"
+if [ "$package_prepared_scripts" = "1" ]; then
+  mkdir -p "$script_queue/pending"
+fi
 
 while :; do
   if pnpm exec tsx infra/scripts/reservoir-status.ts \
@@ -62,6 +71,17 @@ while :; do
     --ready-check; then
     echo "Reservoir target reached; generation stopped cleanly."
     exit 0
+  fi
+  if [ "$package_prepared_scripts" = "1" ] &&
+    ! find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' -print -quit |
+      grep -q .; then
+    if [ "$mode" = "once" ]; then
+      echo "No prepared scripts are waiting for packaging." >&2
+      exit 66
+    fi
+    echo "Prepared script queue empty; waiting without affecting playout."
+    sleep 15
+    continue
   fi
 
   set -- \
@@ -76,6 +96,11 @@ while :; do
     set -- "$@" \
       --tts-base-url "$tts_base_url" \
       --tts-model "$tts_model"
+  fi
+  if [ "$package_prepared_scripts" = "1" ]; then
+    set -- "$@" \
+      --package-scripts \
+      --script-queue "$script_queue"
   fi
   if [ -r "$optimisation_brief" ]; then
     set -- "$@" \

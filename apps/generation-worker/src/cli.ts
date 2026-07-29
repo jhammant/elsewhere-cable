@@ -65,6 +65,11 @@ async function readOptimisationBrief(
 
 async function main(): Promise<void> {
   const demo = process.argv.includes('--demo');
+  const prepareScriptsOnly = process.argv.includes('--prepare-scripts');
+  const packagePreparedScripts = process.argv.includes('--package-scripts');
+  if (prepareScriptsOnly && packagePreparedScripts) {
+    throw new Error('--prepare-scripts and --package-scripts are mutually exclusive');
+  }
   const ifEmpty = process.argv.includes('--if-empty');
   const model = argument('model') ?? process.env.ELSEWHERE_LLM_MODEL ?? 'llama3.2:3b';
   const baseUrl =
@@ -75,6 +80,10 @@ async function main(): Promise<void> {
     argument('output') ?? process.env.ELSEWHERE_SEGMENTS_DIR ?? 'data/segments',
   );
   const historyRoot = argument('history');
+  const scriptQueueRoot = path.resolve(
+    workspaceRoot,
+    argument('script-queue') ?? process.env.ELSEWHERE_SCRIPT_QUEUE_DIR ?? 'data/script-reservoir',
+  );
   const optimisationBrief = await readOptimisationBrief(
     argument('optimisation-brief') ?? process.env.ELSEWHERE_OPTIMISATION_BRIEF,
   );
@@ -95,25 +104,28 @@ async function main(): Promise<void> {
   }
 
   const ttsBaseUrl = argument('tts-base-url') ?? process.env.ELSEWHERE_TTS_BASE_URL;
-  const tts =
-    ttsBaseUrl === undefined
+  const tts = prepareScriptsOnly
+    ? null
+    : ttsBaseUrl === undefined
       ? await LocalCommandTtsProvider.create()
       : new OpenAiCompatibleTtsProvider(
           argument('tts-model') ?? process.env.ELSEWHERE_TTS_MODEL ?? 'kokoro',
           ttsBaseUrl,
           process.env.ELSEWHERE_TTS_API_KEY,
         );
-  const llm = demo ? null : new OpenAiCompatibleProvider(model, baseUrl, apiKey);
-  const embeddingProvider = demo
-    ? null
-    : new OllamaEmbeddingProvider(
-        argument('embedding-model') ??
-          process.env.ELSEWHERE_EMBEDDING_MODEL ??
-          'nomic-embed-text:latest',
-        argument('embedding-base-url') ??
-          process.env.ELSEWHERE_EMBEDDING_BASE_URL ??
-          'http://127.0.0.1:11434',
-      );
+  const llm =
+    demo || packagePreparedScripts ? null : new OpenAiCompatibleProvider(model, baseUrl, apiKey);
+  const embeddingProvider =
+    demo || packagePreparedScripts
+      ? null
+      : new OllamaEmbeddingProvider(
+          argument('embedding-model') ??
+            process.env.ELSEWHERE_EMBEDDING_MODEL ??
+            'nomic-embed-text:latest',
+          argument('embedding-base-url') ??
+            process.env.ELSEWHERE_EMBEDDING_BASE_URL ??
+            'http://127.0.0.1:11434',
+        );
   const result = await produceBatch({
     count: countArgument(),
     concurrency: concurrencyArgument(),
@@ -123,6 +135,9 @@ async function main(): Promise<void> {
     tts,
     embeddingProvider,
     optimisationBrief,
+    scriptQueueRoot,
+    prepareScriptsOnly,
+    packagePreparedScripts,
     fresh: process.argv.includes('--fresh'),
     ...(historyRoot === undefined
       ? {}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { playoutManifestSchema, playoutObservationSchema, segmentPackageSchema } from './index.js';
+import {
+  playoutManifestSchema,
+  playoutObservationSchema,
+  preparedScriptSchema,
+  segmentPackageSchema,
+} from './index.js';
 
 describe('segmentPackageSchema', () => {
   it('rejects renderer events after the segment duration', () => {
@@ -67,5 +72,44 @@ describe('playoutObservationSchema', () => {
     });
 
     expect(observation.event).toBe('segment.started');
+  });
+});
+
+describe('preparedScriptSchema', () => {
+  it('validates a versioned prepared script without making it playable', () => {
+    const prepared = preparedScriptSchema.parse({
+      schemaVersion: 1,
+      draftId: 'draft_01prepared',
+      preparedAt: '2026-07-29T18:00:00.000Z',
+      generator: 'test-generator',
+      model: 'test-model',
+      draft: {
+        channelNumber: 8_818_881,
+        channelName: 'Queue Waiting Room',
+        programmeTitle: 'Your Script Is Important To Us',
+        format: 'public_access',
+        realityId: 'QUEUE-8',
+        visualStyle: 'paper_queue',
+        visualMedium: 'paper_cutout',
+        castArchetype: 'humanoid',
+        pacing: 'slow_burn',
+        premise: 'Unproduced television scripts complain about their position in the queue.',
+        tone: ['dry', 'bureaucratic'],
+        dialogue: [
+          { speaker: 'Script One', text: 'I was promised a voice by Tuesday.', action: 'IDLE' },
+          { speaker: 'Clerk', text: 'Which Tuesday did you request?', action: 'LOOK_AT' },
+          {
+            speaker: 'Script One',
+            text: 'The one with the affordable weather.',
+            action: 'POINT_AT',
+          },
+          { speaker: 'Clerk', text: 'That Tuesday is still in rendering.', action: 'PAUSE' },
+        ],
+        continuityFact: 'Some Tuesdays remain in rendering.',
+        endingBeat: 'The queue ticket begins interviewing the clerk.',
+      },
+    });
+
+    expect(prepared.draft.programmeTitle).toBe('Your Script Is Important To Us');
   });
 });

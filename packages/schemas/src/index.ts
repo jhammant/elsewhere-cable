@@ -305,6 +305,16 @@ export const generatedSegmentProposalSchema = generatedSegmentDraftSchema.omit({
   dialogue: true,
 });
 
+export const preparedScriptSchema = z.object({
+  schemaVersion: z.literal(1),
+  draftId: z.string().regex(/^draft_[a-z0-9]+$/u),
+  preparedAt: z.string().datetime(),
+  generator: z.string().min(1).max(120),
+  model: z.string().min(1).max(200),
+  optimisationBriefGeneratedAt: z.string().datetime().optional(),
+  draft: generatedSegmentDraftSchema,
+});
+
 export type SegmentEvent = z.infer<typeof segmentEventSchema>;
 export type SegmentPackage = z.infer<typeof segmentPackageSchema>;
 export type PlayoutManifest = z.infer<typeof playoutManifestSchema>;
@@ -312,3 +322,4 @@ export type PlayoutObservation = z.infer<typeof playoutObservationSchema>;
 export type OptimisationBrief = z.infer<typeof optimisationBriefSchema>;
 export type GeneratedSegmentDraft = z.infer<typeof generatedSegmentDraftSchema>;
 export type GeneratedSegmentProposal = z.infer<typeof generatedSegmentProposalSchema>;
+export type PreparedScript = z.infer<typeof preparedScriptSchema>;

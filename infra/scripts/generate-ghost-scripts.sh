@@ -1,0 +1,87 @@
+#!/bin/sh
+set -eu
+
+mode=${1:-once}
+batch_count=${ELSEWHERE_SCRIPT_BATCH_COUNT:-16}
+generation_concurrency=${ELSEWHERE_GENERATION_CONCURRENCY:-4}
+output_root=${ELSEWHERE_LIVE_SEGMENTS_DIR:-data/segments-live}
+script_queue=${ELSEWHERE_SCRIPT_QUEUE_DIR:-data/script-reservoir}
+script_target_count=${ELSEWHERE_SCRIPT_TARGET_COUNT:-5400}
+llm_base_url=${ELSEWHERE_LLM_BASE_URL:-http://127.0.0.1:1235/v1}
+llm_model=${ELSEWHERE_LLM_MODEL:-qwen3.5-35b-a3b}
+embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
+embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
+optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
+
+if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
+  echo "Usage: $0 [once|loop]" >&2
+  exit 64
+fi
+for value in "$batch_count" "$generation_concurrency" "$script_target_count"; do
+  case "$value" in
+    '' | *[!0-9]*)
+      echo "Script batch, concurrency and target values must be integers." >&2
+      exit 64
+      ;;
+  esac
+done
+if [ "$batch_count" -lt 1 ] || [ "$batch_count" -gt 100 ]; then
+  echo "ELSEWHERE_SCRIPT_BATCH_COUNT must be an integer from 1 to 100." >&2
+  exit 64
+fi
+if [ "$generation_concurrency" -lt 1 ] || [ "$generation_concurrency" -gt 4 ]; then
+  echo "ELSEWHERE_GENERATION_CONCURRENCY must be an integer from 1 to 4." >&2
+  exit 64
+fi
+if [ "$script_target_count" -lt 1 ]; then
+  echo "ELSEWHERE_SCRIPT_TARGET_COUNT must be a positive integer." >&2
+  exit 64
+fi
+
+mkdir -p "$script_queue/pending" "$script_queue/completed"
+
+while :; do
+  pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
+  completed_count=$(find "$script_queue/completed" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
+  if [ "$pending_count" -ge "$script_target_count" ]; then
+    printf '{"pendingScripts":%s,"completedScripts":%s,"targetScripts":%s,"status":"target"}\n' \
+      "$pending_count" "$completed_count" "$script_target_count"
+    if [ "$mode" = "once" ]; then
+      exit 0
+    fi
+    sleep 60
+    continue
+  fi
+
+  set -- \
+    --prepare-scripts \
+    --script-queue "$script_queue" \
+    --count "$batch_count" \
+    --concurrency "$generation_concurrency" \
+    --output "$output_root" \
+    --base-url "$llm_base_url" \
+    --model "$llm_model" \
+    --embedding-base-url "$embedding_base_url" \
+    --embedding-model "$embedding_model"
+  if [ -r "$optimisation_brief" ]; then
+    set -- "$@" --optimisation-brief "$optimisation_brief"
+  fi
+
+  if ! pnpm generate:batch -- "$@"; then
+    if [ "$mode" = "once" ]; then
+      exit 1
+    fi
+    echo "Script batch yielded no approved drafts; preserving the queue and retrying."
+    sleep 30
+    continue
+  fi
+
+  pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
+  completed_count=$(find "$script_queue/completed" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
+  printf '{"pendingScripts":%s,"completedScripts":%s,"targetScripts":%s,"status":"growing"}\n' \
+    "$pending_count" "$completed_count" "$script_target_count"
+  if [ "$mode" = "once" ]; then
+    exit 0
+  fi
+  sleep 15
+done

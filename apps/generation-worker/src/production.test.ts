@@ -215,6 +215,64 @@ describe('produceBatch', () => {
     expect(manifest.segments).toHaveLength(2);
   });
 
+  it('prepares safe scripts separately and packages them from the FIFO queue', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-script-queue-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+
+    const prepared = await produceBatch({
+      count: 2,
+      concurrency: 2,
+      outputRoot,
+      demo: true,
+      llm: null,
+      tts: null,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      prepareScriptsOnly: true,
+    });
+    expect(prepared.mode).toBe('prepare-scripts');
+    expect(prepared.preparedScriptCount).toBe(2);
+    expect(
+      (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>
+        file.endsWith('.json'),
+      ),
+    ).toHaveLength(2);
+
+    const tts: TtsProvider = {
+      id: 'queued-test-tts',
+      parallelism: 2,
+      synthesize(request: SpeechRequest): Promise<SpeechResult> {
+        return Promise.resolve({
+          audioFile: `audio/${request.speechId}.m4a`,
+          durationMs: 1_000,
+          provider: 'queued-test-tts',
+        });
+      },
+    };
+    const packaged = await produceBatch({
+      count: 2,
+      concurrency: 2,
+      outputRoot,
+      demo: false,
+      llm: null,
+      tts,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      packagePreparedScripts: true,
+    });
+    const manifest = playoutManifestSchema.parse(
+      JSON.parse(await readFile(path.join(outputRoot, 'manifest.json'), 'utf8')),
+    );
+
+    expect(packaged.mode).toBe('package-scripts');
+    expect(packaged.segmentCount).toBe(2);
+    expect(manifest.segments).toHaveLength(2);
+    expect(await readdir(path.join(scriptQueueRoot, 'pending'))).toHaveLength(0);
+    expect(await readdir(path.join(scriptQueueRoot, 'completed'))).toHaveLength(2);
+  });
+
   it('commits completed novel segments when another batch slot is exhausted', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-partial-batch-'));
     temporaryDirectories.push(outputRoot);

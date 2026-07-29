@@ -1,13 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   generatedSegmentProposalSchema,
+  preparedScriptSchema,
   playoutManifestSchema,
   segmentPackageSchema,
   type GeneratedSegmentDraft,
   type GeneratedSegmentProposal,
   type OptimisationBrief,
+  type PreparedScript,
   type PlayoutManifest,
   type SegmentEvent,
   type SegmentPackage,
@@ -24,6 +26,7 @@ import { containsSpokenStageDirection } from './dialogue-quality.js';
 import {
   conceptNoveltyIssues,
   dialogueNoveltyIssues,
+  recordFromDraft,
   recordFromSegment,
   type CreativeRecord,
 } from './novelty.js';
@@ -199,17 +202,101 @@ async function writeManifest(root: string, manifest: PlayoutManifest): Promise<v
   }
 }
 
+interface QueuedPreparedScript {
+  filePath: string;
+  script: PreparedScript;
+}
+
+async function readPreparedScripts(
+  queueRoot: string,
+  limit = Number.POSITIVE_INFINITY,
+): Promise<QueuedPreparedScript[]> {
+  const pendingRoot = path.join(queueRoot, 'pending');
+  try {
+    const fileNames = (await readdir(pendingRoot))
+      .filter((fileName) => /^draft_[a-z0-9]+\.json$/u.test(fileName))
+      .sort()
+      .slice(0, limit);
+    const scripts: QueuedPreparedScript[] = [];
+    for (const fileName of fileNames) {
+      const filePath = path.join(pendingRoot, fileName);
+      try {
+        scripts.push({
+          filePath,
+          script: preparedScriptSchema.parse(JSON.parse(await readFile(filePath, 'utf8'))),
+        });
+      } catch {
+        // A concurrently moved or corrupt draft is not eligible for packaging.
+      }
+    }
+    return scripts;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function writePreparedScripts(
+  queueRoot: string,
+  drafts: readonly GeneratedSegmentDraft[],
+  generator: string,
+  model: string,
+  optimisationBrief: OptimisationBrief | null,
+): Promise<PreparedScript[]> {
+  const pendingRoot = path.join(queueRoot, 'pending');
+  await mkdir(pendingRoot, { recursive: true });
+  const prepared: PreparedScript[] = [];
+  for (const draft of drafts) {
+    assertPreviewSafe(draft);
+    const script = preparedScriptSchema.parse({
+      schemaVersion: 1,
+      draftId: `draft_${randomUUID().replaceAll('-', '')}`,
+      preparedAt: new Date().toISOString(),
+      generator,
+      model,
+      ...(optimisationBrief === null
+        ? {}
+        : { optimisationBriefGeneratedAt: optimisationBrief.generatedAt }),
+      draft,
+    });
+    const targetPath = path.join(pendingRoot, `${script.draftId}.json`);
+    const nextPath = `${targetPath}.${process.pid}.next`;
+    try {
+      await writeFile(nextPath, `${JSON.stringify(script, null, 2)}\n`, 'utf8');
+      await rename(nextPath, targetPath);
+    } finally {
+      await rm(nextPath, { force: true });
+    }
+    prepared.push(script);
+  }
+  return prepared;
+}
+
+async function archivePreparedScript(
+  queueRoot: string,
+  queued: QueuedPreparedScript,
+): Promise<void> {
+  const completedRoot = path.join(queueRoot, 'completed');
+  await mkdir(completedRoot, { recursive: true });
+  await rename(queued.filePath, path.join(completedRoot, path.basename(queued.filePath)));
+}
+
 interface ProduceOptions {
   count: number;
   concurrency: number;
   outputRoot: string;
   demo: boolean;
   llm: LlmProvider | null;
-  tts: TtsProvider;
+  tts: TtsProvider | null;
   embeddingProvider: EmbeddingProvider | null;
   fresh?: boolean;
   historyRoots?: readonly string[];
   optimisationBrief?: OptimisationBrief | null;
+  scriptQueueRoot?: string;
+  prepareScriptsOnly?: boolean;
+  packagePreparedScripts?: boolean;
 }
 
 // Premises deliberately reuse television formats and physical sets. Lower thresholds mostly
@@ -258,8 +345,11 @@ export function semanticNoveltyIssue(
 }
 
 export interface BatchResult {
+  mode: 'full' | 'prepare-scripts' | 'package-scripts';
   requestedSegmentCount: number;
   segmentCount: number;
+  preparedScriptCount: number;
+  preparedScriptsPerMinute: number;
   rejectedSegmentCount: number;
   concurrency: number;
   addedDurationMs: number;
@@ -479,6 +569,18 @@ async function buildSegment(
 
 export async function produceBatch(options: ProduceOptions): Promise<BatchResult> {
   const startedAt = performance.now();
+  if (options.prepareScriptsOnly === true && options.packagePreparedScripts === true) {
+    throw new Error('Script preparation and packaging modes are mutually exclusive');
+  }
+  if (
+    (options.prepareScriptsOnly === true || options.packagePreparedScripts === true) &&
+    options.scriptQueueRoot === undefined
+  ) {
+    throw new Error('Script queue root is required for script preparation or packaging');
+  }
+  if (options.prepareScriptsOnly !== true && options.tts === null) {
+    throw new Error('TTS provider is required when packaging segments');
+  }
   await mkdir(options.outputRoot, { recursive: true });
   const manifest: PlayoutManifest = options.fresh
     ? {
@@ -488,195 +590,255 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         segments: [],
       }
     : await readManifest(options.outputRoot);
-  const startingSegmentCount = manifest.segments.length;
-  const creativeSerialBase = options.demo
-    ? startingSegmentCount
-    : Number.parseInt(randomUUID().replaceAll('-', '').slice(0, 8), 16);
-  const creativeHistory = await readCreativeHistory(options.outputRoot, manifest);
-  for (const historyRoot of options.historyRoots ?? []) {
-    if (path.resolve(historyRoot) === path.resolve(options.outputRoot)) {
-      continue;
-    }
-    const historyManifest = await readManifest(historyRoot);
-    creativeHistory.push(...(await readCreativeHistory(historyRoot, historyManifest)));
+  const queuedPreparedScripts =
+    options.packagePreparedScripts === true
+      ? await readPreparedScripts(options.scriptQueueRoot!, options.count)
+      : [];
+  if (options.packagePreparedScripts === true && queuedPreparedScripts.length === 0) {
+    throw new Error('No prepared scripts are waiting for packaging');
   }
-  const semanticHistory =
-    options.embeddingProvider === null
-      ? []
-      : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
-  let addedDurationMs = 0;
-  const proposals = new Array<GeneratedSegmentProposal | undefined>(options.count);
-  const reservedRecords = new Array<CreativeRecord | undefined>(options.count);
-  const drafts = new Array<GeneratedSegmentDraft | undefined>(options.count);
-  const produced = new Array<SegmentPackage | undefined>(options.count);
-  const failures = new Array<string | undefined>(options.count);
-  let nextIndex = 0;
-  let noveltyGate = Promise.resolve();
-  const withNoveltyGate = async <T>(operation: () => T): Promise<T> => {
-    const previous = noveltyGate;
-    let release = (): void => undefined;
-    noveltyGate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await previous;
-    try {
-      return operation();
-    } finally {
-      release();
+  const workingCount =
+    options.packagePreparedScripts === true ? queuedPreparedScripts.length : options.count;
+  const drafts = new Array<GeneratedSegmentDraft | undefined>(workingCount);
+  const failures = new Array<string | undefined>(workingCount);
+  if (options.packagePreparedScripts === true) {
+    for (const [index, queued] of queuedPreparedScripts.entries()) {
+      drafts[index] = queued.script.draft;
     }
-  };
-
-  const worker = async (): Promise<void> => {
-    while (nextIndex < options.count) {
-      const index = nextIndex;
-      nextIndex += 1;
-      try {
-        let rejectionReasons: string[] = [];
-        const maximumProposalAttempts = 10;
-        for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
-          const recent = creativeHistory.slice(-24);
-          const prompt = userPrompt(
-            creativeSerialBase + index + attempt * options.count,
-            recent.map((record) => record.title),
-            recent.map((record) => record.premise),
-            rejectionReasons,
-            options.optimisationBrief ?? null,
-          );
-          const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
-          const generated = repairNetworkIdentityCollision(
-            options.demo
-              ? demoDraft(startingSegmentCount + index + attempt * options.count)
-              : useProposalStage
-                ? await options.llm!.generateProposal!({
-                    systemPrompt: proposalSystemPrompt,
-                    userPrompt: prompt,
-                  })
-                : await options.llm!.generateStructured({
-                    systemPrompt,
-                    userPrompt: prompt,
-                  }),
-          );
-          const candidateEmbedding =
-            options.embeddingProvider === null
-              ? null
-              : (await options.embeddingProvider.embed([generated.premise]))[0];
-          const accepted = await withNoveltyGate(() => {
-            const semanticIssue =
-              candidateEmbedding === null || candidateEmbedding === undefined
-                ? null
-                : semanticNoveltyIssue(
-                    generated.premise,
-                    candidateEmbedding,
-                    creativeHistory,
-                    semanticHistory,
-                  );
-            rejectionReasons = [
-              ...conceptNoveltyIssues(generated, creativeHistory),
-              ...(semanticIssue === null ? [] : [semanticIssue]),
-              ...(useProposalStage
-                ? proposalQualityIssues(generated)
-                : [
-                    ...dialogueNoveltyIssues(
-                      (generated as GeneratedSegmentDraft).dialogue,
-                      creativeHistory,
-                    ),
-                    ...critiquePremise(generated as GeneratedSegmentDraft).reasons,
-                  ]),
-            ];
-            if (rejectionReasons.length !== 0) {
-              return false;
-            }
-            const record: CreativeRecord = {
-              title: generated.programmeTitle,
-              premise: generated.premise,
-              dialogue: useProposalStage
-                ? []
-                : (generated as GeneratedSegmentDraft).dialogue.map((line) => line.text),
-            };
-            creativeHistory.push(record);
-            reservedRecords[index] = record;
-            if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
-              semanticHistory.push(candidateEmbedding);
-            }
-            if (useProposalStage) {
-              proposals[index] = generated;
-            } else {
-              drafts[index] = generated as GeneratedSegmentDraft;
-            }
-            return true;
-          });
-          if (accepted) {
-            break;
-          }
-        }
-        if (proposals[index] === undefined && drafts[index] === undefined) {
-          throw new Error(
-            `Could not produce a novel premise after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
-          );
-        }
-      } catch (error) {
-        failures[index] = error instanceof Error ? error.message : String(error);
-      }
-    }
-  };
-
-  await Promise.all(
-    Array.from({ length: Math.min(options.concurrency, options.count) }, async () => worker()),
-  );
-
-  let nextScriptIndex = 0;
-  const scriptWorker = async (): Promise<void> => {
-    while (nextScriptIndex < proposals.length) {
-      const index = nextScriptIndex;
-      nextScriptIndex += 1;
-      const proposal = proposals[index];
-      if (proposal === undefined) {
+  } else {
+    const startingSegmentCount = manifest.segments.length;
+    const creativeSerialBase = options.demo
+      ? startingSegmentCount
+      : Number.parseInt(randomUUID().replaceAll('-', '').slice(0, 8), 16);
+    const creativeHistory = await readCreativeHistory(options.outputRoot, manifest);
+    for (const historyRoot of options.historyRoots ?? []) {
+      if (path.resolve(historyRoot) === path.resolve(options.outputRoot)) {
         continue;
       }
-      let rejectionReasons: string[] = [];
-      const maximumScriptAttempts = 2;
-      for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
+      const historyManifest = await readManifest(historyRoot);
+      creativeHistory.push(...(await readCreativeHistory(historyRoot, historyManifest)));
+    }
+    if (options.scriptQueueRoot !== undefined) {
+      creativeHistory.push(
+        ...(await readPreparedScripts(options.scriptQueueRoot)).map(({ script }) =>
+          recordFromDraft(script.draft),
+        ),
+      );
+    }
+    const semanticHistory =
+      options.embeddingProvider === null
+        ? []
+        : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
+    const proposals = new Array<GeneratedSegmentProposal | undefined>(options.count);
+    const reservedRecords = new Array<CreativeRecord | undefined>(options.count);
+    let nextIndex = 0;
+    let noveltyGate = Promise.resolve();
+    const withNoveltyGate = async <T>(operation: () => T): Promise<T> => {
+      const previous = noveltyGate;
+      let release = (): void => undefined;
+      noveltyGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await previous;
+      try {
+        return operation();
+      } finally {
+        release();
+      }
+    };
+
+    const worker = async (): Promise<void> => {
+      while (nextIndex < options.count) {
+        const index = nextIndex;
+        nextIndex += 1;
         try {
-          const scripted = await options.llm!.generateStructured({
-            systemPrompt,
-            userPrompt: scriptPrompt(proposal, rejectionReasons),
-          });
-          const candidate = repairNetworkIdentityCollision({
-            ...scripted,
-            ...proposal,
-            dialogue: scripted.dialogue,
-          });
-          rejectionReasons = [
-            ...proposalPreservationIssues(proposal, candidate),
-            ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
-            ...critiquePremise(candidate).reasons,
-          ];
-          if (rejectionReasons.length === 0) {
-            drafts[index] = candidate;
-            const record = reservedRecords[index];
-            if (record !== undefined) {
-              record.dialogue = candidate.dialogue.map((line) => line.text);
+          let rejectionReasons: string[] = [];
+          const maximumProposalAttempts = 10;
+          for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
+            const recent = creativeHistory.slice(-24);
+            const prompt = userPrompt(
+              creativeSerialBase + index + attempt * options.count,
+              recent.map((record) => record.title),
+              recent.map((record) => record.premise),
+              rejectionReasons,
+              options.optimisationBrief ?? null,
+            );
+            const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
+            const generated = repairNetworkIdentityCollision(
+              options.demo
+                ? demoDraft(startingSegmentCount + index + attempt * options.count)
+                : useProposalStage
+                  ? await options.llm!.generateProposal!({
+                      systemPrompt: proposalSystemPrompt,
+                      userPrompt: prompt,
+                    })
+                  : await options.llm!.generateStructured({
+                      systemPrompt,
+                      userPrompt: prompt,
+                    }),
+            );
+            const candidateEmbedding =
+              options.embeddingProvider === null
+                ? null
+                : (await options.embeddingProvider.embed([generated.premise]))[0];
+            const accepted = await withNoveltyGate(() => {
+              const semanticIssue =
+                candidateEmbedding === null || candidateEmbedding === undefined
+                  ? null
+                  : semanticNoveltyIssue(
+                      generated.premise,
+                      candidateEmbedding,
+                      creativeHistory,
+                      semanticHistory,
+                    );
+              rejectionReasons = [
+                ...conceptNoveltyIssues(generated, creativeHistory),
+                ...(semanticIssue === null ? [] : [semanticIssue]),
+                ...(useProposalStage
+                  ? proposalQualityIssues(generated)
+                  : [
+                      ...dialogueNoveltyIssues(
+                        (generated as GeneratedSegmentDraft).dialogue,
+                        creativeHistory,
+                      ),
+                      ...critiquePremise(generated as GeneratedSegmentDraft).reasons,
+                    ]),
+              ];
+              if (rejectionReasons.length !== 0) {
+                return false;
+              }
+              const record: CreativeRecord = {
+                title: generated.programmeTitle,
+                premise: generated.premise,
+                dialogue: useProposalStage
+                  ? []
+                  : (generated as GeneratedSegmentDraft).dialogue.map((line) => line.text),
+              };
+              creativeHistory.push(record);
+              reservedRecords[index] = record;
+              if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
+                semanticHistory.push(candidateEmbedding);
+              }
+              if (useProposalStage) {
+                proposals[index] = generated;
+              } else {
+                drafts[index] = generated as GeneratedSegmentDraft;
+              }
+              return true;
+            });
+            if (accepted) {
+              break;
             }
-            break;
+          }
+          if (proposals[index] === undefined && drafts[index] === undefined) {
+            throw new Error(
+              `Could not produce a novel premise after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
+            );
           }
         } catch (error) {
-          rejectionReasons = [error instanceof Error ? error.message : String(error)];
+          failures[index] = error instanceof Error ? error.message : String(error);
         }
       }
-      if (drafts[index] === undefined) {
-        failures[index] =
-          `Could not script approved premise after ${maximumScriptAttempts} attempts: ${rejectionReasons.join('; ')}`;
-      }
-    }
-  };
-  await Promise.all(
-    Array.from({ length: Math.min(options.concurrency, options.count) }, async () =>
-      scriptWorker(),
-    ),
-  );
+    };
 
+    await Promise.all(
+      Array.from({ length: Math.min(options.concurrency, options.count) }, async () => worker()),
+    );
+
+    let nextScriptIndex = 0;
+    const scriptWorker = async (): Promise<void> => {
+      while (nextScriptIndex < proposals.length) {
+        const index = nextScriptIndex;
+        nextScriptIndex += 1;
+        const proposal = proposals[index];
+        if (proposal === undefined) {
+          continue;
+        }
+        let rejectionReasons: string[] = [];
+        const maximumScriptAttempts = 2;
+        for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
+          try {
+            const scripted = await options.llm!.generateStructured({
+              systemPrompt,
+              userPrompt: scriptPrompt(proposal, rejectionReasons),
+            });
+            const candidate = repairNetworkIdentityCollision({
+              ...scripted,
+              ...proposal,
+              dialogue: scripted.dialogue,
+            });
+            rejectionReasons = [
+              ...proposalPreservationIssues(proposal, candidate),
+              ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
+              ...critiquePremise(candidate).reasons,
+            ];
+            if (rejectionReasons.length === 0) {
+              drafts[index] = candidate;
+              const record = reservedRecords[index];
+              if (record !== undefined) {
+                record.dialogue = candidate.dialogue.map((line) => line.text);
+              }
+              break;
+            }
+          } catch (error) {
+            rejectionReasons = [error instanceof Error ? error.message : String(error)];
+          }
+        }
+        if (drafts[index] === undefined) {
+          failures[index] =
+            `Could not script approved premise after ${maximumScriptAttempts} attempts: ${rejectionReasons.join('; ')}`;
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(options.concurrency, options.count) }, async () =>
+        scriptWorker(),
+      ),
+    );
+  }
+
+  const completedDrafts = drafts.filter(
+    (draft): draft is GeneratedSegmentDraft => draft !== undefined,
+  );
+  if (options.prepareScriptsOnly === true) {
+    if (completedDrafts.length === 0) {
+      const reasons = failures.filter((failure): failure is string => failure !== undefined);
+      throw new Error(
+        `Batch produced no approved scripts${reasons.length === 0 ? '' : `: ${reasons.join(' | ')}`}`,
+      );
+    }
+    const generator = options.demo ? 'demo-library' : options.llm!.id;
+    const model = options.demo ? 'hand-authored-demo' : options.llm!.model;
+    const prepared = await writePreparedScripts(
+      options.scriptQueueRoot!,
+      completedDrafts,
+      generator,
+      model,
+      options.optimisationBrief ?? null,
+    );
+    const wallTimeMs = performance.now() - startedAt;
+    return {
+      mode: 'prepare-scripts',
+      requestedSegmentCount: options.count,
+      segmentCount: 0,
+      preparedScriptCount: prepared.length,
+      preparedScriptsPerMinute: Number((prepared.length / (wallTimeMs / 60_000)).toFixed(2)),
+      rejectedSegmentCount: options.count - prepared.length,
+      concurrency: options.concurrency,
+      addedDurationMs: 0,
+      wallTimeMs: Math.round(wallTimeMs),
+      realtimeFactor: 0,
+      rejectionReasons: failures.filter((failure): failure is string => failure !== undefined),
+      outputRoot: options.scriptQueueRoot!,
+      ttsProvider: 'not-used',
+    };
+  }
+
+  const tts = options.tts!;
+  const produced = new Array<SegmentPackage | undefined>(workingCount);
+  let addedDurationMs = 0;
   let nextProductionIndex = 0;
-  const withSpeechSlot = createAsyncLimiter(Math.max(1, options.tts.parallelism ?? 1));
+  const withSpeechSlot = createAsyncLimiter(Math.max(1, tts.parallelism ?? 1));
   const productionWorker = async (): Promise<void> => {
     while (nextProductionIndex < drafts.length) {
       const index = nextProductionIndex;
@@ -686,12 +848,13 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         continue;
       }
       try {
+        const queued = queuedPreparedScripts[index];
         produced[index] = await buildSegment(
           draft,
           options.outputRoot,
-          options.demo ? 'demo-library' : options.llm!.id,
-          options.demo ? 'hand-authored-demo' : options.llm!.model,
-          options.tts,
+          queued?.script.generator ?? (options.demo ? 'demo-library' : options.llm!.id),
+          queued?.script.model ?? (options.demo ? 'hand-authored-demo' : options.llm!.model),
+          tts,
           withSpeechSlot,
         );
       } catch (error) {
@@ -735,18 +898,29 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
   }
   outputManifest.generatedAt = new Date().toISOString();
   await writeManifest(options.outputRoot, outputManifest);
+  if (options.packagePreparedScripts === true) {
+    for (const [index, segment] of produced.entries()) {
+      const queued = queuedPreparedScripts[index];
+      if (segment !== undefined && queued !== undefined) {
+        await archivePreparedScript(options.scriptQueueRoot!, queued);
+      }
+    }
+  }
 
   const wallTimeMs = performance.now() - startedAt;
   return {
-    requestedSegmentCount: options.count,
+    mode: options.packagePreparedScripts === true ? 'package-scripts' : 'full',
+    requestedSegmentCount: workingCount,
     segmentCount: completedSegments.length,
-    rejectedSegmentCount: options.count - completedSegments.length,
+    preparedScriptCount: 0,
+    preparedScriptsPerMinute: 0,
+    rejectedSegmentCount: workingCount - completedSegments.length,
     concurrency: options.concurrency,
     addedDurationMs,
     wallTimeMs: Math.round(wallTimeMs),
     realtimeFactor: Number((addedDurationMs / wallTimeMs).toFixed(2)),
     rejectionReasons: failures.filter((failure): failure is string => failure !== undefined),
     outputRoot: options.outputRoot,
-    ttsProvider: options.tts.id,
+    ttsProvider: tts.id,
   };
 }
