@@ -49,6 +49,18 @@ describe('premise critic', () => {
     );
   });
 
+  it('requires visible performance on at least three quarters of dialogue beats', () => {
+    const staticDraft = demoDraft(0);
+    staticDraft.dialogue = staticDraft.dialogue.map((line, index) => ({
+      ...line,
+      action: index < Math.ceil(staticDraft.dialogue.length * 0.5) ? line.action : 'IDLE',
+    }));
+
+    expect(critiquePremise(staticDraft).reasons).toContain(
+      'at least three quarters of dialogue must have a playable reaction or action',
+    );
+  });
+
   it('rejects rule exposition and tragedy shortcuts', () => {
     const exposition = demoDraft(0);
     exposition.dialogue[0]!.text = 'The rule forces me to surrender my chair immediately.';

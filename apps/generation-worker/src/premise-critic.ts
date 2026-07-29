@@ -123,8 +123,8 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
       'dialogue text must contain spoken words only; physical performance belongs in action',
     );
   }
-  if (actionLines < Math.ceil(draft.dialogue.length / 2)) {
-    reasons.push('at least half the dialogue must have a playable reaction or action');
+  if (actionLines < Math.ceil(draft.dialogue.length * 0.75)) {
+    reasons.push('at least three quarters of dialogue must have a playable reaction or action');
   }
   if (disconnectedLanguage.test(JSON.stringify(draft))) {
     reasons.push('proposal describes randomness instead of a consistent comic mechanism');

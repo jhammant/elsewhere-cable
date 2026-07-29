@@ -472,6 +472,10 @@ describe('produceBatch', () => {
         draft.dialogue = Array.from({ length: dialogueCount }, (_, index) => ({
           ...draft.dialogue[index % draft.dialogue.length]!,
           text: `${draft.dialogue[index % draft.dialogue.length]!.text} Beat ${index + 1}.`,
+          action:
+            draft.dialogue[index % draft.dialogue.length]!.action === 'IDLE'
+              ? 'REACTION_NEUTRAL'
+              : draft.dialogue[index % draft.dialogue.length]!.action,
         }));
         if (scriptIndex === 0) {
           draft.dialogue[0]!.text = 'The red label bleeds through the paperwork overnight.';
@@ -614,6 +618,10 @@ describe('produceBatch', () => {
           dialogue: Array.from({ length: dialogueCount }, (_, index) => ({
             ...draft.dialogue[index % draft.dialogue.length]!,
             text: `${draft.dialogue[index % draft.dialogue.length]!.text} Beat ${index + 1}.`,
+            action:
+              draft.dialogue[index % draft.dialogue.length]!.action === 'IDLE'
+                ? 'REACTION_NEUTRAL'
+                : draft.dialogue[index % draft.dialogue.length]!.action,
           })),
         });
       },
