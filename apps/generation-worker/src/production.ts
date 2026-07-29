@@ -544,15 +544,22 @@ async function buildSegment(
         const line = draft.dialogue[index]!;
         const speechId = `speech_${index.toString().padStart(2, '0')}`;
         const voiceId = voiceFor(line.speaker, tts);
-        const result = await withSpeechSlot(async () =>
-          tts.synthesize({
-            speechId,
-            text: line.text,
-            voiceId,
-            speakingRate: speakingRateFor(pacing, line.speaker),
-            outputDirectory: segmentDirectory,
-          }),
-        );
+        let result: Awaited<ReturnType<TtsProvider['synthesize']>>;
+        try {
+          result = await withSpeechSlot(async () =>
+            tts.synthesize({
+              speechId,
+              text: line.text,
+              voiceId,
+              speakingRate: speakingRateFor(pacing, line.speaker),
+              outputDirectory: segmentDirectory,
+            }),
+          );
+        } catch (error) {
+          throw new Error(
+            `${speechId} for ${line.speaker} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
         speech[index] = { line, speechId, voiceId, result };
       }
     };

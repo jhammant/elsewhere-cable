@@ -1308,27 +1308,27 @@ const curatedDrafts: GeneratedSegmentDraft[] = [
     dialogue: [
       {
         speaker: 'Announcer Venn',
-        text: 'Our next programme begins now.',
+        text: 'The scheduled programme is prepared to begin.',
         action: 'POINT_AT',
       },
       {
-        speaker: 'Network Logo',
-        text: 'You omitted the courtesy credit.',
+        speaker: 'Logo Voice',
+        text: 'Please complete the courtesy credit before continuing.',
         action: 'FREEZE',
       },
       {
         speaker: 'Announcer Venn',
-        text: 'Thank you, complete network logo.',
+        text: 'Thank you to the complete network symbol.',
         action: 'PAUSE',
       },
       {
-        speaker: 'Network Logo',
-        text: 'My registered name is considerably longer.',
+        speaker: 'Logo Voice',
+        text: 'Its registered name is considerably longer than that.',
         action: 'REACTION_NEUTRAL',
       },
       {
         speaker: 'Announcer Venn',
-        text: 'Then the programme may thank you.',
+        text: 'Then the programme can finish the acknowledgement.',
         action: 'FREEZE',
       },
     ],
