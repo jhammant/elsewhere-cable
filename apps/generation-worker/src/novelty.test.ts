@@ -93,4 +93,21 @@ describe('creative novelty', () => {
 
     expect(noveltyIssues(fresh, history)).toEqual([]);
   });
+
+  it('rejects a paraphrased repeat of the same broadcast-graphic credit mechanism', () => {
+    const previous = candidate({
+      programmeTitle: 'Thank the Logo',
+      premise:
+        'In a continuity ident, an announcer wants the next title displayed, but the network logo refuses to leave until its full name is thanked aloud.',
+    });
+    const paraphrase = candidate({
+      programmeTitle: 'Station Transition Alpha',
+      premise:
+        'In an empty studio, an announcer tries to conclude the ident while a logo refuses to rotate unless it receives top billing.',
+    });
+
+    expect(noveltyIssues(paraphrase, [recordFromDraft(previous)])).toContain(
+      'comic mechanism repeats "broadcast graphic demands credit before moving"',
+    );
+  });
 });

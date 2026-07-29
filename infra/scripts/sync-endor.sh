@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-source_directory=${ELSEWHERE_LOCAL_SEGMENTS_DIR:-data/segments}
+source_directory=${ELSEWHERE_LOCAL_SEGMENTS_DIR:-data/segments-live}
 remote_host=${ELSEWHERE_ENDOR_HOST:-endor}
 remote_root=${ELSEWHERE_ENDOR_ROOT:-/mnt/tank/apps/elsewhere-cable}
 

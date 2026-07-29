@@ -30,6 +30,7 @@
     "reservoir:remove": "tsx infra/scripts/remove-manifest-segments.ts",
     "reservoir:repair-medium": "tsx infra/scripts/repair-segment-medium.ts",
     "reservoir:tighten-tails": "tsx infra/scripts/tighten-segment-tails.ts",
+    "reservoir:content-runway": "tsx infra/scripts/content-runway.ts",
     "endor:content:check": "tsx infra/scripts/check-endor-content-compatibility.ts",
     "optimise:once": "tsx infra/scripts/optimisation-loop.ts --once",
     "optimise:loop": "tsx infra/scripts/optimisation-loop.ts",

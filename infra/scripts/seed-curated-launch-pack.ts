@@ -4,10 +4,18 @@ import path from 'node:path';
 import process from 'node:process';
 import {
   generatedSegmentDraftSchema,
+  playoutManifestSchema,
   preparedScriptSchema,
+  segmentPackageSchema,
   type GeneratedSegmentDraft,
 } from '../../packages/schemas/src/index.js';
 import { critiquePremise } from '../../apps/generation-worker/src/premise-critic.js';
+import {
+  noveltyIssues,
+  recordFromDraft,
+  recordFromSegment,
+  type CreativeRecord,
+} from '../../apps/generation-worker/src/novelty.js';
 import {
   assertPreviewSafe,
   proposalQualityIssues,
@@ -20,6 +28,7 @@ function argument(name: string): string | undefined {
 
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
 const queueRoot = path.resolve(workspaceRoot, argument('script-queue') ?? 'data/script-reservoir');
+const segmentsRoot = path.resolve(workspaceRoot, argument('segments') ?? 'data/segments-live');
 
 const curatedDrafts: GeneratedSegmentDraft[] = [
   {
@@ -1391,6 +1400,457 @@ const curatedDrafts: GeneratedSegmentDraft[] = [
     endingBeat:
       'The display wall rotates between Miri and Odo until the portrait faces an empty side of the studio.',
   },
+  {
+    channelNumber: 9_118_442_730,
+    channelName: 'Pending Events News',
+    programmeTitle: 'Permission Pending at the Bridge',
+    format: 'news',
+    realityId: 'PIXEL-CIVIC-61',
+    visualStyle: 'chunky_pixel_ribbon_bulletin',
+    visualMedium: 'pixel_broadcast',
+    castArchetype: 'geometric_aliens',
+    pacing: 'staccato',
+    storyMode: 'service_mismatch',
+    premise:
+      'At a pixel local-news desk, anchor Iri wants worker Pell to report a bridge opening, but Pell refuses because the event service has not approved its application to happen.',
+    tone: ['local', 'urgent', 'procedural'],
+    dialogue: [
+      {
+        speaker: 'Anchor Iri',
+        text: 'Is the bridge opening on schedule?',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Worker Pell',
+        text: 'Its application remains under event review.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Anchor Iri',
+        text: 'The ribbon and guests are already waiting.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Worker Pell',
+        text: 'Waiting is approved. Opening is not.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Ribbon Clerk',
+        text: 'I can authorise a ceremonial hesitation.',
+        action: 'ENTER',
+      },
+      {
+        speaker: 'Anchor Iri',
+        text: 'Can the bridge hesitate on camera?',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Worker Pell',
+        text: 'Only if nobody crosses with confidence.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Anchor Iri',
+        text: 'Excellent. We join that uncertainty live.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Civic events require approval to happen even after their guests arrive.',
+    endingBeat:
+      'The ribbon clerk stamps hesitation approved while the waiting guests take one doubtful step onto the bridge.',
+  },
+  {
+    channelNumber: 8_402_771_509,
+    channelName: 'Numerical Lost Property',
+    programmeTitle: 'Decimal on Loan',
+    format: 'ident',
+    realityId: 'STOP-NUMBER-24',
+    visualStyle: 'stop_motion_number_cloakroom',
+    visualMedium: 'stop_motion',
+    castArchetype: 'talking_objects',
+    pacing: 'near_silent',
+    storyMode: 'semantic_contract',
+    premise:
+      'In a stop-motion continuity booth, announcer Sela wants to introduce the next programme, but clerk Om refuses because the spoken word channel signs out a decimal from numerical lost property.',
+    tone: ['minimal', 'careful', 'administrative'],
+    dialogue: [
+      {
+        speaker: 'Announcer Sela',
+        text: 'Your next channel is ready.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Clerk Om',
+        text: 'You just borrowed decimal seven.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Announcer Sela',
+        text: 'I did not request a decimal.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Number Seven',
+        text: 'I have already taken the space between your numbers.',
+        action: 'FREEZE',
+      },
+      {
+        speaker: 'Clerk Om',
+        text: 'Keep it. The next show starts after seven and before nine.',
+        action: 'PAUSE',
+      },
+    ],
+    continuityFact: 'Saying channel may sign out a decimal from numerical lost property.',
+    endingBeat:
+      'Decimal Seven settles between the channel digits while Om hangs the missing integer on a numbered coat hook.',
+  },
+  {
+    channelNumber: 7_114_902_663,
+    channelName: 'Laundry Household Comedy',
+    programmeTitle: 'The Unmatched Veto',
+    format: 'sitcom',
+    realityId: 'CEL-LAUNDRY-10',
+    visualStyle: 'bold_cel_family_laundrette',
+    visualMedium: 'cel_shaded',
+    castArchetype: 'humanoid',
+    pacing: 'conversational',
+    storyMode: 'status_transfer',
+    premise:
+      'At a family laundrette, sibling Mara wants the dryer key, but cousin Oren refuses because household veto authority belongs to whoever carries the most convincing unmatched sock.',
+    tone: ['warm', 'competitive', 'domestic'],
+    dialogue: [
+      {
+        speaker: 'Sibling Mara',
+        text: 'My clothes have occupied that dryer for twenty minutes.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Cousin Oren',
+        text: 'Your sock has no authority here.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Sibling Mara',
+        text: 'It is wool and deeply independent.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Cousin Oren',
+        text: 'Mine has waited alone since breakfast.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Aunt Vessa',
+        text: 'That loneliness is extremely convincing.',
+        action: 'ENTER',
+      },
+      {
+        speaker: 'Sibling Mara',
+        text: 'Can two unmatched socks form a coalition?',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Cousin Oren',
+        text: 'Only after they refuse the same sandal.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Sibling Mara',
+        text: 'Then the dryer key awaits negotiations.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'The most convincing unmatched sock grants a temporary household veto.',
+    endingBeat:
+      'Mara places both socks beside one sandal while Aunt Vessa locks the dryer key inside the coalition tin.',
+  },
+  {
+    channelNumber: 9_661_204_880,
+    channelName: 'Thermal Sincerity Shopping',
+    programmeTitle: 'Genuine Warmth, Sold Separately',
+    format: 'shopping',
+    realityId: 'HEAT-RETAIL-70',
+    visualStyle: 'thermal_camera_product_hour',
+    visualMedium: 'thermal_camera',
+    castArchetype: 'mixed',
+    pacing: 'frantic',
+    storyMode: 'product_consequence',
+    premise:
+      'In a thermal-camera shopping studio, host Varo wants customer Nemi to buy a sincerity product, but Nemi refuses because every agreement makes the demonstration package visibly warmer.',
+    tone: ['bright', 'competitive', 'revealing'],
+    dialogue: [
+      {
+        speaker: 'Host Varo',
+        text: 'One drop reveals completely genuine agreement.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Nemi',
+        text: 'I do not agree with that claim.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Demonstration Package',
+        text: 'Temperature unchanged. Excellent resistance.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Host Varo',
+        text: 'You agree resistance is valuable.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Customer Nemi',
+        text: 'Only during a refund discussion.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Demonstration Package',
+        text: 'Agreement detected. Warming one degree.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Nemi',
+        text: 'That was a condition, not enthusiasm.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Host Varo',
+        text: 'Your distinction sounds genuinely persuasive.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Demonstration Package',
+        text: 'Further agreement detected. Comfortably warm.',
+        action: 'REACTION_SHOCKED',
+      },
+      {
+        speaker: 'Customer Nemi',
+        text: 'Fine. I disagree with the receipt.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Sincerity products warm visibly whenever a nearby customer agrees.',
+    endingBeat:
+      'The package glows warmly beside a cold receipt while Varo records the sale as a documented disagreement.',
+  },
+  {
+    channelNumber: 8_114_337_295,
+    channelName: 'Miniature Room Improvements',
+    programmeTitle: 'Four Corners for the Price of Three',
+    format: 'advert',
+    realityId: 'MODEL-ROOM-14',
+    visualStyle: 'miniature_diorama_corner_showroom',
+    visualMedium: 'miniature_diorama',
+    castArchetype: 'humanoid',
+    pacing: 'staccato',
+    storyMode: 'product_consequence',
+    premise:
+      'At a miniature showroom advert, installer Fen wants to sell customer Evi a temporary-corner package, but Evi refuses because its refund service requires the room to remain politely round.',
+    tone: ['bright', 'architectural', 'awkward'],
+    dialogue: [
+      {
+        speaker: 'Installer Fen',
+        text: 'Add one tasteful corner for important conversations.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Evi',
+        text: 'This room already has four.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Installer Fen',
+        text: 'Those are permanent and emotionally unavailable.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Customer Evi',
+        text: 'Can I return the temporary one?',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Installer Fen',
+        text: 'Certainly, once the room becomes politely round.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Evi',
+        text: 'Rooms cannot be polite.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Installer Fen',
+        text: 'Then this corner may improve its manners.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Customer Evi',
+        text: 'Install it beside the refund desk.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Temporary corners are refundable only from rooms certified politely round.',
+    endingBeat:
+      'Fen installs the spare corner behind the refund desk and gives the existing walls a customer-service questionnaire.',
+  },
+  {
+    channelNumber: 6_774_203_118,
+    channelName: 'Civic Conversation Appeals',
+    programmeTitle: 'The Borrowed Pause Appeal',
+    format: 'public_access',
+    realityId: 'DRAWN-PAUSE-47',
+    visualStyle: 'hand_drawn_community_hearing',
+    visualMedium: 'hand_drawn',
+    castArchetype: 'paper_puppets',
+    pacing: 'slow_burn',
+    storyMode: 'semantic_contract',
+    premise:
+      'At a community appeals desk, resident Toma wants a conversation fine cancelled, but clerk Senn refuses because the spoken word wait renews every borrowed pause in the transcript.',
+    tone: ['quiet', 'earnest', 'linguistic'],
+    dialogue: [
+      {
+        speaker: 'Resident Toma',
+        text: 'I returned every pause before noon.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Clerk Senn',
+        text: 'Your transcript still contains seven.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Resident Toma',
+        text: 'Wait, those belong to the interviewer.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Clerk Senn',
+        text: 'Thank you. All seven are renewed.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Resident Toma',
+        text: 'I withdraw that particular word.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Clerk Senn',
+        text: 'Withdrawal requires a pause you currently owe.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Saying wait renews every borrowed pause recorded in a civic transcript.',
+    endingBeat:
+      'Senn stamps the silent gap after Toma’s final sentence and adds it to the outstanding balance.',
+  },
+  {
+    channelNumber: 9_003_556_412,
+    channelName: 'Household Equipment Notice',
+    programmeTitle: 'Supervisory Umbrella Notice',
+    format: 'emergency',
+    realityId: 'VECTOR-RAIN-56',
+    visualStyle: 'flat_vector_household_advisory',
+    visualMedium: 'corporate_vector',
+    castArchetype: 'geometric_aliens',
+    pacing: 'interrupted',
+    storyMode: 'service_mismatch',
+    premise:
+      'During a household emergency service notice, official Daro wants resident Pevi to close an umbrella indoors, but Pevi refuses because its equipment promotion now requires a formal supervisor greeting.',
+    tone: ['calm', 'domestic', 'official'],
+    dialogue: [
+      {
+        speaker: 'Official Daro',
+        text: 'Please close the promoted umbrella indoors.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Resident Pevi',
+        text: 'It has not acknowledged my greeting.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Official Daro',
+        text: 'Use its complete supervisory title.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Resident Pevi',
+        text: 'Good evening, Acting Manager of Rain.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Umbrella Supervisor',
+        text: 'Greeting accepted. Indoor weather remains open.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Official Daro',
+        text: 'Fine. Please supervise the hallway responsibly.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact:
+      'Promoted household equipment requires a formal greeting before accepting instructions.',
+    endingBeat:
+      'Daro pins a tiny management badge to the open umbrella while Pevi submits an indoor-weather leave request.',
+  },
+  {
+    channelNumber: 8_552_110_947,
+    channelName: 'Cut-and-Paste Results',
+    programmeTitle: 'The Trophy Changes Sides',
+    format: 'news',
+    realityId: 'COLLAGE-SPORT-81',
+    visualStyle: 'torn_paper_results_bulletin',
+    visualMedium: 'collage_zine',
+    castArchetype: 'talking_objects',
+    pacing: 'conversational',
+    storyMode: 'status_transfer',
+    premise:
+      'At a collage sports-news desk, anchor Lio wants to announce the winner, but coach Mera refuses because team credit transfers whenever the trophy files a membership request.',
+    tone: ['serious', 'competitive', 'papery'],
+    dialogue: [
+      {
+        speaker: 'Anchor Lio',
+        text: 'The blue team has won by three.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Coach Mera',
+        text: 'The trophy joined red during the break.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Trophy',
+        text: 'Their membership form offered better shelf space.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Anchor Lio',
+        text: 'Results belong to the players.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Trophy',
+        text: 'Then why am I carrying the victory?',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Coach Mera',
+        text: 'Blue may apply to borrow it.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Anchor Lio',
+        text: 'Tonight, the winner is administrative.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Team credit follows a trophy’s accepted membership request.',
+    endingBeat:
+      'The trophy pins a red membership strip across its blue engraving while Lio updates only the ownership column.',
+  },
 ].map((draft) => generatedSegmentDraftSchema.parse(draft));
 
 async function existingProgrammeTitles(): Promise<Set<string>> {
@@ -1420,16 +1880,67 @@ async function existingProgrammeTitles(): Promise<Set<string>> {
   return titles;
 }
 
+async function existingCreativeHistory(): Promise<CreativeRecord[]> {
+  const history: CreativeRecord[] = [];
+  try {
+    const manifest = playoutManifestSchema.parse(
+      JSON.parse(await readFile(path.join(segmentsRoot, 'manifest.json'), 'utf8')),
+    );
+    for (const entry of manifest.segments) {
+      try {
+        const segment = segmentPackageSchema.parse(
+          JSON.parse(await readFile(path.join(segmentsRoot, entry.packagePath), 'utf8')),
+        );
+        history.push(recordFromSegment(segment));
+      } catch {
+        // A missing legacy package does not prevent safe curated seeding.
+      }
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+  for (const bucket of ['pending', 'completed']) {
+    const directory = path.join(queueRoot, bucket);
+    try {
+      for (const fileName of await readdir(directory)) {
+        if (!/^draft_[a-z0-9]+\.json$/u.test(fileName)) {
+          continue;
+        }
+        try {
+          const prepared = preparedScriptSchema.parse(
+            JSON.parse(await readFile(path.join(directory, fileName), 'utf8')),
+          );
+          history.push(recordFromDraft(prepared.draft));
+        } catch {
+          // A corrupt queued draft is excluded from creative history.
+        }
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+  return history;
+}
+
 const pendingRoot = path.join(queueRoot, 'pending');
 await mkdir(pendingRoot, { recursive: true });
 const existingTitles = await existingProgrammeTitles();
+const creativeHistory = await existingCreativeHistory();
 let added = 0;
 for (const draft of curatedDrafts) {
   if (existingTitles.has(draft.programmeTitle.toLowerCase())) {
     continue;
   }
   assertPreviewSafe(draft);
-  const issues = [...proposalQualityIssues(draft), ...critiquePremise(draft).reasons];
+  const issues = [
+    ...proposalQualityIssues(draft),
+    ...critiquePremise(draft).reasons,
+    ...noveltyIssues(draft, creativeHistory),
+  ];
   if (issues.length > 0) {
     throw new Error(`${draft.programmeTitle} failed editorial gates: ${issues.join('; ')}`);
   }
@@ -1448,6 +1959,7 @@ for (const draft of curatedDrafts) {
     'utf8',
   );
   existingTitles.add(draft.programmeTitle.toLowerCase());
+  creativeHistory.push(recordFromDraft(draft));
   added += 1;
 }
 

@@ -57,6 +57,20 @@ function sharedPhrase(left: string, right: string, width = 5): string | null {
   return null;
 }
 
+const comicMechanismFamilies = [
+  {
+    name: 'broadcast graphic demands credit before moving',
+    pattern:
+      /^(?=[\s\S]*\b(?:graphic|logo|lower third|title card)\b)(?=[\s\S]*\b(?:billing|byline|credit|name|thank)\w*\b)(?=[\s\S]*\b(?:demand|refus|until|want)\w*\b)/iu,
+  },
+] as const;
+
+function matchingMechanismFamilies(premise: string): string[] {
+  return comicMechanismFamilies
+    .filter(({ pattern }) => pattern.test(normalise(premise)))
+    .map(({ name }) => name);
+}
+
 export function recordFromDraft(draft: GeneratedSegmentDraft): CreativeRecord {
   return {
     title: draft.programmeTitle,
@@ -92,6 +106,7 @@ export function conceptNoveltyIssues(
   const issues: string[] = [];
   const title = normalise(proposal.programmeTitle);
   const premise = normalise(proposal.premise);
+  const premiseMechanismFamilies = matchingMechanismFamilies(premise);
   // A large reservoir inevitably shares short connective phrases. At catalogue
   // scale, retain exact and semantic checks while requiring a longer verbatim
   // phrase before rejecting an otherwise distinct physical comedy mechanism.
@@ -107,6 +122,12 @@ export function conceptNoveltyIssues(
     const repeatedPhrase = sharedPhrase(premise, previous.premise, sharedPhraseWidth);
     if (repeatedPhrase !== null) {
       issues.push(`premise reuses the phrase "${repeatedPhrase}"`);
+    }
+    const repeatedMechanismFamily = premiseMechanismFamilies.find((family) =>
+      matchingMechanismFamilies(previous.premise).includes(family),
+    );
+    if (repeatedMechanismFamily !== undefined) {
+      issues.push(`comic mechanism repeats "${repeatedMechanismFamily}"`);
     }
   }
 
