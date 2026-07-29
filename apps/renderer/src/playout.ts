@@ -152,12 +152,9 @@ export class PlayoutEngine {
   async start(): Promise<void> {
     this.ui.mode.textContent = 'Connecting to prepared segment queue';
     try {
-      const response = await fetch('/api/playout/manifest', { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error(`Manifest request failed with HTTP ${response.status}`);
-      }
-      this.manifest = playoutManifestSchema.parse(await response.json());
-      if (this.manifest.segments.length === 0) {
+      await this.refreshManifest();
+      const manifest = this.manifest;
+      if (manifest === null || manifest.segments.length === 0) {
         this.enterFallback('Prepared queue empty · showing fallback');
         return;
       }
@@ -165,6 +162,23 @@ export class PlayoutEngine {
       await this.playCurrent();
     } catch (error) {
       this.enterFallback(error instanceof Error ? error.message : 'Manifest unavailable');
+    }
+  }
+
+  private async refreshManifest(): Promise<void> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3_000);
+    try {
+      const response = await fetch('/api/playout/manifest', {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`Manifest request failed with HTTP ${response.status}`);
+      }
+      this.manifest = playoutManifestSchema.parse(await response.json());
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -200,12 +214,17 @@ export class PlayoutEngine {
   }
 
   private async playCurrent(): Promise<void> {
+    this.clearSchedule();
+    try {
+      await this.refreshManifest();
+    } catch {
+      // Keep airing the last atomic manifest if the local control API briefly drops out.
+    }
     const manifest = this.manifest;
     if (manifest === null || manifest.segments.length === 0) {
       this.enterFallback('No approved segments available');
       return;
     }
-    this.clearSchedule();
     const nextIndex = nextUnplayedIndex(manifest, this.index, this.playedSegmentIds);
     const entry = nextIndex === null ? undefined : manifest.segments[nextIndex];
     if (nextIndex === null || entry === undefined) {

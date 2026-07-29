@@ -10,6 +10,10 @@ import {
 import { z } from 'zod';
 
 const execFileAsync = promisify(execFile);
+const localSpeechProcessOptions = {
+  timeout: 60_000,
+  killSignal: 'SIGKILL' as const,
+};
 
 export interface StructuredGenerationRequest {
   systemPrompt: string;
@@ -298,58 +302,60 @@ export class LocalCommandTtsProvider implements TtsProvider {
 
     if (this.backend === 'say') {
       const wordsPerMinute = Math.round(172 * (request.speakingRate ?? 1));
-      await execFileAsync('say', [
-        '-v',
-        request.voiceId,
-        '-r',
-        String(wordsPerMinute),
-        '-o',
-        sourceFile,
-        request.text,
-      ]);
+      await execFileAsync(
+        'say',
+        ['-v', request.voiceId, '-r', String(wordsPerMinute), '-o', sourceFile, request.text],
+        localSpeechProcessOptions,
+      );
     } else if (this.backend === 'espeak-ng') {
       const wordsPerMinute = Math.round(165 * (request.speakingRate ?? 1));
-      await execFileAsync('espeak-ng', [
-        '-s',
-        String(wordsPerMinute),
-        '-w',
-        sourceFile,
-        request.text,
-      ]);
+      await execFileAsync(
+        'espeak-ng',
+        ['-s', String(wordsPerMinute), '-w', sourceFile, request.text],
+        localSpeechProcessOptions,
+      );
     } else {
       const estimatedSeconds = Math.max(1, request.text.split(/\s+/u).length / 2.7);
-      await execFileAsync('ffmpeg', [
+      await execFileAsync(
+        'ffmpeg',
+        [
+          '-hide_banner',
+          '-loglevel',
+          'error',
+          '-f',
+          'lavfi',
+          '-i',
+          'anullsrc=r=48000:cl=mono',
+          '-t',
+          estimatedSeconds.toFixed(2),
+          '-y',
+          sourceFile,
+        ],
+        localSpeechProcessOptions,
+      );
+    }
+
+    await execFileAsync(
+      'ffmpeg',
+      [
         '-hide_banner',
         '-loglevel',
         'error',
-        '-f',
-        'lavfi',
         '-i',
-        'anullsrc=r=48000:cl=mono',
-        '-t',
-        estimatedSeconds.toFixed(2),
-        '-y',
         sourceFile,
-      ]);
-    }
-
-    await execFileAsync('ffmpeg', [
-      '-hide_banner',
-      '-loglevel',
-      'error',
-      '-i',
-      sourceFile,
-      '-af',
-      'loudnorm=I=-16:LRA=7:TP=-1.5',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '160k',
-      '-ar',
-      '48000',
-      '-y',
-      outputFile,
-    ]);
+        '-af',
+        'loudnorm=I=-16:LRA=7:TP=-1.5',
+        '-c:a',
+        'aac',
+        '-b:a',
+        '160k',
+        '-ar',
+        '48000',
+        '-y',
+        outputFile,
+      ],
+      localSpeechProcessOptions,
+    );
     await unlink(sourceFile);
 
     return {

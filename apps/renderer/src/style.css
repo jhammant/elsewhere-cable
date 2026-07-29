@@ -54,6 +54,26 @@ body {
   z-index: 1;
 }
 
+.broadcast[data-medium='pixel_broadcast'] #programme-2d-canvas {
+  image-rendering: pixelated;
+}
+
+.broadcast[data-medium='archive_film'] #programme-2d-canvas {
+  filter: sepia(0.72) contrast(1.18) brightness(0.92);
+}
+
+.broadcast[data-medium='signal_corruption'] #programme-2d-canvas {
+  filter: saturate(1.55) contrast(1.24);
+}
+
+.broadcast[data-medium='shadow_theatre'] #programme-2d-canvas {
+  filter: sepia(0.28) contrast(1.16);
+}
+
+.broadcast[data-medium='thermal_camera'] #programme-2d-canvas {
+  filter: saturate(1.5) contrast(1.2);
+}
+
 .programme-mask {
   position: absolute;
   top: 4.16%;

@@ -92,6 +92,10 @@ export function conceptNoveltyIssues(
   const issues: string[] = [];
   const title = normalise(proposal.programmeTitle);
   const premise = normalise(proposal.premise);
+  // A large reservoir inevitably shares short connective phrases. At catalogue
+  // scale, retain exact and semantic checks while requiring a longer verbatim
+  // phrase before rejecting an otherwise distinct physical comedy mechanism.
+  const sharedPhraseWidth = history.length > 192 ? 8 : 5;
 
   for (const previous of history) {
     if (title === normalise(previous.title)) {
@@ -100,7 +104,7 @@ export function conceptNoveltyIssues(
     if (premise === normalise(previous.premise) || similarity(premise, previous.premise) >= 0.7) {
       issues.push(`premise resembles "${previous.premise}"`);
     }
-    const repeatedPhrase = sharedPhrase(premise, previous.premise);
+    const repeatedPhrase = sharedPhrase(premise, previous.premise, sharedPhraseWidth);
     if (repeatedPhrase !== null) {
       issues.push(`premise reuses the phrase "${repeatedPhrase}"`);
     }

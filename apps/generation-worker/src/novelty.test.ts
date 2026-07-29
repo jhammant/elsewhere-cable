@@ -79,4 +79,18 @@ describe('creative novelty', () => {
       expect.arrayContaining([expect.stringContaining('premise reuses the phrase')]),
     );
   });
+
+  it('does not exhaust a large catalogue on short generator scaffold phrases', () => {
+    const history = Array.from({ length: 193 }, (_, index) => ({
+      title: `Programme ${index}`,
+      premise: `At location ${index}, the music stops without warning and object ${index} folds.`,
+      dialogue: [],
+    }));
+    const fresh = candidate({
+      premise:
+        'Inside a rotating kiln, the music stops without warning and every clay judge trades height with a trophy.',
+    });
+
+    expect(noveltyIssues(fresh, history)).toEqual([]);
+  });
 });

@@ -420,6 +420,128 @@ const requestedPacing = [
   'conversational',
 ] as const;
 
+const affectedSetElements = [
+  'entrance marks',
+  'prize podiums',
+  'camera tripods',
+  'costume sleeves',
+  'painted horizons',
+  'microphone cables',
+  'scoreboard digits',
+  'audience chairs',
+  'lighting ladders',
+  'serving counters',
+  'floor arrows',
+  'stage curtains',
+  'contestant shadows',
+  'product labels',
+  'window reflections',
+  'musical instruments',
+  'safety rails',
+  'display plinths',
+  'weather symbols',
+  'kitchen timers',
+  'exit signs',
+  'handheld props',
+  'studio doors',
+  'name badges',
+  'background scenery',
+  'teleprompter words',
+  'table legs',
+  'practical lamps',
+  'control buttons',
+  'queue barriers',
+  'camera sightlines',
+  'applause indicators',
+] as const;
+
+const transformationVerbs = [
+  'trade heights',
+  'acquire working hinges',
+  'flatten into scenery',
+  'continue moving after release',
+  'split into unequal copies',
+  'rotate toward the least prepared person',
+  'become load-bearing',
+  'queue by usefulness',
+  'swap material properties',
+  'move one beat ahead',
+  'shrink when correctly named',
+  'grow when ignored',
+  'change owners after eye contact',
+  'turn into navigable terrain',
+  'become audible but invisible',
+  'lose one spatial dimension',
+  'gain an unnecessary corner',
+  'follow the wrong performer',
+  'reassemble in alphabetical order',
+  'mirror the previous action',
+  'drift toward professional confidence',
+  'refuse symmetrical placement',
+  'exchange weight without changing size',
+  'become temporary exits',
+  'repeat the smallest motion',
+  'slide toward sincere agreement',
+  'act as if already demonstrated',
+  'occupy the nearest empty role',
+  'lock whenever the host improvises',
+  'change scale at every camera cut',
+  'detach from their painted outlines',
+  'form a second competing set',
+] as const;
+
+const escalationCadences = [
+  'once, then faster after every denial',
+  'only during close-ups',
+  'in reverse cast order',
+  'whenever the task is performed correctly',
+  'one item per spoken sentence',
+  'only while nobody acknowledges it',
+  'at alternating ends of the set',
+  'after each sincere apology',
+  'whenever two characters cooperate',
+  'in proportion to the host’s confidence',
+  'each time the same camera returns',
+  'until the prize becomes unreachable',
+  'with the smallest character affected first',
+  'only during silence',
+  'whenever the official rules are quoted',
+  'one stage zone at a time',
+] as const;
+
+const visualDirections: Record<(typeof requestedMediums)[number], string> = {
+  cel_shaded:
+    'saturated three-dimensional cel animation with hard outlines, graphic poses and aggressive camera cuts',
+  paper_cutout:
+    'hinged construction-paper puppets on a layered tabletop stage with limited joint motion',
+  pixel_broadcast:
+    'low-resolution sprite animation, tile-map scenery and stepped eight-bit movement',
+  archive_film:
+    'sepia silent-era staging with a proscenium, hand-cranked motion, scratches and intertitle composition',
+  neon_wireframe:
+    'black-space geometry, luminous wireframes, emissive props and floating diagrammatic cameras',
+  public_access_vhs:
+    'cheap live-action studio grammar, awkward wide shots, analogue colour bleed and practical furniture',
+  signal_corruption:
+    'fragmented RGB figures, displaced scan blocks and a set assembled from broken transmission data',
+  stop_motion: 'tactile miniature models animated on held poses with visibly stepped movement',
+  collage_zine:
+    'torn editorial collage, misregistered print layers, photographic scraps and jump-cut motion',
+  ink_monochrome:
+    'heavy black brush caricatures, crosshatched scenery and boiling monochrome linework',
+  miniature_diorama:
+    'tilt-shift tabletop architecture, tiny practical lights and visibly modelled scenic depth',
+  corporate_vector:
+    'clean infographic avatars, strict presentation grids and unnervingly smooth easing',
+  claymation: 'soft thumb-marked clay figures, rounded props and squash-and-stretch held animation',
+  shadow_theatre:
+    'backlit rod-puppet silhouettes against parchment with pendulum movement and visible control rods',
+  hand_drawn:
+    'loose pencil characters, unstable outlines and a continuously redrawn notebook environment',
+  thermal_camera:
+    'false-colour heat signatures, measurement reticles and surveillance-camera blocking',
+};
+
 function axisIndex(serial: number, salt: number, length: number): number {
   let value = (serial ^ salt) >>> 0;
   value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
@@ -447,24 +569,34 @@ export function userPrompt(
   const format = formats[axisIndex(serial, 0x16b2c79, formats.length)] ?? 'advert';
   const setting = settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
   const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
-  const physicalConsequence =
+  const consequenceReference =
     physicalConsequences[axisIndex(serial, 0x51ac93f, physicalConsequences.length)]!;
   const comicConflict = comicConflicts[axisIndex(serial, 0x6d092e5, comicConflicts.length)]!;
   const cast = castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
   const pacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
+  const affectedSetElement =
+    affectedSetElements[axisIndex(serial, 0xa12f683, affectedSetElements.length)]!;
+  const transformation =
+    transformationVerbs[axisIndex(serial, 0xb37c1d9, transformationVerbs.length)]!;
+  const escalation = escalationCadences[axisIndex(serial, 0xc9e8047, escalationCadences.length)]!;
+  const visualDirection = visualDirections[visualMedium];
   return `Create batch segment ${index + 1} using the ${format} format.
 This proposal will be compared semantically with ${recentTitles.length} recent programme titles, ${recentPremises.length} recent premises and the complete broadcast catalogue. Do not rely on familiar Elsewhere Cable motifs.
 ${rejectionReasons.length > 0 ? 'The previous attempt collided with an existing concept. Change its setting nouns, physical mechanism, character objective and type of escalation completely; do not paraphrase that attempt.' : ''}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.
 - Comic trigger: ${comicTrigger}.
-- Physical consequence: ${physicalConsequence}.
+- Affected set element: ${affectedSetElement}.
+- Transformation: the affected elements ${transformation}.
+- Escalation rhythm: ${escalation}.
+- Loose consequence reference: ${consequenceReference}.
 - Character conflict: ${comicConflict}.
 - Cast structure: ${cast}.
 - Visual medium: ${visualMedium}.
+- Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
-Fuse the trigger, consequence and conflict into one simple comic rule. Use all seven coordinates directly and visibly; do not replace them with dreams, memory products, emotional weather, household litigation, identity deletion or generic bureaucracy.
+Fuse the trigger, affected element, transformation, escalation and conflict into one simple comic rule. The consequence reference is behavioural inspiration only: do not copy five consecutive words from it. Use the visual production grammar literally in the staging and visualStyle field. Do not replace the coordinates with dreams, memory products, emotional weather, household litigation, identity deletion or generic bureaucracy.
 For this batch, memory, dreams, identity, feelings, apologies, household objects and official paperwork cannot be the subject of the premise. Keep the comic problem physical, active and specific to the assigned location.
 Select a very high, memorable channel number. Make the scene unlike the immediately preceding material.`;
 }

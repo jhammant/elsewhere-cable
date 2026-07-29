@@ -138,7 +138,7 @@ describe('produceBatch', () => {
       generateStructured() {
         requestCount += 1;
         const draft = demoDraft(requestCount);
-        if (requestCount <= 6) {
+        if (requestCount <= 10) {
           draft.premise = 'Too short';
         }
         return Promise.resolve(draft);

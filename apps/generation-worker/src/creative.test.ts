@@ -13,17 +13,21 @@ describe('generation prompts', () => {
     );
 
     const coordinateBlocks = prompts.map(
-      (prompt) => prompt.match(/Mandatory creative coordinates[\s\S]*?Use all seven/u)?.[0] ?? '',
+      (prompt) =>
+        prompt.match(/Mandatory creative coordinates[\s\S]*?Fuse the trigger/u)?.[0] ?? '',
     );
     expect(new Set(coordinateBlocks).size).toBe(prompts.length);
     for (const prompt of prompts) {
       expect(prompt).toContain('Mandatory creative coordinates');
       expect(prompt).toContain('Physical setting:');
       expect(prompt).toContain('Comic trigger:');
-      expect(prompt).toContain('Physical consequence:');
+      expect(prompt).toContain('Affected set element:');
+      expect(prompt).toContain('Transformation:');
+      expect(prompt).toContain('Escalation rhythm:');
       expect(prompt).toContain('Character conflict:');
       expect(prompt).toContain('Cast structure:');
       expect(prompt).toContain('Visual medium:');
+      expect(prompt).toContain('Visual production grammar:');
       expect(prompt).toContain('Pacing:');
       expect(prompt).not.toContain('Previous Programme');
       expect(prompt).not.toContain('A previous premise');

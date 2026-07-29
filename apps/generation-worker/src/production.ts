@@ -491,7 +491,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       nextIndex += 1;
       try {
         let rejectionReasons: string[] = [];
-        const maximumProposalAttempts = 6;
+        const maximumProposalAttempts = 10;
         for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
           const recent = creativeHistory.slice(-24);
           const prompt = userPrompt(
