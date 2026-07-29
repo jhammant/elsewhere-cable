@@ -49,6 +49,16 @@ function slug(value: string): string {
     .slice(0, 48);
 }
 
+function onScreenText(value: string, maximumLength = 180): string {
+  if (value.length <= maximumLength) {
+    return value;
+  }
+  const candidate = value.slice(0, maximumLength - 1);
+  const lastSpace = candidate.lastIndexOf(' ');
+  const boundary = lastSpace >= maximumLength * 0.7 ? lastSpace : candidate.length;
+  return `${candidate.slice(0, boundary).trimEnd()}…`;
+}
+
 function voiceFor(name: string, tts: TtsProvider): string {
   let hash = 0;
   for (const character of name) {
@@ -373,7 +383,7 @@ async function buildSegment(
       atMs: cursorMs,
       type: 'graphic.show',
       graphic: 'WARNING',
-      text: draft.endingBeat,
+      text: onScreenText(draft.endingBeat),
     });
     events.push({
       atMs: cursorMs + timing.endingHoldMs,

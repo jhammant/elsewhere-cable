@@ -81,7 +81,12 @@ describe('produceBatch', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         active -= 1;
         completedGenerations += 1;
-        return demoDraft(index);
+        const draft = demoDraft(index);
+        draft.endingBeat =
+          'The final compliance notice continues past the available broadcast-safe graphic area because the committee has mistaken length for authority. '.repeat(
+            2,
+          );
+        return draft;
       },
     };
     const tts: TtsProvider = {
@@ -125,6 +130,15 @@ describe('produceBatch', () => {
     );
     expect(firstSegment.visualMedium).toBeDefined();
     expect(firstSegment.castArchetype).toBeDefined();
+    const endingGraphic = firstSegment.events.find(
+      (event) => event.type === 'graphic.show' && event.graphic === 'WARNING',
+    );
+    expect(
+      endingGraphic?.type === 'graphic.show' ? endingGraphic.text.length : 0,
+    ).toBeLessThanOrEqual(180);
+    expect(endingGraphic?.type === 'graphic.show' ? endingGraphic.text.endsWith('…') : false).toBe(
+      true,
+    );
   });
 
   it('commits completed novel segments when another batch slot is exhausted', async () => {
