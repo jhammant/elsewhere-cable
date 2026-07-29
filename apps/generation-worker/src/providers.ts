@@ -138,6 +138,50 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
       ['advert', 'public_access', 'news', 'shopping', 'sitcom', 'emergency', 'ident'],
       'public_access',
     );
+  const storyMode = generatedCoordinate(
+    request.userPrompt,
+    'Story mode',
+    [
+      'social_protocol',
+      'service_mismatch',
+      'status_transfer',
+      'format_literalism',
+      'object_agency',
+      'product_consequence',
+      'semantic_contract',
+      'visual_physics',
+    ],
+    'social_protocol',
+  );
+  const physicalSetting =
+    request.userPrompt.match(/Physical setting: ([^\n]+)\./u)?.[1] ?? 'an assigned studio set';
+  const formatRole = {
+    advert: 'spokesperson',
+    public_access: 'civic host',
+    news: 'news anchor',
+    shopping: 'sales host',
+    sitcom: 'household member',
+    emergency: 'fictional procedure official',
+    ident: 'continuity announcer',
+  }[format];
+  const mechanismShape = {
+    social_protocol:
+      'wants a concrete social privilege, but an opposing role refuses because one impossible etiquette rule controls permission',
+    service_mismatch:
+      'wants an ordinary emotional result, but a service worker delivers the exact promised service in a socially obstructive way',
+    status_transfer:
+      'wants to keep a minor privilege, but an opposing role gains authority through one clear bureaucratic criterion',
+    format_literalism:
+      'wants to finish the broadcast, but a producer enforces one familiar television convention as a workplace rule',
+    object_agency:
+      'needs an ordinary object to cooperate, but the object explicitly demands one concrete workplace benefit',
+    product_consequence:
+      'wants to demonstrate one impossible product, but its exact advertised effect creates a recognisable relationship problem',
+    semantic_contract:
+      'wants a routine exception, but one spoken phrase creates a precise incompatible obligation',
+    visual_physics:
+      'wants a minor status advantage, but the assigned visible trigger changes one set element and transfers that advantage',
+  }[storyMode];
   return JSON.stringify({
     channelNumber: 700_000_001,
     channelName: 'REPLACE WITH ORIGINAL CHANNEL',
@@ -175,23 +219,8 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
       ['frantic', 'staccato', 'conversational', 'slow_burn', 'interrupted', 'near_silent'],
       'conversational',
     ),
-    storyMode: generatedCoordinate(
-      request.userPrompt,
-      'Story mode',
-      [
-        'social_protocol',
-        'service_mismatch',
-        'status_transfer',
-        'format_literalism',
-        'object_agency',
-        'product_consequence',
-        'semantic_contract',
-        'visual_physics',
-      ],
-      'social_protocol',
-    ),
-    premise:
-      'Replace this with one original sentence naming a character goal, an opposing role or rule, and the resulting comic consequence.',
+    storyMode,
+    premise: `At ${physicalSetting}, a placeholder ${formatRole} ${mechanismShape}, causing one harmless social consequence.`,
     tone: ['original-tone', 'original-tone'],
     continuityFact: 'Replace with one original fictional fact established by the scene.',
     endingBeat:
@@ -272,9 +301,10 @@ export class OpenAiCompatibleProvider implements LlmProvider {
               role: 'user',
               content: `${request.userPrompt}
 
-The JSON below demonstrates required keys and value types only. Do not copy or
-adapt its names, setting, premise, joke, characters, dialogue or ending. Replace
-every value with original programme content that follows the creative coordinates:
+The JSON below demonstrates required keys, value types and the mechanical premise
+shape. It includes the assigned setting and enum coordinates; preserve those.
+Replace every placeholder role, goal, consequence, name, character, line and ending
+with original programme content. Do not reuse its generic mechanism wording:
 ${structuralExample}
 ${repairInstruction}`,
             },

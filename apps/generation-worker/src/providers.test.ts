@@ -29,6 +29,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
     const request = {
       systemPrompt: 'Return JSON.',
       userPrompt: `Create batch segment 71 using the news format.
+- Physical setting: a miniature newsroom inside a closed florist.
 - Visual medium: pixel_broadcast.
 - Pacing: frantic.
 - Story mode: object_agency.`,
@@ -38,6 +39,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
       visualMedium: string;
       pacing: string;
       storyMode: string;
+      premise: string;
     };
     const draft = JSON.parse(draftStructuralExample(request)) as {
       dialogue: unknown[];
@@ -49,6 +51,10 @@ describe('OpenAiCompatibleTtsProvider', () => {
       pacing: 'frantic',
       storyMode: 'object_agency',
     });
+    expect(proposal.premise).toMatch(
+      /^At a miniature newsroom inside a closed florist, a placeholder news anchor/u,
+    );
+    expect(proposal.premise).toContain('object explicitly demands');
     expect(draft.dialogue).toHaveLength(10);
   });
 
