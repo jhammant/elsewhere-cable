@@ -2,7 +2,7 @@
 set -eu
 
 sink_name=${ELSEWHERE_AUDIO_SINK:-elsewhere}
-quiet_threshold=${ELSEWHERE_AUDIO_QUIET_SECONDS:-8}
+quiet_threshold=${ELSEWHERE_AUDIO_QUIET_SECONDS:-1}
 cursor=${ELSEWHERE_AUDIO_RECOVERY_CURSOR:-1}
 quiet_seconds=0
 
