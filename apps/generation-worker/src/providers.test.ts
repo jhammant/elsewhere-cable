@@ -121,6 +121,9 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(requests[0]?.systemPrompt).toContain(
       'A character may naturally state a first-person intention',
     );
+    expect(requests[0]?.systemPrompt).toContain(
+      "Trace the premise's single cause and effect through every dialogue line",
+    );
   });
 
   it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
