@@ -14,6 +14,7 @@ embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
 embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 reservoir_target_hours=${ELSEWHERE_RESERVOIR_TARGET_HOURS:-72}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
+recovery_refill_count=${ELSEWHERE_RECOVERY_REFILL_COUNT:-0}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
@@ -37,6 +38,16 @@ case "$generation_concurrency" in
 esac
 if [ "$generation_concurrency" -lt 1 ] || [ "$generation_concurrency" -gt 4 ]; then
   echo "ELSEWHERE_GENERATION_CONCURRENCY must be an integer from 1 to 4." >&2
+  exit 64
+fi
+case "$recovery_refill_count" in
+  '' | *[!0-9]*)
+    echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
+    exit 64
+    ;;
+esac
+if [ "$recovery_refill_count" -lt 0 ] || [ "$recovery_refill_count" -gt 100 ]; then
+  echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
   exit 64
 fi
 
@@ -84,6 +95,11 @@ while :; do
     --segments "$output_root" \
     --recent "$batch_count" \
     --apply
+  if [ "$recovery_refill_count" -gt 0 ]; then
+    pnpm exec tsx infra/scripts/emergency-refill.ts \
+      --segments "$output_root" \
+      --count "$recovery_refill_count"
+  fi
 
   ELSEWHERE_LOCAL_SEGMENTS_DIR="$output_root" pnpm endor:sync
 
