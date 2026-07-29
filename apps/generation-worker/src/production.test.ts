@@ -106,6 +106,21 @@ describe('produceBatch', () => {
     );
   });
 
+  it('recognises ordinary broadcast language as format literalism', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      format: 'ident',
+      storyMode: 'format_literalism',
+      premise:
+        'In a continuity booth, an announcer wants to finish the broadcast, but the scheduler refuses because its caption contractually demands closing credit.',
+      endingBeat: 'The announcer grants the caption closing credit and completes the broadcast.',
+    });
+
+    expect(proposalQualityIssues(proposal)).not.toContain(
+      'premise does not realise its assigned format_literalism story mode',
+    );
+  });
+
   it('rejects realistic catastrophe stakes and alarm-style titles from emergency comedy', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),

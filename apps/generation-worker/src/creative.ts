@@ -817,9 +817,45 @@ export function userPrompt(
 - Motifs currently overused and forbidden in this attempt: ${optimisationBrief.avoidMotifs.join(', ') || 'none'}.
 - Strengths worth preserving without copying wording: ${optimisationBrief.preserveStrengths.join('; ') || 'none'}.
 - Editorial direction: ${optimisationBrief.editorialDirection}.`;
+  const retryDefects = [
+    rejectionReasons.some((reason) => reason.includes('physical setting'))
+      ? 'start the premise with At, In, Inside, On or During and name the assigned physical setting immediately'
+      : null,
+    rejectionReasons.some((reason) => reason.includes('assigned') && reason.includes('story mode'))
+      ? 'name and perform the assigned comedy mechanism family explicitly'
+      : null,
+    rejectionReasons.some(
+      (reason) => reason.includes('assigned') && reason.includes('television format'),
+    )
+      ? 'make the assigned television format explicit in the premise'
+      : null,
+    rejectionReasons.some((reason) => reason.includes('automatic body or set transformation'))
+      ? 'remove every physical transformation because this attempt permits only a social or procedural consequence'
+      : null,
+    rejectionReasons.some((reason) => reason.includes('harmless fictional administrative stakes'))
+      ? 'replace danger or catastrophe with a harmless administrative or social inconvenience'
+      : null,
+    rejectionReasons.some((reason) => reason.includes('specific character goal or refusal'))
+      ? 'state one role’s concrete goal and the opposing role or rule that blocks it'
+      : null,
+    rejectionReasons.some((reason) => reason.includes('object-agency premise'))
+      ? 'give the ordinary object one explicit demand or refusal and a concrete institutional benefit'
+      : null,
+    rejectionReasons.some((reason) =>
+      /(?:repeats|resembles|reuses|mechanism repeats)/u.test(reason),
+    )
+      ? 'replace the previous concept with a catalogue-novel objective, mechanism and consequence'
+      : null,
+  ].filter((defect): defect is string => defect !== null);
+  const retryBlock =
+    retryDefects.length === 0
+      ? ''
+      : `Correct these mechanical defects from the previous attempt:
+${retryDefects.map((defect) => `- ${defect}.`).join('\n')}`;
   return `Create batch segment ${index + 1} using the ${format} format.
 This proposal will be compared semantically with ${recentTitles.length} recent programme titles, ${recentPremises.length} recent premises and the complete broadcast catalogue. Do not rely on familiar Elsewhere Cable motifs.
 ${rejectionReasons.length > 0 ? 'The previous attempt failed an editorial gate. Keep the assigned format but change the character objective and single comic mechanism completely; do not paraphrase that attempt.' : ''}
+${retryBlock}
 ${optimisationBlock}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.

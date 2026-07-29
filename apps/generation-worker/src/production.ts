@@ -266,7 +266,7 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
           product_consequence:
             /\b(?:device|kit|machine|package|product|service|subscription|tool)\b/iu,
           format_literalism:
-            /\b(?:advert break|applause|camera|closing credits|cue|episode|live broadcast|lower third|programme|teleprompter|title sequence)\b/iu,
+            /\b(?:advert break|applause|broadcast|bulletin|camera|caption|closing credits|continuity|cue|episode|lower third|programme|teleprompter|title sequence|warning)\b/iu,
           service_mismatch: /\b(?:client|customer|help|representative|service|support|worker)\b/iu,
           status_transfer:
             /\b(?:authority|control|credit|decision|promotion|privilege|rank|status|veto)\b/iu,

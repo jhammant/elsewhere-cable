@@ -39,6 +39,7 @@ describe('generation prompts', () => {
       expect(prompt).not.toContain('Previous Programme');
       expect(prompt).not.toContain('A previous premise');
       expect(prompt).not.toContain('premise semantically repeats');
+      expect(prompt).toContain('catalogue-novel objective, mechanism and consequence');
     }
     expect(
       prompts.some((prompt) => prompt.includes('Automatic set transformations are forbidden')),
@@ -90,6 +91,25 @@ describe('generation prompts', () => {
     expect(scriptPrompt(demoDraft(0))).toContain(
       'never put stage directions, visual labels, bracketed actions',
     );
+  });
+
+  it('turns internal gate failures into bounded corrective guidance', () => {
+    const prompt = userPrompt(
+      12,
+      [],
+      [],
+      [
+        'premise must begin with the physical setting so the renderer can stage it',
+        'non-visual story mode introduces an automatic body or set transformation',
+        'premise semantically repeats "untrusted previous output" (0.999)',
+      ],
+    );
+
+    expect(prompt).toContain('Correct these mechanical defects');
+    expect(prompt).toContain('name the assigned physical setting immediately');
+    expect(prompt).toContain('permits only a social or procedural consequence');
+    expect(prompt).toContain('catalogue-novel objective, mechanism and consequence');
+    expect(prompt).not.toContain('untrusted previous output');
   });
 
   it('applies bounded half-hour feedback without exposing recent catalogue text', () => {
