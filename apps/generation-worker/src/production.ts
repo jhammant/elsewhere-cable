@@ -879,7 +879,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         nextIndex += 1;
         try {
           let rejectionReasons: string[] = [];
-          const maximumProposalAttempts = 10;
+          // A mature catalogue occupies much more of the obvious premise space than a fresh
+          // installation. Search longer rather than weakening the semantic novelty gate.
+          const maximumProposalAttempts = 16;
           for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
             const creativeSerial = creativeSerialBase + index + attempt * options.count;
             const recent = creativeHistory.slice(-24);
@@ -986,7 +988,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           continue;
         }
         let rejectionReasons: string[] = [];
-        const maximumScriptAttempts = 5;
+        // Preserve the approved premise while giving the writer enough room to replace
+        // expository or unnatural dialogue that the editorial critic rejects.
+        const maximumScriptAttempts = 8;
         for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
           try {
             const scripted = await options.llm!.generateStructured({
