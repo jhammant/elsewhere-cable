@@ -4,6 +4,7 @@ import type {
   OptimisationBrief,
 } from '@elsewhere-cable/schemas';
 import { expandedDemoDrafts } from './demo-network.js';
+import { deliveryNeedsCorrection } from './optimisation-policy.js';
 
 const originalDemoDrafts: GeneratedSegmentDraft[] = [
   {
@@ -795,9 +796,7 @@ export function assignedPacing(
   if (optimisationBrief === null || optimisationBrief.increasePacing.length === 0) {
     return basePacing;
   }
-  const correctionRequired =
-    (optimisationBrief.delivery.silenceRatio ?? 0) >= 0.18 ||
-    (optimisationBrief.delivery.freezeRatio ?? 0) >= 0.3;
+  const correctionRequired = deliveryNeedsCorrection(optimisationBrief.delivery);
   if (!correctionRequired && axisIndex(serial, 0xf47d281, 5) >= 2) {
     return basePacing;
   }

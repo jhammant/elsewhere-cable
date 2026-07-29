@@ -14,20 +14,22 @@ interface DeliveryPacingSignal {
   freezeRatio: number | null;
 }
 
+export function deliveryNeedsCorrection(delivery: DeliveryPacingSignal): boolean {
+  return (
+    (delivery.silenceRatio !== null && delivery.silenceRatio >= 0.12) ||
+    (delivery.freezeRatio !== null && delivery.freezeRatio >= 0.18)
+  );
+}
+
 export function pacingCandidatesForDelivery(delivery: DeliveryPacingSignal): readonly PacingMode[] {
-  const excessiveSilence = delivery.silenceRatio !== null && delivery.silenceRatio >= 0.18;
-  const excessiveFreeze = delivery.freezeRatio !== null && delivery.freezeRatio >= 0.3;
-  if (excessiveSilence || excessiveFreeze) {
+  if (deliveryNeedsCorrection(delivery)) {
     return ['frantic', 'staccato', 'interrupted'];
   }
   return pacingModes;
 }
 
 export function deliveryPacingDirection(delivery: DeliveryPacingSignal): string | null {
-  if (
-    (delivery.silenceRatio !== null && delivery.silenceRatio >= 0.18) ||
-    (delivery.freezeRatio !== null && delivery.freezeRatio >= 0.3)
-  ) {
+  if (deliveryNeedsCorrection(delivery)) {
     return 'Reduce prolonged silence and static holds; favour visible action, frequent shot changes and continuous audible presence.';
   }
   return null;

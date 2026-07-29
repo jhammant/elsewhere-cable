@@ -19,6 +19,17 @@ describe('delivery-aware pacing policy', () => {
     );
   });
 
+  it('keeps correction active until delivered silence is genuinely low', () => {
+    expect(pacingCandidatesForDelivery({ silenceRatio: 0.16, freezeRatio: 0.07 })).toEqual([
+      'frantic',
+      'staccato',
+      'interrupted',
+    ]);
+    expect(deliveryPacingDirection({ silenceRatio: 0.16, freezeRatio: 0.07 })).toContain(
+      'continuous audible presence',
+    );
+  });
+
   it('keeps every pacing mode available when delivery is healthy', () => {
     expect(pacingCandidatesForDelivery({ silenceRatio: 0.05, freezeRatio: 0.12 })).toContain(
       'near_silent',
