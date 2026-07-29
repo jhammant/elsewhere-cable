@@ -51,20 +51,7 @@ for (const entry of manifest.segments) {
   try {
     const segmentPath = path.join(segmentsRoot, entry.packagePath);
     const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
-    let eligible = segment.production.generator !== 'emergency-recovery-alias';
-    for (const event of segment.events) {
-      if (!eligible || event.type !== 'speech.play') {
-        continue;
-      }
-      if (
-        containsSpokenStageDirection(event.subtitle) ||
-        event.durationMs > maximumPlausibleSpeechDurationMs(event.subtitle) ||
-        (await audioQualityIssue(path.join(path.dirname(segmentPath), event.audioFile))) !== null
-      ) {
-        eligible = false;
-      }
-    }
-    if (eligible) {
+    if (segment.production.generator !== 'emergency-recovery-alias') {
       candidates.push({ entry, segment });
     }
   } catch {
@@ -74,9 +61,37 @@ for (const entry of manifest.segments) {
 const demoCandidates = candidates.filter(
   ({ segment }) => segment.production.generator === 'demo-library',
 );
-const sourcePool = demoCandidates.length >= count ? demoCandidates : candidates;
-if (sourcePool.length === 0) {
+const candidateSourcePool = demoCandidates.length >= count ? demoCandidates : candidates;
+if (candidateSourcePool.length === 0) {
   throw new Error('No approved package is available for emergency refill');
+}
+const desiredSourceCount = Math.min(candidateSourcePool.length, Math.max(8, Math.min(count, 32)));
+const sourcePool: typeof candidates = [];
+for (const source of candidateSourcePool) {
+  const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
+  let eligible = true;
+  for (const event of source.segment.events) {
+    if (event.type !== 'speech.play') {
+      continue;
+    }
+    if (
+      containsSpokenStageDirection(event.subtitle) ||
+      event.durationMs > maximumPlausibleSpeechDurationMs(event.subtitle) ||
+      (await audioQualityIssue(path.join(path.dirname(segmentPath), event.audioFile))) !== null
+    ) {
+      eligible = false;
+      break;
+    }
+  }
+  if (eligible) {
+    sourcePool.push(source);
+  }
+  if (sourcePool.length >= desiredSourceCount) {
+    break;
+  }
+}
+if (sourcePool.length === 0) {
+  throw new Error('No audio-safe package is available for emergency refill');
 }
 
 const stamp = Date.now().toString(36);
