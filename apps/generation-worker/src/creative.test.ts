@@ -59,6 +59,50 @@ describe('generation prompts', () => {
     expect(userPrompt(483_021, [])).toContain(`Story mode: ${storyMode}.`);
   });
 
+  it('fully applies corrective pacing while the delivered feed is too silent', () => {
+    const brief: NonNullable<Parameters<typeof assignedPacing>[1]> = {
+      schemaVersion: 1,
+      generatedAt: '2026-07-30T00:00:00.000Z',
+      windowMinutes: 30,
+      sampleSize: 30,
+      scores: {
+        premiseClarity: 6,
+        comedyEscalation: 5,
+        dialogueCoherence: 6,
+        visualMatch: 5,
+        paceVariety: 4,
+        originality: 5,
+        shareability: 4,
+      },
+      increaseFormats: ['shopping'],
+      increasePacing: ['frantic', 'interrupted'],
+      avoidMotifs: [],
+      preserveStrengths: ['clear character wants'],
+      editorialDirection: 'Keep speech and visible action moving.',
+      delivery: {
+        isLive: true,
+        concurrentViewers: 1,
+        silenceRatio: 0.21,
+        freezeRatio: 0.12,
+        fallbackOccurrences: 0,
+      },
+    };
+
+    expect(
+      Array.from({ length: 40 }, (_, serial) => assignedPacing(serial, brief)).every((pacing) =>
+        brief.increasePacing.includes(pacing),
+      ),
+    ).toBe(true);
+    for (let serial = 0; serial < 70; serial += 1) {
+      const frame =
+        userPrompt(serial, [], [], [], brief).match(/Format-specific comedy frame: (.+)\n/u)?.[1] ??
+        '';
+      expect(frame).not.toMatch(
+        /\b(?:customer refuses|clerk refuses|contractually|workplace benefit)\b/iu,
+      );
+    }
+  });
+
   it('pairs every story mode with a compatible single comedy frame', () => {
     for (let serial = 0; serial < 140; serial += 1) {
       const prompt = userPrompt(serial, []);

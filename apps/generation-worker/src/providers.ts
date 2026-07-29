@@ -170,11 +170,11 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
     service_mismatch:
       'wants an ordinary emotional result, but a service worker delivers the exact promised service in a socially obstructive way',
     status_transfer:
-      'wants to keep a minor privilege, but an opposing role gains authority through one clear bureaucratic criterion',
+      'wants to keep a minor privilege, but an opposing role gains authority through one specific visible social criterion',
     format_literalism:
       'wants to finish the broadcast, but a producer enforces one familiar television convention as a workplace rule',
     object_agency:
-      'needs an ordinary object to cooperate, but the object explicitly demands one concrete workplace benefit',
+      'needs an ordinary object to cooperate, but the object explicitly demands one visible privilege tied to the scene',
     product_consequence:
       'wants to demonstrate one impossible product, but its exact advertised effect creates a recognisable relationship problem',
     semantic_contract:

@@ -385,18 +385,18 @@ const storyEngines = [
 const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
   advert: [
     'A demonstrator needs to prove one impossible product solves a harmless social embarrassment, while its owner needs the perfectly functioning product stopped before its single reputational cost becomes public.',
-    'A service representative needs one customer testimonial, while the customer refuses because the service delivered its precise benefit to the wrong harmless social occasion.',
+    'Two demonstrators need one endorsement, but temporary on-air authority passes to whichever person the product embarrasses least.',
     'A talking receipt or product refuses to reveal the advertised price until the demonstrator grants it one concrete workplace benefit.',
     'Two former friends must demonstrate a product that works only when their claims sincerely agree, exposing the one harmless opinion neither has admitted they still share.',
-    'A spokesperson promises a service will rescue one small celebration, but its exact successful result threatens the private surprise the customer was trying to preserve.',
+    'A spokesperson tries to keep credit for a successful demo, but promotion passes to the family member who explains the product without sales language.',
     'A familiar household product has accepted a new professional role and will perform only if the demonstrator acknowledges the person already doing that role for free.',
   ],
   shopping: [
     'A host must sell one impossible product, while a caller who already owns it needs the host to admit the single harmless social consequence caused when it works.',
-    'A host must complete one service order, while the customer refuses because the service fulfils the contract at an inconvenient but harmless social moment.',
+    'Two hosts want credit for one sale, while on-air authority transfers to the caller who can name the least glamorous use.',
     'A talking product refuses to demonstrate itself until the shopping host grants it one concrete on-air privilege.',
     'Two hosts compete for credit when a product assigns ownership to whoever reveals the most ordinary genuine need for it.',
-    'A caller orders an impossible gift for somebody else, but the service correctly delivers its benefit to the caller’s concealed emotional target.',
+    'A caller’s order becomes a promotion contest in which sales authority passes to the person who needs the product least.',
     'A returned product negotiates to choose its next owner while the host tries to conceal why its previous choice was embarrassingly accurate.',
   ],
   news: [
@@ -434,7 +434,7 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'A station ident needs to finish while the assigned visible trigger changes one logo or graphic element in the repeatable way specified below.',
     'An announcer keeps introducing the next programme at the wrong emotional moment, while the outgoing cast calmly negotiates the exact cue that would let them leave with dignity.',
     'A hand-painted letter has done the work of two missing logo elements and wants their place in the spoken station name before the ident ends.',
-    'Two continuity announcers each use one routine handover phrase that makes the other contractually responsible for completing the same unfinished introduction.',
+    'Two continuity announcers each use one routine handover phrase that quietly assigns the other responsibility for completing the same unfinished introduction.',
     'An announcer attempts a perfectly ordinary sign-off while the assigned visible trigger repeatedly changes which graphic element appears to have delivered it.',
   ],
   public_access: [
@@ -466,8 +466,8 @@ const formatStoryModes: Record<
   GeneratedSegmentProposal['format'],
   readonly NonNullable<GeneratedSegmentProposal['storyMode']>[]
 > = {
-  advert: ['product_consequence', 'service_mismatch', 'object_agency'],
-  shopping: ['product_consequence', 'service_mismatch', 'object_agency'],
+  advert: ['product_consequence', 'status_transfer', 'object_agency'],
+  shopping: ['product_consequence', 'status_transfer', 'object_agency'],
   news: ['status_transfer', 'format_literalism', 'object_agency', 'visual_physics'],
   sitcom: ['social_protocol', 'status_transfer', 'semantic_contract', 'service_mismatch'],
   emergency: ['format_literalism', 'social_protocol', 'service_mismatch'],
@@ -506,7 +506,7 @@ const storyModes = [
   {
     id: 'status_transfer',
     direction:
-      'authority passes by one clear bureaucratic criterion that the least respected character unexpectedly satisfies',
+      'authority passes by one specific visible social criterion that the least respected character unexpectedly satisfies',
   },
   {
     id: 'format_literalism',
@@ -516,7 +516,7 @@ const storyModes = [
   {
     id: 'object_agency',
     direction:
-      'one ordinary object has a specific institutional role and negotiates for a concrete benefit like a difficult colleague',
+      'one ordinary object has a specific role and negotiates for a visible privilege tied to the scene like a difficult colleague',
   },
   {
     id: 'product_consequence',
@@ -792,13 +792,18 @@ export function assignedPacing(
   optimisationBrief: OptimisationBrief | null = null,
 ): NonNullable<GeneratedSegmentDraft['pacing']> {
   const basePacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
-  return optimisationBrief !== null &&
-    optimisationBrief.increasePacing.length > 0 &&
-    axisIndex(serial, 0xf47d281, 5) < 2
-    ? optimisationBrief.increasePacing[
-        axisIndex(serial, 0x1038a4d, optimisationBrief.increasePacing.length)
-      ]!
-    : basePacing;
+  if (optimisationBrief === null || optimisationBrief.increasePacing.length === 0) {
+    return basePacing;
+  }
+  const correctionRequired =
+    (optimisationBrief.delivery.silenceRatio ?? 0) >= 0.18 ||
+    (optimisationBrief.delivery.freezeRatio ?? 0) >= 0.3;
+  if (!correctionRequired && axisIndex(serial, 0xf47d281, 5) >= 2) {
+    return basePacing;
+  }
+  return optimisationBrief.increasePacing[
+    axisIndex(serial, 0x1038a4d, optimisationBrief.increasePacing.length)
+  ]!;
 }
 
 export function assignedStoryMode(
@@ -838,12 +843,17 @@ export function userPrompt(
   const setting =
     settingPool[axisIndex(serial, 0x2f6e2b1, settingPool.length)] ??
     settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
+  const storyMode = assignedStoryMode(serial, optimisationBrief);
   const storyFrames = formatStoryFrames[format];
+  const storyModeIndex = formatStoryModes[format].indexOf(storyMode);
+  const originalityRecovery = (optimisationBrief?.scores.originality ?? 10) <= 5;
+  const storyFrameIndex = originalityRecovery
+    ? storyModeIndex + formatStoryModes[format].length
+    : axisIndex(serial, 0x36abf51, storyFrames.length);
   const storyFrame =
-    storyFrames[axisIndex(serial, 0x36abf51, storyFrames.length)] ??
+    storyFrames[storyFrameIndex] ??
     storyEngines[axisIndex(serial, 0x36abf51, storyEngines.length)]!;
   const storyScale = storyScales[axisIndex(serial, 0x3bce725, storyScales.length)]!;
-  const storyMode = assignedStoryMode(serial, optimisationBrief);
   const mechanismFamily = storyModes.find(({ id }) => id === storyMode)!;
   const usesVisualPhysics = storyMode === 'visual_physics';
   const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
