@@ -98,7 +98,7 @@ chromium \
   "http://127.0.0.1:${ELSEWHERE_PORT}/?broadcast=1" &
 browser_pid=$!
 
-ELSEWHERE_AUDIO_QUIET_SECONDS=${ELSEWHERE_AUDIO_QUIET_SECONDS:-1} \
+ELSEWHERE_AUDIO_QUIET_SECONDS=${ELSEWHERE_AUDIO_QUIET_SECONDS:-2} \
   sh /usr/local/bin/elsewhere-audio-watchdog >/tmp/elsewhere-audio-watchdog.log 2>&1 &
 watchdog_pid=$!
 
