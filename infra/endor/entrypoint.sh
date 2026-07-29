@@ -118,13 +118,13 @@ set -- "$@" \
   -g 50 \
   -keyint_min 50 \
   -sc_threshold 0 \
-  -b:v 4000k \
-  -maxrate 5000k \
-  -bufsize 8000k \
+  -b:v 1600k \
+  -maxrate 1800k \
+  -bufsize 3200k \
   -c:a aac \
   -ar 48000 \
   -ac 2 \
-  -b:a 160k
+  -b:a 96k
 
 case "${ELSEWHERE_OUTPUT_MODE}" in
   record)
