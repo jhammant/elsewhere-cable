@@ -12,6 +12,7 @@ tts_model=${ELSEWHERE_TTS_MODEL:-mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-b
 embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
 embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 reservoir_target_hours=${ELSEWHERE_RESERVOIR_TARGET_HOURS:-72}
+optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
@@ -54,6 +55,10 @@ while :; do
       --tts-base-url "$tts_base_url" \
       --tts-model "$tts_model"
   fi
+  if [ -r "$optimisation_brief" ]; then
+    set -- "$@" \
+      --optimisation-brief "$optimisation_brief"
+  fi
 
   if ! pnpm generate:batch -- "$@"; then
     if [ "$mode" = "once" ]; then
@@ -66,6 +71,7 @@ while :; do
 
   pnpm exec tsx infra/scripts/audit-reservoir.ts \
     --segments "$output_root" \
+    --recent "$batch_count" \
     --apply
 
   ELSEWHERE_LOCAL_SEGMENTS_DIR="$output_root" pnpm endor:sync

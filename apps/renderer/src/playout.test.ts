@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayoutManifest } from '@elsewhere-cable/schemas';
-import { applyVisualEvent, nextUnplayedIndex, type PlayoutVisuals } from './playout.js';
+import type { PlayoutManifest, SegmentPackage } from '@elsewhere-cable/schemas';
+import {
+  applyVisualEvent,
+  nextUnplayedIndex,
+  segmentObservation,
+  type PlayoutVisuals,
+} from './playout.js';
 
 function visuals(): {
   target: PlayoutVisuals;
@@ -102,5 +107,60 @@ describe('single-use playout selection', () => {
 
   it('does not wrap to the beginning after every segment has aired', () => {
     expect(nextUnplayedIndex(manifest, 3, new Set(['one', 'two', 'three']))).toBeNull();
+  });
+});
+
+describe('playout observations', () => {
+  it('records the production grammar attached to an aired segment', () => {
+    const segment: SegmentPackage = {
+      schemaVersion: 1,
+      segmentId: 'seg_observed',
+      channel: {
+        id: 'channel_83040021',
+        number: 83_040_021,
+        name: 'Observed Channel',
+        realityId: 'OBS-1',
+      },
+      programme: {
+        id: 'observed_programme',
+        title: 'Observed Programme',
+        format: 'sitcom',
+        premise: 'Two paper officials disagree about which crease counts as a corridor.',
+      },
+      durationMs: 45_000,
+      visualStyle: 'hinged paper hearing',
+      visualMedium: 'paper_cutout',
+      castArchetype: 'paper_puppets',
+      pacing: 'staccato',
+      tone: ['dry'],
+      events: [{ atMs: 0, type: 'camera.cut', camera: 'CAMERA_WIDE' }],
+      continuityUpdates: [],
+      suggestedExit: {
+        earliestMs: 42_000,
+        preferredMs: 45_000,
+        transition: 'STATIC_BURST',
+      },
+      production: {
+        generatedAt: '2026-07-29T12:00:00.000Z',
+        generator: 'test',
+        model: 'test',
+        safetyStatus: 'approved-for-local-preview',
+        audioPrepared: true,
+      },
+    };
+
+    const observation = segmentObservation(
+      'segment.started',
+      '9f59e377-cade-4b9c-a37c-1c56bd002a24',
+      segment,
+    );
+
+    expect(observation).toMatchObject({
+      event: 'segment.started',
+      segmentId: 'seg_observed',
+      visualMedium: 'paper_cutout',
+      pacing: 'staccato',
+      durationMs: 45_000,
+    });
   });
 });

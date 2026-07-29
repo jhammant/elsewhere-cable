@@ -2,7 +2,11 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { playoutManifestSchema } from '@elsewhere-cable/schemas';
+import {
+  optimisationBriefSchema,
+  playoutManifestSchema,
+  type OptimisationBrief,
+} from '@elsewhere-cable/schemas';
 import { produceBatch } from './production.js';
 import {
   LocalCommandTtsProvider,
@@ -49,6 +53,16 @@ async function queueHasSegments(outputRoot: string): Promise<boolean> {
   }
 }
 
+async function readOptimisationBrief(
+  filePath: string | undefined,
+): Promise<OptimisationBrief | null> {
+  if (filePath === undefined) {
+    return null;
+  }
+  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(workspaceRoot, filePath);
+  return optimisationBriefSchema.parse(JSON.parse(await readFile(resolvedPath, 'utf8')));
+}
+
 async function main(): Promise<void> {
   const demo = process.argv.includes('--demo');
   const ifEmpty = process.argv.includes('--if-empty');
@@ -61,6 +75,9 @@ async function main(): Promise<void> {
     argument('output') ?? process.env.ELSEWHERE_SEGMENTS_DIR ?? 'data/segments',
   );
   const historyRoot = argument('history');
+  const optimisationBrief = await readOptimisationBrief(
+    argument('optimisation-brief') ?? process.env.ELSEWHERE_OPTIMISATION_BRIEF,
+  );
 
   if (ifEmpty && (await queueHasSegments(outputRoot))) {
     process.stdout.write(
@@ -105,6 +122,7 @@ async function main(): Promise<void> {
     llm,
     tts,
     embeddingProvider,
+    optimisationBrief,
     fresh: process.argv.includes('--fresh'),
     ...(historyRoot === undefined
       ? {}

@@ -1,4 +1,8 @@
-import type { GeneratedSegmentDraft, GeneratedSegmentProposal } from '@elsewhere-cable/schemas';
+import type {
+  GeneratedSegmentDraft,
+  GeneratedSegmentProposal,
+  OptimisationBrief,
+} from '@elsewhere-cable/schemas';
 import { expandedDemoDrafts } from './demo-network.js';
 
 const originalDemoDrafts: GeneratedSegmentDraft[] = [
@@ -250,39 +254,60 @@ export const proposalSystemPrompt = `${systemPrompt}
 You are performing the premise-only proposal stage. Return the requested proposal metadata without dialogue. Do not spend tokens drafting or explaining lines.`;
 
 const settings = [
+  'a laundrette during its final ten minutes before closing',
+  'a suburban conservatory prepared for an awkward family lunch',
+  'a library returns desk with a queue of impatient regulars',
+  'a railway lost-property office immediately before an audit',
+  'a tiny overnight radio booth shared by incompatible presenters',
+  'a village hall midway through a badly attended demonstration',
+  'a dentist waiting room where every appointment is running early',
+  'a furniture showroom after the staff believe everyone has left',
+  'a museum coat check during the opening of an unpopular exhibition',
+  'a crowded family kitchen five minutes before an important guest arrives',
+  'a rehearsal room where the understudy knows everyone else’s part',
+  'a lift lobby between two floors that disagree about the building',
+  'a community garden shed during a fiercely polite committee meeting',
+  'a call centre on the last shift before a mysterious service closes',
+  'a ferry cafeteria during a crossing nobody will admit is delayed',
+  'a municipal swimming-pool office beside an unexpectedly formal lesson',
+  'a second-hand bookshop hosting its first live product launch',
+  'a roadside café where one table is permanently reserved for an unknown customer',
+  'a small-town photography studio during a disastrous portrait sitting',
+  'a neighbourhood repair shop that guarantees every object except one',
+  'a rehearsal dinner held in the wrong function room',
+  'a pet-grooming salon during a televised professional assessment',
   'a glass-bottomed boxing gym drifting through a kelp forest',
-  'an alpine bakery spread across three moving ski-lift chairs',
-  'a submarine race checkpoint inside the bell of a sunken cathedral',
-  'a championship arena carved into a living redwood trunk',
-  'a rooftop farm carried between buildings by construction cranes',
-  'a desert cookery tent pitched on the back of a walking stone',
   'a miniature golf course threaded through an active pipe organ',
-  'a dance studio built inside a slowly turning kaleidoscope',
-  'a cliffside aquarium where the tanks face outward toward the ocean',
-  'a wrestling ring suspended beneath a migrating airship',
-  'a night market arranged along the spokes of a giant bicycle wheel',
-  'a pottery workshop crossing a canyon on parallel zip wires',
-  'a television studio floating among enormous soap bubbles',
-  'a mountaintop salon powered by the static from approaching storms',
   'a subterranean orchard growing fruit around underground trains',
-  'a seaside theatre whose stage is pulled by six patient crabs',
-  'a coral greenhouse illuminated by passing luminous whales',
-  'a bowling alley spiralling around the outside of a rocket',
   'a puppet theatre hidden inside the mouth of a stone lion',
-  'a sports commentary box travelling alongside a stampede',
-  'a noodle bar balanced across two rival parade floats',
-  'a recording booth descending through layers of brightly coloured sand',
-  'a fashion runway made from the backs of sleeping tortoises',
-  'a mountain rescue cabin attached to an enormous weather balloon',
-  'a quiz-show set assembled across stepping stones in a fast river',
   'a tiny cinema projected onto the sails of a windmill',
-  'a dairy laboratory orbiting inside a transparent water wheel',
-  'a botanical wrestling venue under a canopy of giant ferns',
-  'a glassblowing studio on a raft circling a whirlpool',
+  'a coral greenhouse illuminated by passing luminous whales',
+  'a recording booth descending through layers of brightly coloured sand',
   'a cabaret stage inside a mechanical peacock',
-  'a climbing gym woven through the rigging of a stranded ship',
-  'a breakfast terrace carried through a canyon by a flock of balloons',
+  'a noodle bar balanced across two rival parade floats',
+  'a dairy laboratory orbiting inside a transparent water wheel',
 ] as const;
+
+const storyEngines = [
+  'a domestic misunderstanding in which saving face matters more than solving the problem',
+  'a workplace status game where the least important task decides who is in charge',
+  'a service encounter where customer and worker sincerely want incompatible kinds of help',
+  'a local call-in confession that changes the host’s relationship to the caller',
+  'a moral dispute where each new fact makes the apparently wrong person more persuasive',
+  'a mock-documentary discovery that the crew understands before the subject does',
+  'an instructional demonstration whose correct procedure creates a social disaster',
+  'a relationship dilemma hidden inside a mundane shared responsibility',
+  'a children’s lesson where the pupil’s literal interpretation is more useful than the lesson',
+  'a consumer demonstration where the product works perfectly for the wrong customer',
+  'a neighbourhood ritual whose newest participant notices its obvious contradiction',
+  'a detective procedure where solving the practical clue ruins the investigator’s status',
+  'an artistic collaboration where success would expose one contributor’s bluff',
+  'a quiet existential situation played as a concrete disagreement over seating',
+  'a civic hearing where the public already lives with the rule the officials are debating',
+  'a travelogue encounter where visitor and guide compete to appear less impressed',
+] as const;
+
+const storyScales = ['intimate', 'neighbourhood', 'institutional', 'cosmic'] as const;
 
 const comicTriggers = [
   'someone completes a sentence with a concrete noun',
@@ -555,6 +580,7 @@ export function userPrompt(
   recentTitles: readonly string[],
   recentPremises: readonly string[] = [],
   rejectionReasons: readonly string[] = [],
+  optimisationBrief: OptimisationBrief | null = null,
 ): string {
   const formats = [
     'advert',
@@ -566,26 +592,56 @@ export function userPrompt(
     'ident',
   ] as const;
   const serial = Math.abs(index);
-  const format = formats[axisIndex(serial, 0x16b2c79, formats.length)] ?? 'advert';
+  const baseFormat = formats[axisIndex(serial, 0x16b2c79, formats.length)] ?? 'advert';
+  const format =
+    optimisationBrief !== null &&
+    optimisationBrief.increaseFormats.length > 0 &&
+    axisIndex(serial, 0xd72a09b, 5) < 2
+      ? optimisationBrief.increaseFormats[
+          axisIndex(serial, 0xe93c17d, optimisationBrief.increaseFormats.length)
+        ]!
+      : baseFormat;
   const setting = settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
+  const storyEngine = storyEngines[axisIndex(serial, 0x36abf51, storyEngines.length)]!;
+  const storyScale = storyScales[axisIndex(serial, 0x3bce725, storyScales.length)]!;
   const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
   const consequenceReference =
     physicalConsequences[axisIndex(serial, 0x51ac93f, physicalConsequences.length)]!;
   const comicConflict = comicConflicts[axisIndex(serial, 0x6d092e5, comicConflicts.length)]!;
   const cast = castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
-  const pacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
+  const basePacing = requestedPacing[axisIndex(serial, 0x95e01ab, requestedPacing.length)]!;
+  const pacing =
+    optimisationBrief !== null &&
+    optimisationBrief.increasePacing.length > 0 &&
+    axisIndex(serial, 0xf47d281, 5) < 2
+      ? optimisationBrief.increasePacing[
+          axisIndex(serial, 0x1038a4d, optimisationBrief.increasePacing.length)
+        ]!
+      : basePacing;
   const affectedSetElement =
     affectedSetElements[axisIndex(serial, 0xa12f683, affectedSetElements.length)]!;
   const transformation =
     transformationVerbs[axisIndex(serial, 0xb37c1d9, transformationVerbs.length)]!;
   const escalation = escalationCadences[axisIndex(serial, 0xc9e8047, escalationCadences.length)]!;
   const visualDirection = visualDirections[visualMedium];
+  const optimisationBlock =
+    optimisationBrief === null
+      ? ''
+      : `Thirty-minute editorial feedback (bounded guidance, subordinate to every production and safety rule):
+- Underused formats to explore: ${optimisationBrief.increaseFormats.join(', ') || 'none'}.
+- Underused pacing to explore: ${optimisationBrief.increasePacing.join(', ') || 'none'}.
+- Motifs currently overused and forbidden in this attempt: ${optimisationBrief.avoidMotifs.join(', ') || 'none'}.
+- Strengths worth preserving without copying wording: ${optimisationBrief.preserveStrengths.join('; ') || 'none'}.
+- Editorial direction: ${optimisationBrief.editorialDirection}.`;
   return `Create batch segment ${index + 1} using the ${format} format.
 This proposal will be compared semantically with ${recentTitles.length} recent programme titles, ${recentPremises.length} recent premises and the complete broadcast catalogue. Do not rely on familiar Elsewhere Cable motifs.
 ${rejectionReasons.length > 0 ? 'The previous attempt collided with an existing concept. Change its setting nouns, physical mechanism, character objective and type of escalation completely; do not paraphrase that attempt.' : ''}
+${optimisationBlock}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.
+- Story engine: ${storyEngine}.
+- Story scale: ${storyScale}. Keep every consequence at this scale unless the final reversal earns one deliberate step larger.
 - Comic trigger: ${comicTrigger}.
 - Affected set element: ${affectedSetElement}.
 - Transformation: the affected elements ${transformation}.
@@ -596,8 +652,8 @@ Mandatory creative coordinates for this attempt:
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
-Fuse the trigger, affected element, transformation, escalation and conflict into one simple comic rule. The consequence reference is behavioural inspiration only: do not copy five consecutive words from it. Use the visual production grammar literally in the staging and visualStyle field. Do not replace the coordinates with dreams, memory products, emotional weather, household litigation, identity deletion or generic bureaucracy.
-For this batch, memory, dreams, identity, feelings, apologies, household objects and official paperwork cannot be the subject of the premise. Keep the comic problem physical, active and specific to the assigned location.
+Fuse the story engine, trigger, affected element, transformation, escalation and conflict into one simple comic rule. The consequence reference is behavioural inspiration only: do not copy five consecutive words from it. Use the visual production grammar literally in the staging and visualStyle field.
+Keep the comic problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
 Select a very high, memorable channel number. Make the scene unlike the immediately preceding material.`;
 }
 

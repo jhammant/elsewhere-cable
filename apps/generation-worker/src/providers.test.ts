@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   maximumPlausibleSpeechDurationMs,
   OpenAiCompatibleTtsProvider,
+  speechAudioQualityIssue,
   speechTempoCorrection,
 } from './providers.js';
 
@@ -39,6 +40,27 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(maximumPlausibleSpeechDurationMs(text)).toBe(8_900);
     expect(speechTempoCorrection(text, 9_280)).toBeCloseTo(1.092, 3);
     expect(speechTempoCorrection(text, 20_000)).toBeNull();
+  });
+
+  it('rejects long internal dead air while allowing a short natural pause', () => {
+    expect(
+      speechAudioQualityIssue({
+        durationMs: 9_400,
+        meanVolumeDb: -20.6,
+        maxVolumeDb: -6.2,
+        silenceDurationMs: 7_760,
+        silenceRatio: 0.826,
+      }),
+    ).toContain('silence');
+    expect(
+      speechAudioQualityIssue({
+        durationMs: 3_700,
+        meanVolumeDb: -15.7,
+        maxVolumeDb: -1.9,
+        silenceDurationMs: 380,
+        silenceRatio: 0.103,
+      }),
+    ).toBeNull();
   });
 
   it('uses stable named speakers for Qwen CustomVoice models', () => {

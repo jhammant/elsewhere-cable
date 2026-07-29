@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { playoutManifestSchema, segmentPackageSchema } from './index.js';
+import { playoutManifestSchema, playoutObservationSchema, segmentPackageSchema } from './index.js';
 
 describe('segmentPackageSchema', () => {
   it('rejects renderer events after the segment duration', () => {
@@ -45,5 +45,27 @@ describe('playoutManifestSchema', () => {
         segments: [],
       }).segments,
     ).toHaveLength(0);
+  });
+});
+
+describe('playoutObservationSchema', () => {
+  it('accepts a bounded segment-start observation', () => {
+    const observation = playoutObservationSchema.parse({
+      schemaVersion: 1,
+      occurrenceId: '9f59e377-cade-4b9c-a37c-1c56bd002a24',
+      observedAt: '2026-07-29T12:00:00.000Z',
+      event: 'segment.started',
+      segmentId: 'seg_test',
+      channelNumber: 83_040_021,
+      channelName: 'Test Channel',
+      programmeId: 'test_programme',
+      programmeTitle: 'Test Programme',
+      format: 'sitcom',
+      visualMedium: 'paper_cutout',
+      pacing: 'staccato',
+      durationMs: 45_000,
+    });
+
+    expect(observation.event).toBe('segment.started');
   });
 });

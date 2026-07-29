@@ -17,6 +17,7 @@ services:
       ELSEWHERE_STREAM_URL: ${ELSEWHERE_STREAM_URL:-rtmps://a.rtmps.youtube.com/live2}
       ELSEWHERE_STREAM_KEY_FILE: /run/secrets/youtube_stream_key
       ELSEWHERE_CHROMIUM_PROFILE: /state/chromium
+      ELSEWHERE_TELEMETRY_PATH: /state/playout-observations.ndjson
     devices:
       - /dev/dri:/dev/dri
     group_add:

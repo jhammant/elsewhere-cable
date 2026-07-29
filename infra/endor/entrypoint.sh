@@ -4,9 +4,11 @@ set -eu
 controller_pid=''
 display_pid=''
 browser_pid=''
+bed_pid=''
+watchdog_pid=''
 
 cleanup() {
-  for pid in "$browser_pid" "$controller_pid" "$display_pid"; do
+  for pid in "$watchdog_pid" "$bed_pid" "$browser_pid" "$controller_pid" "$display_pid"; do
     if [ -n "$pid" ]; then
       kill "$pid" 2>/dev/null || true
     fi
@@ -38,6 +40,7 @@ display_pid=$!
 
 pulseaudio --daemonize=yes --exit-idle-time=-1 --log-target=file:/tmp/pulseaudio.log
 for attempt in 1 2 3 4 5; do
+  : "$attempt"
   if pactl info >/dev/null 2>&1; then
     break
   fi
@@ -48,10 +51,23 @@ pactl load-module module-null-sink \
   sink_properties=device.description=ElsewhereCable >/dev/null
 pactl set-default-sink elsewhere
 
+ffmpeg \
+  -hide_banner \
+  -loglevel error \
+  -nostdin \
+  -re \
+  -f lavfi \
+  -i 'anoisesrc=color=pink:amplitude=0.002:sample_rate=44100' \
+  -ac 2 \
+  -f pulse \
+  elsewhere >/tmp/elsewhere-bed.log 2>&1 &
+bed_pid=$!
+
 pnpm --filter @elsewhere-cable/playout-controller start &
 controller_pid=$!
 
 for attempt in $(seq 1 60); do
+  : "$attempt"
   if curl -fsS "http://127.0.0.1:${ELSEWHERE_PORT}/health/ready" >/dev/null 2>&1; then
     break
   fi
@@ -81,6 +97,10 @@ chromium \
   --kiosk \
   "http://127.0.0.1:${ELSEWHERE_PORT}/?broadcast=1" &
 browser_pid=$!
+
+ELSEWHERE_AUDIO_QUIET_SECONDS=${ELSEWHERE_AUDIO_QUIET_SECONDS:-1} \
+  sh /usr/local/bin/elsewhere-audio-watchdog >/tmp/elsewhere-audio-watchdog.log 2>&1 &
+watchdog_pid=$!
 
 sleep 8
 

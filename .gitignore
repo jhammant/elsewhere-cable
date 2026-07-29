@@ -13,6 +13,8 @@ data/benchmarks/*
 !data/benchmarks/.gitkeep
 data/cache/
 data/generated/
+data/logs/
+data/optimisation/
 data/segments/*
 !data/segments/.gitkeep
 data/segments-*/

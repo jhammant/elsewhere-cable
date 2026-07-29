@@ -2,6 +2,7 @@ import {
   playoutManifestSchema,
   segmentPackageSchema,
   type PlayoutManifest,
+  type PlayoutObservation,
   type SegmentEvent,
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
@@ -116,6 +117,29 @@ export function nextUnplayedIndex(
   return null;
 }
 
+export function segmentObservation(
+  event: 'segment.started' | 'segment.completed',
+  occurrenceId: string,
+  segment: SegmentPackage,
+): PlayoutObservation {
+  const design = resolveProductionDesign(segment);
+  return {
+    schemaVersion: 1,
+    occurrenceId,
+    observedAt: new Date().toISOString(),
+    event,
+    segmentId: segment.segmentId,
+    channelNumber: segment.channel.number,
+    channelName: segment.channel.name,
+    programmeId: segment.programme.id,
+    programmeTitle: segment.programme.title,
+    format: segment.programme.format,
+    visualMedium: design.visualMedium,
+    pacing: segment.pacing ?? 'conversational',
+    durationMs: segment.durationMs,
+  };
+}
+
 export class PlayoutEngine {
   private static readonly broadcastHistoryKey = 'elsewhere-cable.played-segments.v1';
   private readonly ui = elements();
@@ -183,6 +207,13 @@ export class PlayoutEngine {
   }
 
   private enterFallback(reason: string): void {
+    this.reportObservation({
+      schemaVersion: 1,
+      occurrenceId: crypto.randomUUID(),
+      observedAt: new Date().toISOString(),
+      event: 'fallback.started',
+      reason: reason.slice(0, 200),
+    });
     this.ui.status.textContent = 'Fallback signal';
     this.ui.mode.textContent = reason;
     this.fallbackSequence += 1;
@@ -241,11 +272,24 @@ export class PlayoutEngine {
         throw new Error(`Segment ${entry.segmentId} failed with HTTP ${response.status}`);
       }
       const segment = segmentPackageSchema.parse(await response.json());
+      const occurrenceId = crypto.randomUUID();
       this.showSegment(segment, entry.packagePath);
       this.markPlayed(entry.segmentId);
+      this.reportObservation(segmentObservation('segment.started', occurrenceId, segment));
       this.index += 1;
-      this.timer(() => void this.playCurrent(), segment.durationMs);
+      this.timer(() => {
+        this.reportObservation(segmentObservation('segment.completed', occurrenceId, segment));
+        void this.playCurrent();
+      }, segment.durationMs);
     } catch (error) {
+      this.reportObservation({
+        schemaVersion: 1,
+        occurrenceId: crypto.randomUUID(),
+        observedAt: new Date().toISOString(),
+        event: 'segment.failed',
+        segmentId: entry.segmentId,
+        reason: (error instanceof Error ? error.message : 'Unknown segment error').slice(0, 200),
+      });
       this.ui.status.textContent = 'Segment rejected';
       this.ui.lowerStatus.textContent =
         error instanceof Error ? error.message.slice(0, 80) : 'UNKNOWN SEGMENT ERROR';
@@ -254,6 +298,17 @@ export class PlayoutEngine {
       this.staticBurst();
       this.timer(() => void this.playCurrent(), 2_000);
     }
+  }
+
+  private reportObservation(observation: PlayoutObservation): void {
+    void fetch('/api/playout/telemetry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(observation),
+      keepalive: true,
+    }).catch(() => {
+      // Observability must never interrupt playout.
+    });
   }
 
   private restorePlaybackHistory(): void {

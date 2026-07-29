@@ -61,6 +61,42 @@ export const flatStyleGrammars = {
     motion: 'tracked-thermal-drift',
     texture: 'sensor-noise',
   },
+  ascii_terminal: {
+    silhouette: 'monospace-glyph-actor',
+    backdrop: 'phosphor-command-console',
+    motion: 'cursor-stepped-performance',
+    texture: 'crt-character-bloom',
+  },
+  blueprint_schematic: {
+    silhouette: 'dimensioned-exploded-figure',
+    backdrop: 'architectural-drafting-sheet',
+    motion: 'annotated-mechanical-articulation',
+    texture: 'cyanotype-grid',
+  },
+  stained_glass: {
+    silhouette: 'leaded-faceted-character',
+    backdrop: 'luminous-rose-window-world',
+    motion: 'refracted-panel-shift',
+    texture: 'cathedral-glass-grain',
+  },
+  xerox_punk: {
+    silhouette: 'photocopied-ransom-cutout',
+    backdrop: 'overprinted-flyposter-wall',
+    motion: 'toner-jump-duplication',
+    texture: 'high-contrast-copy-noise',
+  },
+  storybook_wash: {
+    silhouette: 'painted-ink-story-figure',
+    backdrop: 'layered-watercolour-landscape',
+    motion: 'gentle-page-parallax',
+    texture: 'pigment-bloom-paper',
+  },
+  isometric_manual: {
+    silhouette: 'exploded-instruction-avatar',
+    backdrop: 'axonometric-assembly-sheet',
+    motion: 'numbered-diagram-steps',
+    texture: 'registration-mark-print',
+  },
 } as const;
 
 export type FlatVisualMedium = keyof typeof flatStyleGrammars;

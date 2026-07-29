@@ -44,6 +44,12 @@ describe('hybrid renderer selection', () => {
     expect(usesTwoDimensionalRenderer(segment('signal_corruption'))).toBe(true);
     expect(usesTwoDimensionalRenderer(segment('shadow_theatre'))).toBe(true);
     expect(usesTwoDimensionalRenderer(segment('thermal_camera'))).toBe(true);
+    expect(usesTwoDimensionalRenderer(segment('ascii_terminal'))).toBe(true);
+    expect(usesTwoDimensionalRenderer(segment('blueprint_schematic'))).toBe(true);
+    expect(usesTwoDimensionalRenderer(segment('stained_glass'))).toBe(true);
+    expect(usesTwoDimensionalRenderer(segment('xerox_punk'))).toBe(true);
+    expect(usesTwoDimensionalRenderer(segment('storybook_wash'))).toBe(true);
+    expect(usesTwoDimensionalRenderer(segment('isometric_manual'))).toBe(true);
   });
 
   it('keeps volumetric media in Three.js', () => {

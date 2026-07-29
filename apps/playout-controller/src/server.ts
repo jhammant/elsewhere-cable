@@ -1,10 +1,14 @@
-import { readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
-import { playoutManifestSchema, segmentPackageSchema } from '@elsewhere-cable/schemas';
+import {
+  playoutManifestSchema,
+  playoutObservationSchema,
+  segmentPackageSchema,
+} from '@elsewhere-cable/schemas';
 import Fastify from 'fastify';
 
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -15,6 +19,10 @@ const segmentsRoot = path.resolve(
   process.env.ELSEWHERE_SEGMENTS_DIR ?? 'data/segments',
 );
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
+const telemetryPath = path.resolve(
+  workspaceRoot,
+  process.env.ELSEWHERE_TELEMETRY_PATH ?? 'data/logs/playout-observations.ndjson',
+);
 const host = process.env.ELSEWHERE_HOST ?? '127.0.0.1';
 const port = Number(process.env.ELSEWHERE_PORT ?? 4174);
 const startedAt = Date.now();
@@ -45,6 +53,8 @@ const app = Fastify({
   },
 });
 
+await mkdir(path.dirname(telemetryPath), { recursive: true });
+
 app.get('/health/live', () => ({
   status: 'live',
   service: 'playout-controller',
@@ -69,6 +79,27 @@ app.get('/health/ready', async (_request, reply) => {
 });
 
 app.get('/api/playout/manifest', async () => readManifest());
+
+app.post('/api/playout/telemetry', async (request, reply) => {
+  const observation = playoutObservationSchema.parse(request.body);
+  await appendFile(
+    telemetryPath,
+    `${JSON.stringify({
+      ...observation,
+      serverReceivedAt: new Date().toISOString(),
+    })}\n`,
+    'utf8',
+  );
+  app.log.info(
+    {
+      event: observation.event,
+      occurrenceId: observation.occurrenceId,
+      segmentId: 'segmentId' in observation ? observation.segmentId : undefined,
+    },
+    'Recorded playout observation',
+  );
+  return reply.code(202).send({ accepted: true });
+});
 
 app.get('/api/playout/state', async () => {
   const manifest = await readManifest();
@@ -136,6 +167,7 @@ app.log.info(
     host,
     port,
     segmentsRoot,
+    telemetryPath,
     publicStreamActive: false,
   },
   `Elsewhere Cable local playout is ready at http://${host}:${port}`,

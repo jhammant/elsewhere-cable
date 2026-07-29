@@ -254,6 +254,172 @@ export class Broadcast2DScene implements PlayoutVisuals {
         context.lineTo(index * 190 + 150, 570);
         context.fill();
       }
+    } else if (this.medium === 'ascii_terminal') {
+      context.fillStyle = '#020905';
+      context.fillRect(0, 0, 1280, 720);
+      context.strokeStyle = '#39f28f';
+      context.lineWidth = 2;
+      context.strokeRect(46, 46, 1188, 620);
+      context.font = '21px monospace';
+      context.fillStyle = 'rgba(88, 255, 159, 0.42)';
+      for (let row = 0; row < 18; row += 1) {
+        const line = `${String(row + 1).padStart(2, '0')}  ${'>'.repeat((row % 5) + 1)} SIGNAL_${String(
+          (seed >>> (row % 24)) % 999,
+        ).padStart(3, '0')} ${'.'.repeat(29 - (row % 7))}`;
+        context.fillText(line, 72, 86 + row * 31);
+      }
+      context.fillStyle = '#50ffa0';
+      context.fillRect(70, 545, 1140, 78);
+      context.fillStyle = '#031109';
+      context.fillText(`EXECUTE REALITY://${segment.channel.number}`, 92, 593);
+    } else if (this.medium === 'blueprint_schematic') {
+      context.fillStyle = '#0752a0';
+      context.fillRect(0, 0, 1280, 720);
+      context.strokeStyle = 'rgba(185, 231, 255, 0.2)';
+      context.lineWidth = 1;
+      for (let x = 0; x < 1280; x += 32) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, 720);
+        context.stroke();
+      }
+      for (let y = 0; y < 720; y += 32) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(1280, y);
+        context.stroke();
+      }
+      context.strokeStyle = '#d8f4ff';
+      context.lineWidth = 3;
+      context.strokeRect(42, 42, 1196, 636);
+      context.beginPath();
+      context.arc(640, 352, 286 + Math.sin(elapsed * 0.5) * 8, 0, Math.PI * 2);
+      context.moveTo(640, 66);
+      context.lineTo(640, 640);
+      context.moveTo(354, 352);
+      context.lineTo(926, 352);
+      context.stroke();
+      context.font = '18px monospace';
+      context.fillStyle = '#e4f8ff';
+      context.fillText('FIG. 08 / NOT TO SCALE / REVISION ∞', 70, 82);
+    } else if (this.medium === 'stained_glass') {
+      context.fillStyle = '#100b24';
+      context.fillRect(0, 0, 1280, 720);
+      const glassColours = ['#ff406f', '#ffb637', '#32c7bd', '#3f73e8', '#9f52d8'];
+      for (let index = 0; index < 18; index += 1) {
+        const angle = (index / 18) * Math.PI * 2 + elapsed * 0.015;
+        const inner = 135;
+        const outer = 610;
+        context.beginPath();
+        context.moveTo(640 + Math.cos(angle) * inner, 340 + Math.sin(angle) * inner);
+        context.lineTo(
+          640 + Math.cos(angle - Math.PI / 18) * outer,
+          340 + Math.sin(angle - Math.PI / 18) * outer,
+        );
+        context.lineTo(
+          640 + Math.cos(angle + Math.PI / 18) * outer,
+          340 + Math.sin(angle + Math.PI / 18) * outer,
+        );
+        context.closePath();
+        context.fillStyle = glassColours[index % glassColours.length]!;
+        context.globalAlpha = 0.67;
+        context.fill();
+        context.globalAlpha = 1;
+        context.strokeStyle = '#1b1532';
+        context.lineWidth = 12;
+        context.stroke();
+      }
+      context.beginPath();
+      context.arc(640, 340, 135, 0, Math.PI * 2);
+      context.fillStyle = '#f4cf55';
+      context.fill();
+      context.strokeStyle = '#1b1532';
+      context.lineWidth = 14;
+      context.stroke();
+      context.fillStyle = '#1a122d';
+      context.fillRect(0, 574, 1280, 146);
+    } else if (this.medium === 'xerox_punk') {
+      context.fillStyle = '#efe9d5';
+      context.fillRect(0, 0, 1280, 720);
+      for (let index = 0; index < 12; index += 1) {
+        context.save();
+        context.translate(55 + (index % 6) * 220, 74 + Math.floor(index / 6) * 270);
+        context.rotate(((index % 5) - 2) * 0.035);
+        context.fillStyle = index % 3 === 0 ? '#fa285f' : index % 3 === 1 ? '#111111' : '#f5cc2d';
+        context.fillRect(-25, -26, 196, 218);
+        context.strokeStyle = '#111111';
+        context.lineWidth = 8;
+        context.strokeRect(-25, -26, 196, 218);
+        context.restore();
+      }
+      context.fillStyle = '#111111';
+      context.font = '900 48px sans-serif';
+      context.fillText('LIVE COPY / COPY LIVES', 52, 674);
+    } else if (this.medium === 'storybook_wash') {
+      context.fillStyle = '#f5ecd3';
+      context.fillRect(0, 0, 1280, 720);
+      const wash = [
+        ['#82b6c7', 590, 0.1],
+        ['#9bbf83', 520, 0.18],
+        ['#d99278', 450, 0.26],
+      ] as const;
+      for (const [fill, baseline, speed] of wash) {
+        context.beginPath();
+        context.moveTo(0, 720);
+        context.lineTo(0, baseline);
+        for (let x = 0; x <= 1280; x += 80) {
+          context.lineTo(
+            x,
+            baseline - 110 - Math.sin(x * 0.007 + elapsed * speed) * 72 - ((x / 80) % 3) * 18,
+          );
+        }
+        context.lineTo(1280, 720);
+        context.closePath();
+        context.fillStyle = fill;
+        context.globalAlpha = 0.58;
+        context.fill();
+      }
+      context.globalAlpha = 1;
+      context.fillStyle = 'rgba(255, 245, 208, 0.74)';
+      context.beginPath();
+      context.arc(1020, 148, 94, 0, Math.PI * 2);
+      context.fill();
+    } else if (this.medium === 'isometric_manual') {
+      context.fillStyle = '#f2efe3';
+      context.fillRect(0, 0, 1280, 720);
+      context.strokeStyle = 'rgba(32, 68, 84, 0.2)';
+      context.lineWidth = 1;
+      for (let offset = -720; offset < 1280; offset += 44) {
+        context.beginPath();
+        context.moveTo(offset, 720);
+        context.lineTo(offset + 720, 0);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(offset + 720, 720);
+        context.lineTo(offset, 0);
+        context.stroke();
+      }
+      context.strokeStyle = '#274d5b';
+      context.lineWidth = 4;
+      for (let index = 0; index < 5; index += 1) {
+        const x = 105 + index * 250;
+        const y = 150 + (index % 2) * 92;
+        context.beginPath();
+        context.moveTo(x, y);
+        context.lineTo(x + 92, y - 46);
+        context.lineTo(x + 184, y);
+        context.lineTo(x + 92, y + 46);
+        context.closePath();
+        context.stroke();
+        context.fillStyle = '#ea4c59';
+        context.font = '700 28px sans-serif';
+        context.fillText(String(index + 1), x + 78, y + 10);
+      }
+      context.fillStyle = '#274d5b';
+      context.fillRect(0, 590, 1280, 130);
+      context.fillStyle = '#f2efe3';
+      context.font = '700 25px sans-serif';
+      context.fillText('ASSEMBLY MUST REMAIN FICTIONAL', 52, 650);
     } else {
       context.fillStyle = '#071b45';
       context.fillRect(0, 0, 1280, 720);
@@ -380,6 +546,30 @@ export class Broadcast2DScene implements PlayoutVisuals {
     }
     if (this.medium === 'signal_corruption') {
       this.drawSignalCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
+    if (this.medium === 'ascii_terminal') {
+      this.drawAsciiCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
+    if (this.medium === 'blueprint_schematic') {
+      this.drawBlueprintCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
+    if (this.medium === 'stained_glass') {
+      this.drawStainedGlassCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
+    if (this.medium === 'xerox_punk') {
+      this.drawXeroxCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
+    if (this.medium === 'storybook_wash') {
+      this.drawStorybookCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
+    if (this.medium === 'isometric_manual') {
+      this.drawIsometricCharacter(character, speaking, acting, elapsed, closeUp);
       return;
     }
     const jitter =
@@ -643,6 +833,281 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.restore();
   }
 
+  private drawAsciiCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const x = closeUp ? 640 : character.x;
+    const scale = closeUp ? 1.35 : 1;
+    const frame = Math.floor(elapsed * 4 + character.seed) % 2;
+    context.save();
+    context.translate(x, closeUp ? 440 : 500);
+    context.scale(scale, scale);
+    context.fillStyle = 'rgba(1, 12, 6, 0.9)';
+    context.strokeStyle = '#48ff9d';
+    context.lineWidth = 3;
+    context.strokeRect(-108, -300, 216, 374);
+    context.fillStyle = '#48ff9d';
+    context.font = '30px monospace';
+    const head = frame === 0 ? ' /O_O\\ ' : ' |o_o| ';
+    context.fillText(head, -92, -218);
+    context.fillText(' /|_|\\ ', -92, -142);
+    context.fillText(
+      acting && character.action === 'POINT_AT' ? '<==| |  ' : '  /| |\\ ',
+      -92,
+      -76,
+    );
+    context.fillText('  / \\  ', -92, -10);
+    context.font = '18px monospace';
+    context.fillText(speaking ? '[TRANSMIT █]' : '[STANDBY _]', -86, 48);
+    context.restore();
+  }
+
+  private drawBlueprintCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const x = closeUp ? 640 : character.x;
+    const scale = closeUp ? 1.3 : 1;
+    const reach = character.action === 'POINT_AT' && acting ? -175 : -112;
+    context.save();
+    context.translate(x, closeUp ? 444 : 505);
+    context.scale(scale, scale);
+    context.strokeStyle = '#e5f8ff';
+    context.fillStyle = 'rgba(116, 206, 255, 0.12)';
+    context.lineWidth = 5;
+    context.beginPath();
+    context.arc(0, -214, 76, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+    context.strokeRect(-72, -134, 144, 212);
+    context.beginPath();
+    context.moveTo(-58, -90);
+    context.lineTo(reach, acting ? -138 : 8);
+    context.moveTo(58, -90);
+    context.lineTo(112, 8);
+    context.moveTo(-42, 78);
+    context.lineTo(-56, 132);
+    context.moveTo(42, 78);
+    context.lineTo(56, 132);
+    context.stroke();
+    context.setLineDash([8, 8]);
+    context.lineWidth = 2;
+    context.strokeRect(-104, -304, 208, 450);
+    context.setLineDash([]);
+    context.fillStyle = '#e5f8ff';
+    context.font = '17px monospace';
+    context.fillText(`Ø ${70 + (character.seed % 29)}.${Math.floor(elapsed) % 10}`, -104, -318);
+    context.fillRect(-28, -192, 56, speaking ? 20 : 5);
+    context.restore();
+  }
+
+  private drawStainedGlassCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const x = closeUp ? 640 : character.x;
+    const scale = closeUp ? 1.25 : 1;
+    context.save();
+    context.translate(x, closeUp ? 444 : 505);
+    context.scale(scale, scale);
+    context.rotate(Math.sin(elapsed * 0.7 + character.seed) * 0.012);
+    context.strokeStyle = '#1b1532';
+    context.lineWidth = 11;
+    context.fillStyle = colour(character.seed, 78, 55);
+    context.beginPath();
+    context.moveTo(0, -302);
+    context.lineTo(82, -218);
+    context.lineTo(58, -126);
+    context.lineTo(96, 86);
+    context.lineTo(-96, 86);
+    context.lineTo(-58, -126);
+    context.lineTo(-82, -218);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.beginPath();
+    context.moveTo(-58, -126);
+    context.lineTo(58, -126);
+    context.moveTo(-82, -218);
+    context.lineTo(82, -218);
+    context.moveTo(0, -302);
+    context.lineTo(0, 86);
+    context.stroke();
+    context.fillStyle = '#f7d75f';
+    context.beginPath();
+    context.arc(-28, -218, 10, 0, Math.PI * 2);
+    context.arc(28, -218, 10, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = '#1b1532';
+    context.lineWidth = speaking ? 18 : 7;
+    context.beginPath();
+    context.moveTo(-25, -170);
+    context.lineTo(25, -170);
+    context.stroke();
+    if (acting) {
+      context.strokeStyle = '#f7d75f';
+      context.lineWidth = 16;
+      context.beginPath();
+      context.moveTo(-72, -80);
+      context.lineTo(character.action === 'POINT_AT' ? -188 : -130, -118);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  private drawXeroxCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const x = closeUp ? 640 : character.x;
+    const scale = closeUp ? 1.28 : 1;
+    const jump = Math.round(Math.sin(elapsed * 7 + character.seed)) * 3;
+    context.save();
+    context.translate(x + jump, closeUp ? 442 : 503);
+    context.scale(scale, scale);
+    for (let copy = 1; copy >= 0; copy -= 1) {
+      context.save();
+      context.translate(copy * 11, -copy * 7);
+      context.fillStyle = copy === 1 ? '#f22961' : '#0b0b0b';
+      context.beginPath();
+      context.arc(0, -210, 76, 0, Math.PI * 2);
+      context.fill();
+      context.fillRect(-76, -132, 152, 218);
+      context.restore();
+    }
+    context.fillStyle = '#efe9d5';
+    context.fillRect(-42, -234, 22, 16);
+    context.fillRect(20, -234, 22, 16);
+    context.fillRect(-36, -188, 72, speaking ? 24 : 7);
+    context.fillStyle = '#f5cc2d';
+    context.save();
+    context.rotate(-0.08);
+    context.fillRect(-92, -112, 184, 34);
+    context.fillStyle = '#111111';
+    context.font = '900 18px sans-serif';
+    context.fillText(acting ? 'DO IT AGAIN' : 'ORIGINAL COPY', -82, -88);
+    context.restore();
+    context.restore();
+  }
+
+  private drawStorybookCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const x = closeUp ? 640 : character.x;
+    const scale = closeUp ? 1.25 : 1;
+    context.save();
+    context.translate(x, closeUp ? 444 : 505);
+    context.scale(scale, scale);
+    context.rotate(Math.sin(elapsed * 0.6 + character.seed) * 0.018);
+    context.globalAlpha = 0.84;
+    context.fillStyle = colour(character.seed, 38, 58);
+    context.strokeStyle = '#3d3a34';
+    context.lineWidth = 4;
+    context.beginPath();
+    context.ellipse(0, -202, 72, 91, 0, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+    context.beginPath();
+    context.moveTo(-62, -122);
+    context.quadraticCurveTo(-102, 8, -64, 88);
+    context.quadraticCurveTo(0, 112, 64, 88);
+    context.quadraticCurveTo(102, 8, 62, -122);
+    context.closePath();
+    context.fillStyle = colour(character.seed >>> 4, 42, 61);
+    context.fill();
+    context.stroke();
+    context.globalAlpha = 1;
+    context.fillStyle = '#3d3a34';
+    context.beginPath();
+    context.arc(-25, -217, 7, 0, Math.PI * 2);
+    context.arc(25, -217, 7, 0, Math.PI * 2);
+    context.fill();
+    context.lineWidth = speaking ? 13 : 4;
+    context.beginPath();
+    context.moveTo(-22, -172);
+    context.quadraticCurveTo(0, -158, 22, -172);
+    context.stroke();
+    if (acting) {
+      context.lineWidth = 12;
+      context.beginPath();
+      context.moveTo(-55, -82);
+      context.quadraticCurveTo(-118, -124, character.action === 'POINT_AT' ? -176 : -128, -62);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  private drawIsometricCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    _elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const x = closeUp ? 640 : character.x;
+    const scale = closeUp ? 1.3 : 1;
+    const explode = acting ? 16 : 6;
+    context.save();
+    context.translate(x, closeUp ? 446 : 506);
+    context.scale(scale, scale);
+    context.strokeStyle = '#274d5b';
+    context.lineWidth = 5;
+    const parts = [
+      { y: -254 - explode, width: 120, height: 82, fill: '#f3b743' },
+      { y: -122, width: 154, height: 148, fill: '#ea4c59' },
+      { y: 56 + explode, width: 132, height: 54, fill: '#62aaa4' },
+    ];
+    for (const part of parts) {
+      context.fillStyle = part.fill;
+      context.beginPath();
+      context.moveTo(0, part.y - part.height / 2);
+      context.lineTo(part.width / 2, part.y - part.height / 4);
+      context.lineTo(part.width / 2, part.y + part.height / 3);
+      context.lineTo(0, part.y + part.height / 2);
+      context.lineTo(-part.width / 2, part.y + part.height / 3);
+      context.lineTo(-part.width / 2, part.y - part.height / 4);
+      context.closePath();
+      context.fill();
+      context.stroke();
+    }
+    context.fillStyle = '#274d5b';
+    context.fillRect(-34, -272 - explode, 16, 16);
+    context.fillRect(18, -272 - explode, 16, 16);
+    context.fillRect(-31, -232 - explode, 62, speaking ? 20 : 6);
+    context.setLineDash([7, 7]);
+    context.beginPath();
+    context.moveTo(0, -174 - explode);
+    context.lineTo(0, -122);
+    context.moveTo(0, 26);
+    context.lineTo(0, 56 + explode);
+    context.stroke();
+    context.setLineDash([]);
+    context.restore();
+  }
+
   private drawMediumTexture(elapsed: number): void {
     const context = this.context;
     if (this.medium === 'hand_drawn' || this.medium === 'ink_monochrome') {
@@ -714,6 +1179,75 @@ export class Broadcast2DScene implements PlayoutVisuals {
         94,
         58,
       );
+    } else if (this.medium === 'ascii_terminal') {
+      context.globalAlpha = 0.18;
+      context.fillStyle = '#4cff9b';
+      for (let y = 0; y < 720; y += 6) {
+        context.fillRect(0, y, 1280, 1);
+      }
+      context.globalAlpha = 1;
+      context.fillRect(72 + (Math.floor(elapsed * 7) % 74) * 14, 632, 12, 24);
+    } else if (this.medium === 'blueprint_schematic') {
+      context.strokeStyle = 'rgba(229, 248, 255, 0.64)';
+      context.lineWidth = 2;
+      context.setLineDash([6, 9]);
+      context.beginPath();
+      context.moveTo(70, 620);
+      context.lineTo(1210, 620);
+      context.stroke();
+      context.setLineDash([]);
+      context.fillStyle = '#e5f8ff';
+      context.font = '16px monospace';
+      context.fillText(`SECTION ${String(Math.floor(elapsed) % 99).padStart(2, '0')}`, 1070, 650);
+    } else if (this.medium === 'stained_glass') {
+      const shimmer = 0.08 + Math.sin(elapsed * 0.8) * 0.03;
+      context.globalAlpha = shimmer;
+      context.fillStyle = '#fffbe0';
+      context.beginPath();
+      context.arc(640, 340, 340, 0, Math.PI * 2);
+      context.fill();
+      context.globalAlpha = 1;
+    } else if (this.medium === 'xerox_punk') {
+      context.globalAlpha = 0.18;
+      context.fillStyle = '#111111';
+      for (let index = 0; index < 520; index += 1) {
+        const x = (index * 97 + Math.floor(elapsed * 19)) % 1280;
+        const y = (index * 53 + ((index * 7_919) % 719)) % 720;
+        context.fillRect(x, y, 1 + (index % 4), 1 + (index % 3));
+      }
+      context.globalAlpha = 1;
+    } else if (this.medium === 'storybook_wash') {
+      context.globalAlpha = 0.055;
+      for (let index = 0; index < 15; index += 1) {
+        context.fillStyle = colour(index * 79, 45, 56);
+        context.beginPath();
+        context.arc(
+          (index * 173) % 1280,
+          (index * 109) % 720,
+          70 + (index % 5) * 24,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+      }
+      context.globalAlpha = 1;
+    } else if (this.medium === 'isometric_manual') {
+      context.strokeStyle = '#ea4c59';
+      context.lineWidth = 3;
+      for (const [x, y] of [
+        [28, 28],
+        [1252, 28],
+        [28, 692],
+        [1252, 692],
+      ] as const) {
+        context.beginPath();
+        context.arc(x, y, 12, 0, Math.PI * 2);
+        context.moveTo(x - 20, y);
+        context.lineTo(x + 20, y);
+        context.moveTo(x, y - 20);
+        context.lineTo(x, y + 20);
+        context.stroke();
+      }
     }
   }
 

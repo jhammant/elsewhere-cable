@@ -6,7 +6,11 @@ import {
   segmentPackageSchema,
   type PlayoutManifest,
 } from '../../packages/schemas/src/index.js';
-import { maximumPlausibleSpeechDurationMs } from '../../apps/generation-worker/src/providers.js';
+import {
+  inspectSpeechAudio,
+  maximumPlausibleSpeechDurationMs,
+  speechAudioQualityIssue,
+} from '../../apps/generation-worker/src/providers.js';
 import { containsSpokenStageDirection } from '../../apps/generation-worker/src/dialogue-quality.js';
 
 function argument(name: string): string | undefined {
@@ -20,12 +24,23 @@ const segmentsRoot = path.resolve(
   argument('segments') ?? process.env.ELSEWHERE_LIVE_SEGMENTS_DIR ?? 'data/segments-live',
 );
 const apply = process.argv.includes('--apply');
+const recentValue = argument('recent');
+const recent =
+  recentValue === undefined ? Number.POSITIVE_INFINITY : Number.parseInt(recentValue, 10);
+if (!(recent > 0)) {
+  throw new Error('--recent must be a positive integer');
+}
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
 const accepted: PlayoutManifest['segments'] = [];
 const rejected: Array<{ segmentId: string; reasons: string[] }> = [];
+const firstAuditedIndex = Math.max(0, manifest.segments.length - recent);
 
-for (const entry of manifest.segments) {
+for (const [entryIndex, entry] of manifest.segments.entries()) {
+  if (entryIndex < firstAuditedIndex) {
+    accepted.push(entry);
+    continue;
+  }
   const segmentPath = path.join(segmentsRoot, entry.packagePath);
   const reasons: string[] = [];
   try {
@@ -46,6 +61,10 @@ for (const entry of manifest.segments) {
       const audioPath = path.join(path.dirname(segmentPath), event.audioFile);
       try {
         await readFile(audioPath);
+        const qualityIssue = speechAudioQualityIssue(await inspectSpeechAudio(audioPath));
+        if (qualityIssue !== null) {
+          reasons.push(`${event.speechId} ${qualityIssue}`);
+        }
       } catch {
         reasons.push(`${event.speechId} is missing its prepared audio file`);
       }
@@ -93,6 +112,7 @@ process.stdout.write(
       acceptedSegmentCount: accepted.length,
       rejectedSegmentCount: rejected.length,
       acceptedDurationMs: cleanedManifest.totalDurationMs,
+      auditedSegmentCount: manifest.segments.length - firstAuditedIndex,
       rejected,
       segmentsRoot,
     },

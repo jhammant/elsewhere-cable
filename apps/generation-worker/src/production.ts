@@ -7,6 +7,7 @@ import {
   segmentPackageSchema,
   type GeneratedSegmentDraft,
   type GeneratedSegmentProposal,
+  type OptimisationBrief,
   type PlayoutManifest,
   type SegmentEvent,
   type SegmentPackage,
@@ -201,6 +202,7 @@ interface ProduceOptions {
   embeddingProvider: EmbeddingProvider | null;
   fresh?: boolean;
   historyRoots?: readonly string[];
+  optimisationBrief?: OptimisationBrief | null;
 }
 
 // Premises deliberately reuse television formats and physical sets. Lower thresholds mostly
@@ -509,6 +511,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             recent.map((record) => record.title),
             recent.map((record) => record.premise),
             rejectionReasons,
+            options.optimisationBrief ?? null,
           );
           const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
           const generated = repairNetworkIdentityCollision(

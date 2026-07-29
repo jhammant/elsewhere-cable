@@ -248,6 +248,65 @@ async function probeDurationMs(audioPath: string): Promise<number> {
   return Math.ceil(seconds * 1_000);
 }
 
+export interface SpeechAudioQuality {
+  durationMs: number;
+  meanVolumeDb: number;
+  maxVolumeDb: number;
+  silenceDurationMs: number;
+  silenceRatio: number;
+}
+
+export async function inspectSpeechAudio(audioPath: string): Promise<SpeechAudioQuality> {
+  const durationMs = await probeDurationMs(audioPath);
+  const { stderr } = await execFileAsync(
+    'ffmpeg',
+    [
+      '-hide_banner',
+      '-nostats',
+      '-i',
+      audioPath,
+      '-af',
+      'silencedetect=n=-45dB:d=0.35,volumedetect',
+      '-f',
+      'null',
+      '-',
+    ],
+    {
+      timeout: 30_000,
+      killSignal: 'SIGKILL',
+      maxBuffer: 2 * 1024 * 1024,
+    },
+  );
+  const meanVolumeDb = Number(stderr.match(/mean_volume:\s*(-?(?:inf|[\d.]+))\s*dB/iu)?.[1]);
+  const maxVolumeDb = Number(stderr.match(/max_volume:\s*(-?(?:inf|[\d.]+))\s*dB/iu)?.[1]);
+  const silenceDurationMs = [...stderr.matchAll(/silence_duration:\s*([\d.]+)/giu)].reduce(
+    (total, match) => total + Number(match[1] ?? 0) * 1_000,
+    0,
+  );
+  return {
+    durationMs,
+    meanVolumeDb,
+    maxVolumeDb,
+    silenceDurationMs: Math.round(silenceDurationMs),
+    silenceRatio: Math.min(1, silenceDurationMs / durationMs),
+  };
+}
+
+export function speechAudioQualityIssue(quality: SpeechAudioQuality): string | null {
+  if (!Number.isFinite(quality.maxVolumeDb) || quality.maxVolumeDb < -30) {
+    return `speech peak is inaudible (${quality.maxVolumeDb} dB)`;
+  }
+  if (!Number.isFinite(quality.meanVolumeDb) || quality.meanVolumeDb < -42) {
+    return `speech mean level is inaudible (${quality.meanVolumeDb} dB)`;
+  }
+  if (quality.silenceDurationMs > 1_500 && quality.silenceRatio > 0.25) {
+    return `speech contains ${quality.silenceDurationMs}ms silence (${Math.round(
+      quality.silenceRatio * 100,
+    )}%)`;
+  }
+  return null;
+}
+
 export function maximumPlausibleSpeechDurationMs(text: string): number {
   const wordCount = text.trim().split(/\s+/u).filter(Boolean).length;
   return Math.min(18_000, Math.max(7_000, wordCount * 800 + 2_500));
@@ -457,6 +516,12 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
           await unlink(sourceFile);
           continue;
         }
+        const qualityIssue = speechAudioQualityIssue(await inspectSpeechAudio(sourceFile));
+        if (qualityIssue !== null) {
+          failures.push(`${baseUrl}: ${qualityIssue}`);
+          await unlink(sourceFile);
+          continue;
+        }
         sourceDurationMs = durationMs;
         tempoCorrection = candidateTempoCorrection;
         break;
@@ -474,7 +539,7 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
       '-i',
       sourceFile,
       '-af',
-      `${tempoCorrection > 1 ? `atempo=${tempoCorrection.toFixed(4)},` : ''}loudnorm=I=-16:LRA=7:TP=-1.5`,
+      `silenceremove=start_periods=1:start_duration=0.08:start_threshold=-45dB:stop_periods=1:stop_duration=0.35:stop_threshold=-45dB,${tempoCorrection > 1 ? `atempo=${tempoCorrection.toFixed(4)},` : ''}loudnorm=I=-16:LRA=7:TP=-1.5`,
       '-c:a',
       'aac',
       '-b:a',
