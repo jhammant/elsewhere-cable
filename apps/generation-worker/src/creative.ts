@@ -297,6 +297,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'a trade-show booth with one working sample',
     'a garden shed converted into a sales set',
     'a pharmacy-style counter for impossible household services',
+    'a wedding-gift demonstration filmed between two feuding families',
+    'a beach kiosk trying to sell one product before the tide reaches the counter',
+    'a cramped lift used as a travelling showroom between appointments',
   ],
   shopping: [
     'a late-night shopping studio with one demonstration table',
@@ -304,6 +307,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'a kitchen counter prepared for a live product test',
     'a warehouse aisle presented as a luxury boutique',
     'a quiet craft desk with a single call-in customer',
+    'a tiny jewellery turntable shared by two hosts who no longer speak off air',
+    'a mobile shopping set rolling slowly through a family reunion',
+    'a greenhouse sales desk where every product has already chosen a customer',
   ],
   news: [
     'a regional news desk during a developing local story',
@@ -311,6 +317,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'a weather wall showing one impossible neighbourhood',
     'a cramped newsroom minutes before the bulletin ends',
     'a traffic desk covering one stubborn municipal problem',
+    'a sports desk where the trophy has requested its own microphone',
+    'a kitchen-table newsroom broadcasting one family disagreement as breaking news',
+    'a field report from a queue whose front keeps changing its account of events',
   ],
   sitcom: [
     'a family living room before an awkward visitor arrives',
@@ -318,6 +327,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'an office break room during a minor promotion dispute',
     'a small restaurant before the regular customer returns',
     'a laundrette where two neighbours need the same machine',
+    'a spare bedroom being prepared for a relative nobody remembers inviting',
+    'a cramped band rehearsal where every performer claims to have written the quiet part',
+    'a birthday lunch at which the cake recognises the wrong guest of honour',
   ],
   emergency: [
     'a calm municipal emergency studio',
@@ -325,6 +337,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'a ferry terminal information desk',
     'a school gym temporarily serving as a coordination centre',
     'a local utilities bunker with an excessively polite spokesperson',
+    'a supermarket customer-service booth issuing a warning about one aisle',
+    'a radio booth where a harmless warning has become useful relationship advice',
+    'a hotel lobby coordinating the return of one incorrectly delivered afternoon',
   ],
   ident: [
     'a late-night continuity booth between programmes',
@@ -332,6 +347,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'a cable-routing room with one disputed channel',
     'a minimalist station-ident space',
     'an announcer desk after the schedule has objected',
+    'a hand-painted title-card workshop seconds before transmission',
+    'a continuity sofa occupied by the family from the programme that just ended',
+    'a corridor of numbered studio doors while the announcer searches for the next show',
   ],
   public_access: [
     'a municipal hearing desk with one complainant',
@@ -339,6 +357,9 @@ const formatSettings: Record<GeneratedSegmentProposal['format'], readonly string
     'a library meeting room during a minor civic appeal',
     'a neighbourhood advice desk staffed by one clerk',
     'a village-hall demonstration with three attendees',
+    'a basement talent show judged by the only person who arrived late',
+    'a local relationship phone-in hosted from the presenter’s own kitchen',
+    'an amateur craft lesson whose caller is much better than the host',
   ],
 };
 
@@ -366,34 +387,55 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'A demonstrator needs to prove one impossible product solves a harmless social embarrassment, while its owner needs the perfectly functioning product stopped before its single reputational cost becomes public.',
     'A service representative needs one customer testimonial, while the customer refuses because the service delivered its precise benefit to the wrong harmless social occasion.',
     'A talking receipt or product refuses to reveal the advertised price until the demonstrator grants it one concrete workplace benefit.',
+    'Two former friends must demonstrate a product that works only when their claims sincerely agree, exposing the one harmless opinion neither has admitted they still share.',
+    'A spokesperson promises a service will rescue one small celebration, but its exact successful result threatens the private surprise the customer was trying to preserve.',
+    'A familiar household product has accepted a new professional role and will perform only if the demonstrator acknowledges the person already doing that role for free.',
   ],
   shopping: [
     'A host must sell one impossible product, while a caller who already owns it needs the host to admit the single harmless social consequence caused when it works.',
     'A host must complete one service order, while the customer refuses because the service fulfils the contract at an inconvenient but harmless social moment.',
     'A talking product refuses to demonstrate itself until the shopping host grants it one concrete on-air privilege.',
+    'Two hosts compete for credit when a product assigns ownership to whoever reveals the most ordinary genuine need for it.',
+    'A caller orders an impossible gift for somebody else, but the service correctly delivers its benefit to the caller’s concealed emotional target.',
+    'A returned product negotiates to choose its next owner while the host tries to conceal why its previous choice was embarrassingly accurate.',
   ],
   news: [
     'A reporter wants credit for one harmless local story, while an official refuses because temporary interview authority belongs to whoever satisfies one petty visible criterion.',
     'An anchor needs to finish one bulletin, while a familiar broadcast convention such as the lower third, camera cue or closing credit becomes an enforceable newsroom rule.',
     'A talking map, caption or studio object demands credit for evidence it supplies, while the anchor refuses because the newsroom classifies it as part of the location.',
     'A reporter needs to retain professional authority while the one assigned visible trigger changes the one assigned set element in the repeatable way specified below.',
+    'A field reporter and witness each try to appear incidental to a tiny story until its petty criterion unexpectedly makes the least involved person the newsroom authority.',
+    'An anchor discovers that every correction changes which speaker the bulletin identifies as the subject, turning a professional clarification into a personal negotiation.',
+    'A studio object has gathered better evidence than the correspondent and wants a named reporting role, while the correspondent needs its evidence without admitting dependence.',
+    'A presenter tries to downplay one studio change, but each use of the assigned visible trigger repeats the transformation and alters who appears credible.',
   ],
   sitcom: [
     'One household member wants a harmless social exception, while a relative refuses because one impossible household custom determines who may speak, enter, leave or claim credit.',
     'Two colleagues want the same minor privilege, while workplace authority transfers by one petty criterion that unexpectedly favours the least respected colleague.',
     'One character wants an ordinary favour, while another refuses because one specific spoken phrase contractually transfers a harmless obligation between them.',
     'A household member requests an ordinary service, while the relative providing it follows the request so literally that it obstructs the requester’s harmless social goal.',
+    'A family tries to conceal one shared minor mistake from a visitor, but an impossible household custom requires the worst liar to welcome and brief every new arrival.',
+    'Three friends rehearse a small celebration while authority passes to whoever performs the least impressive task with genuine care.',
+    'Two relatives practise an apology, but one ordinary phrase transfers responsibility for the original embarrassment every time either tries to sound more sincere.',
+    'A flatmate performs an ordinary service exactly as requested, forcing the requester to choose between saving face and admitting the unstated emotional reason for asking.',
   ],
   emergency: [
     'A calm spokesperson needs to complete one live warning, while an ordinary broadcast convention such as a caption, cue or closing announcement becomes a mandatory emergency procedure.',
     'An official needs the public to follow one harmless social procedure, while a resident requests permission for one embarrassingly ordinary exception.',
     'A local service announces one precise recall, while a customer needs to keep the recalled service benefit for a mundane social appointment.',
+    'A presenter tries to retract a harmless warning after callers begin using its broadcast wording as relationship advice, but each correction becomes another mandatory instruction.',
+    'Two neighbours need the same tiny exception during a contained warning, while an impossible courtesy protocol makes each insist the other should be helped first.',
+    'A recalled convenience is the only thing helping a caller through an awkward social occasion, so the service team must replace its function without repeating its unintended result.',
   ],
   ident: [
     'A continuity announcer needs to introduce the next programme, while the programme refuses its title for one specific professional reason.',
     'A station ident needs to finish in ten seconds, while one logo element negotiates for billing.',
     'An announcer needs to say one continuity phrase, while that phrase contractually obliges the station to keep the current programme on air.',
     'A station ident needs to finish while the assigned visible trigger changes one logo or graphic element in the repeatable way specified below.',
+    'An announcer keeps introducing the next programme at the wrong emotional moment, while the outgoing cast calmly negotiates the exact cue that would let them leave with dignity.',
+    'A hand-painted letter has done the work of two missing logo elements and wants their place in the spoken station name before the ident ends.',
+    'Two continuity announcers each use one routine handover phrase that makes the other contractually responsible for completing the same unfinished introduction.',
+    'An announcer attempts a perfectly ordinary sign-off while the assigned visible trigger repeatedly changes which graphic element appears to have delivered it.',
   ],
   public_access: [
     'A resident wants one practical exception, while a clerk refuses because an impossible but harmless social protocol controls permission or speaking order.',
@@ -401,8 +443,24 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'A resident wants one ordinary exception, while a clerk refuses because one precise spoken phrase contractually accepts a different harmless obligation.',
     'A talking form, chair, pen or civic object demands one workplace benefit before cooperating, while the clerk needs the hearing to continue.',
     'A resident requests one ordinary municipal service, while the worker fulfils its exact terms in a way that obstructs the resident’s harmless social goal.',
+    'An amateur host gives advice about one tiny social custom while a caller’s better method exposes that the host has never successfully performed it.',
+    'Three talent-show entrants avoid winning until the judging criterion unexpectedly gives authority to the quiet helper changing the scenery.',
+    'A relationship caller tries to retract one ordinary phrase after the host explains the different harmless commitment it formally makes on this channel.',
+    'An amateur craft object has completed the lesson better than its presenter and negotiates for a named co-host role before allowing the final step.',
+    'A volunteer delivers exactly the small community service requested, forcing the requester to admit the private social outcome they actually wanted.',
   ],
 };
+
+const performanceDynamics = [
+  'one character’s bluff unravels through increasingly specific ordinary details',
+  'a dismissed character becomes indispensable and remains politely aware of it',
+  'two rivals compete to appear less emotionally invested than the other',
+  'a private disagreement stays courteous while its visible consequence becomes public',
+  'a guest repeatedly prepares to leave but needs one honest answer first',
+  'two characters discover they want the same outcome and then compete for authorship',
+  'a confident explanation becomes a reluctant request for help',
+  'a minor confession creates an unexpected but fragile alliance',
+] as const;
 
 const formatStoryModes: Record<
   GeneratedSegmentProposal['format'],
@@ -793,6 +851,8 @@ export function userPrompt(
   const cast =
     castPool[axisIndex(serial, 0x63d835f, castPool.length)] ??
     castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
+  const performanceDynamic =
+    performanceDynamics[axisIndex(serial, 0x6f922b3, performanceDynamics.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
   const pacing = assignedPacing(serial, optimisationBrief);
   const affectedSetElement =
@@ -865,12 +925,14 @@ Mandatory creative coordinates for this attempt:
 - Comedy mechanism family: ${mechanismFamily.direction}.
 ${physicalMechanismBlock}
 - Cast structure: ${cast}.
+- Performance dynamic: ${performanceDynamic}. This shapes the acting and relationship beats, not the surreal mechanism.
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
 Use the format-specific frame as the whole story. Apply the story mode inside that frame; it is not permission to add a second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
-The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
+The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. A conflict need not be another refusal: use concealment, temptation, rivalry, loyalty, embarrassment, a fragile alliance or a change of mind where the assigned frame permits it. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
+Do not default to clerks, permits, waivers, penalties, policies, employee benefits or customer-satisfaction scores unless the assigned coordinates specifically require one. continuityFact will appear as a mid-programme broadcast graphic: make it a unique 5–16 word in-world fact, never an action, direction or generic slogan.
 Write the premise as one complete sentence of 8–48 words.
 Select a very high, memorable channel number. Make the scene unlike the immediately preceding material.`;
 }

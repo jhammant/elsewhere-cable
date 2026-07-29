@@ -11,10 +11,12 @@ import { demoDraft } from './creative.js';
 import {
   assertPreviewSafe,
   editorialCritiqueIssues,
+  midSpeechCameraEvents,
   produceBatch,
   proposalQualityIssues,
   repairNetworkIdentityCollision,
   semanticNoveltyIssue,
+  storyGraphicForFormat,
 } from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
 
@@ -41,6 +43,23 @@ afterEach(async () => {
 });
 
 describe('produceBatch', () => {
+  it('uses format-specific information graphics without displaying stage directions', () => {
+    expect(storyGraphicForFormat('news')).toBe('LOWER_THIRD');
+    expect(storyGraphicForFormat('emergency')).toBe('WARNING');
+    expect(storyGraphicForFormat('ident')).toBe('TITLE_CARD');
+  });
+
+  it('adds visual beats to long energetic speech while preserving deliberate holds', () => {
+    expect(midSpeechCameraEvents(1_000, 5_000, 'frantic', 0)).toEqual([
+      { atMs: 2_700, type: 'camera.cut', camera: 'CAMERA_WIDE' },
+      { atMs: 4_500, type: 'camera.cut', camera: 'CAMERA_GUEST' },
+    ]);
+    expect(midSpeechCameraEvents(1_000, 3_000, 'conversational', 1)).toEqual([
+      { atMs: 2_620, type: 'camera.cut', camera: 'CAMERA_WIDE' },
+    ]);
+    expect(midSpeechCameraEvents(1_000, 5_000, 'slow_burn', 0)).toEqual([]);
+  });
+
   it('requires the editorial critic to approve coherent, earned comedy', () => {
     expect(
       editorialCritiqueIssues({
@@ -299,10 +318,13 @@ describe('produceBatch', () => {
     );
     expect(firstSegment.visualMedium).toBeDefined();
     expect(firstSegment.castArchetype).toBeDefined();
-    const endingGraphic = firstSegment.events.find(
-      (event) => event.type === 'graphic.show' && event.graphic === 'WARNING',
+    const storyGraphic = firstSegment.events.find(
+      (event) => event.type === 'graphic.show' && event.text !== firstSegment.programme.title,
     );
-    expect(endingGraphic).toBeUndefined();
+    expect(storyGraphic).toBeDefined();
+    expect(storyGraphic?.type === 'graphic.show' ? storyGraphic.text : '').not.toContain(
+      'camera holds',
+    );
     const lastSpeech = firstSegment.events.filter((event) => event.type === 'speech.play').at(-1);
     const payoffAction = firstSegment.events
       .filter((event) => event.type === 'character.action')

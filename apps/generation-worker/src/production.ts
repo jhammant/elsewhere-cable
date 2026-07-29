@@ -141,6 +141,57 @@ function pacingFor(draft: GeneratedSegmentDraft): NonNullable<GeneratedSegmentDr
   return 'conversational';
 }
 
+type BroadcastFormat = GeneratedSegmentDraft['format'];
+type PacingMode = NonNullable<GeneratedSegmentDraft['pacing']>;
+
+export function storyGraphicForFormat(
+  format: BroadcastFormat,
+): 'LOWER_THIRD' | 'WARNING' | 'TITLE_CARD' {
+  switch (format) {
+    case 'advert':
+    case 'ident':
+    case 'sitcom':
+      return 'TITLE_CARD';
+    case 'emergency':
+    case 'public_access':
+      return 'WARNING';
+    case 'news':
+    case 'shopping':
+      return 'LOWER_THIRD';
+  }
+}
+
+export function midSpeechCameraEvents(
+  speechStartMs: number,
+  durationMs: number,
+  pacing: PacingMode,
+  speakerIndex: number,
+): SegmentEvent[] {
+  if (durationMs < 2_400 || pacing === 'slow_burn' || pacing === 'near_silent') {
+    return [];
+  }
+  const cuts =
+    pacing === 'frantic' && durationMs >= 3_600
+      ? [
+          { fraction: 0.34, camera: 'CAMERA_WIDE' as const },
+          {
+            fraction: 0.7,
+            camera: speakerIndex % 2 === 0 ? ('CAMERA_GUEST' as const) : ('CAMERA_HOST' as const),
+          },
+        ]
+      : [{ fraction: 0.54, camera: 'CAMERA_WIDE' as const }];
+  return cuts.map(({ fraction, camera }) => ({
+    atMs: speechStartMs + Math.floor(durationMs * fraction),
+    type: 'camera.cut',
+    camera,
+  }));
+}
+
+function storyGraphicText(value: string): string {
+  const text = value.trim();
+  return text.length <= 180 ? text : `${text.slice(0, 177).trimEnd()}…`;
+}
+
 function speakingRateFor(
   pacing: NonNullable<GeneratedSegmentDraft['pacing']>,
   speaker: string,
@@ -687,13 +738,7 @@ async function buildSegment(
         audioFile: result.audioFile,
         durationMs: result.durationMs,
       });
-      if (pacing === 'frantic' && result.durationMs > 1_400) {
-        events.push({
-          atMs: cursorMs + Math.floor(result.durationMs * 0.58),
-          type: 'camera.cut',
-          camera: index % 2 === 0 ? 'CAMERA_GUEST' : 'CAMERA_HOST',
-        });
-      }
+      events.push(...midSpeechCameraEvents(cursorMs + 120, result.durationMs, pacing, index));
       if (pacing === 'interrupted' && index < speech.length - 1 && index % 2 === 0) {
         events.push({
           atMs: cursorMs + result.durationMs + 120,
@@ -716,6 +761,14 @@ async function buildSegment(
             action: 'REACTION_NEUTRAL',
           });
         }
+      }
+      if (index === Math.floor((speech.length - 1) / 2) && index < speech.length - 1) {
+        events.push({
+          atMs: cursorMs + result.durationMs + Math.min(140, timing.lineGapMs),
+          type: 'graphic.show',
+          graphic: storyGraphicForFormat(draft.format),
+          text: storyGraphicText(draft.continuityFact),
+        });
       }
       cursorMs += result.durationMs + (index === speech.length - 1 ? 120 : timing.lineGapMs);
     });
