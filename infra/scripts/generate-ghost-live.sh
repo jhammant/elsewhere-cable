@@ -3,6 +3,7 @@ set -eu
 
 mode=${1:-once}
 batch_count=${ELSEWHERE_LIVE_BATCH_COUNT:-24}
+generation_concurrency=${ELSEWHERE_GENERATION_CONCURRENCY:-2}
 output_root=${ELSEWHERE_LIVE_SEGMENTS_DIR:-data/segments-live}
 history_root=${ELSEWHERE_CREATIVE_HISTORY_DIR:-data/segments}
 llm_base_url=${ELSEWHERE_LLM_BASE_URL:-http://127.0.0.1:1235/v1}
@@ -28,6 +29,16 @@ if [ "$batch_count" -lt 1 ] || [ "$batch_count" -gt 100 ]; then
   echo "ELSEWHERE_LIVE_BATCH_COUNT must be an integer from 1 to 100." >&2
   exit 64
 fi
+case "$generation_concurrency" in
+  '' | *[!0-9]*)
+    echo "ELSEWHERE_GENERATION_CONCURRENCY must be an integer from 1 to 4." >&2
+    exit 64
+    ;;
+esac
+if [ "$generation_concurrency" -lt 1 ] || [ "$generation_concurrency" -gt 4 ]; then
+  echo "ELSEWHERE_GENERATION_CONCURRENCY must be an integer from 1 to 4." >&2
+  exit 64
+fi
 
 pnpm exec tsx infra/scripts/bootstrap-live-queue.ts \
   --base "$history_root" \
@@ -44,7 +55,7 @@ while :; do
 
   set -- \
     --count "$batch_count" \
-    --concurrency 2 \
+    --concurrency "$generation_concurrency" \
     --output "$output_root" \
     --base-url "$llm_base_url" \
     --model "$llm_model" \
