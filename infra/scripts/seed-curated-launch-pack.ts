@@ -930,6 +930,467 @@ const curatedDrafts: GeneratedSegmentDraft[] = [
     endingBeat:
       'Noll applauds Venn’s hosting while Lemi is handed the guest coat and the smallest chair.',
   },
+  {
+    channelNumber: 9_771_420_608,
+    channelName: 'Portable Waiting Solutions',
+    programmeTitle: 'Carry Your Place',
+    format: 'advert',
+    realityId: 'CLAY-QUEUE-82',
+    visualStyle: 'bright_clay_trade_counter',
+    visualMedium: 'claymation',
+    castArchetype: 'talking_objects',
+    pacing: 'frantic',
+    storyMode: 'product_consequence',
+    premise:
+      'At a trade-show advert, demonstrator Rell wants customer Pavi to buy a queue-folding product, but Pavi refuses because the bag carries only their place and none of their belongings.',
+    tone: ['bright', 'urgent', 'contractual'],
+    dialogue: [
+      {
+        speaker: 'Demonstrator Rell',
+        text: 'Fold any waiting place into this convenient bag.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Pavi',
+        text: 'Where do my actual belongings go?',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Queue Bag',
+        text: 'Belongings have never waited politely.',
+        action: 'FREEZE',
+      },
+      {
+        speaker: 'Demonstrator Rell',
+        text: 'Your place remains fresh for seven days.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Pavi',
+        text: 'I waited here to return this bag.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Queue Bag',
+        text: 'That place is already inside me.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Demonstrator Rell',
+        text: 'Then your refund is first in line.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Customer Pavi',
+        text: 'May I leave while it waits?',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Queue Bag',
+        text: 'Only your place purchased me.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Demonstrator Rell',
+        text: 'Congratulations. Your place is our newest customer.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact:
+      'Queue-folding bags treat stored places as customers separate from their owners.',
+    endingBeat:
+      'Rell hands the receipt to the empty waiting mark while Pavi quietly takes the bag’s place on the display.',
+  },
+  {
+    channelNumber: 8_660_305_771,
+    channelName: 'Heat Signature Bulletin',
+    programmeTitle: 'Warmest Voice First',
+    format: 'news',
+    realityId: 'THERMAL-DESK-19',
+    visualStyle: 'thermal_camera_evening_news',
+    visualMedium: 'thermal_camera',
+    castArchetype: 'geometric_aliens',
+    pacing: 'interrupted',
+    storyMode: 'status_transfer',
+    premise:
+      'At a thermal-camera news desk, reporter Senn wants credit for an exclusive interview, but anchor Varo refuses because speaking authority transfers to the warmest microphone.',
+    tone: ['serious', 'competitive', 'technical'],
+    dialogue: [
+      {
+        speaker: 'Reporter Senn',
+        text: 'My witness is ready with exclusive evidence.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Anchor Varo',
+        text: 'Your microphone is three degrees too junior.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Reporter Senn',
+        text: 'It spent all afternoon outside.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Witness Olo',
+        text: 'Mine was under my coat.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Anchor Varo',
+        text: 'Then the witness now conducts the interview.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Witness Olo',
+        text: 'Excellent. Senn, why were you outside?',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'The warmest studio microphone temporarily grants speaking authority.',
+    endingBeat:
+      'Senn faces the witness’s glowing microphone while Varo places the exclusive card beneath the witness’s name.',
+  },
+  {
+    channelNumber: 7_554_091_226,
+    channelName: 'Domestic Place Settings',
+    programmeTitle: 'The Senior Napkin',
+    format: 'sitcom',
+    realityId: 'PAPER-LUNCH-53',
+    visualStyle: 'flat_paper_family_lunch',
+    visualMedium: 'paper_cutout',
+    castArchetype: 'paper_puppets',
+    pacing: 'conversational',
+    storyMode: 'social_protocol',
+    premise:
+      'At a family lunch, cousin Tavi wants the window seat, but host Enna refuses permission because household custom awards each place according to the napkin folded with greatest confidence.',
+    tone: ['warm', 'petty', 'domestic'],
+    dialogue: [
+      {
+        speaker: 'Cousin Tavi',
+        text: 'I asked for the window seat yesterday.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Host Enna',
+        text: 'Your napkin arrived without conviction.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Cousin Tavi',
+        text: 'It is folded into a swan.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Aunt Mero',
+        text: 'That swan appears open to suggestions.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Cousin Tavi',
+        text: 'What did you fold?',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Aunt Mero',
+        text: 'A written refusal to move.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Host Enna',
+        text: 'Very senior work, Mero.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Cousin Tavi',
+        text: 'Fine. My swan formally disputes dessert.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Confidently folded napkins determine household seating seniority.',
+    endingBeat:
+      'Enna serves dessert to the refusal while Tavi’s paper swan receives the window seat alone.',
+  },
+  {
+    channelNumber: 6_905_331_840,
+    channelName: 'Civic Vocabulary Clinic',
+    programmeTitle: 'A Word in Your Name',
+    format: 'public_access',
+    realityId: 'SHADOW-WORD-40',
+    visualStyle: 'quiet_shadow_vocabulary_hearing',
+    visualMedium: 'shadow_theatre',
+    castArchetype: 'mixed',
+    pacing: 'slow_burn',
+    storyMode: 'semantic_contract',
+    premise:
+      'At a community vocabulary clinic, resident Jori wants the word mine removed from a borrowed sign, but clerk Pell refuses because saying the word renews the sign for another month.',
+    tone: ['earnest', 'quiet', 'procedural'],
+    dialogue: [
+      {
+        speaker: 'Resident Jori',
+        text: 'This sign says the garden is mine.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Clerk Pell',
+        text: 'Thank you. It is renewed.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Resident Jori',
+        text: 'I was identifying the disputed word.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Borrowed Sign',
+        text: 'Your pronunciation was legally affectionate.',
+        action: 'FREEZE',
+      },
+      {
+        speaker: 'Resident Jori',
+        text: 'Please remove the possessive mistake.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Clerk Pell',
+        text: 'Certainly. The mistake now owns the garden.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Saying mine near a borrowed sign renews its claim for one month.',
+    endingBeat: 'Pell crosses out Jori’s name and files the garden beneath the disputed word.',
+  },
+  {
+    channelNumber: 9_204_881_663,
+    channelName: 'Reciprocal Loyalty Shopping',
+    programmeTitle: 'The Card Chooses a Customer',
+    format: 'shopping',
+    realityId: 'COLLAGE-RETAIL-64',
+    visualStyle: 'torn_magazine_loyalty_studio',
+    visualMedium: 'collage_zine',
+    castArchetype: 'talking_objects',
+    pacing: 'staccato',
+    storyMode: 'object_agency',
+    premise:
+      'In a shopping studio, host Dema wants customer Lio to accept a refund, but the talking card refuses and demands to exchange Lio for someone with more points.',
+    tone: ['bright', 'awkward', 'transactional'],
+    dialogue: [
+      {
+        speaker: 'Host Dema',
+        text: 'Your refund is ready, Lio.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Loyalty Card',
+        text: 'The customer is below my standard.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Customer Lio',
+        text: 'I earned every point on you.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Loyalty Card',
+        text: 'You spent them without consulting me.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Host Dema',
+        text: 'Cards cannot exchange customers.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Loyalty Card',
+        text: 'Then why is he returnable?',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Customer Lio',
+        text: 'Who has enough points for me?',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Host Dema',
+        text: 'Apparently, your refund does.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Talking loyalty cards may request an exchange of their registered customer.',
+    endingBeat:
+      'Dema pins the loyalty card to the refund envelope and places Lio beneath the returns sign.',
+  },
+  {
+    channelNumber: 8_990_440_127,
+    channelName: 'Minor Calendar Recovery',
+    programmeTitle: 'Tuesday Has Been Recalled',
+    format: 'emergency',
+    realityId: 'VECTOR-WEEK-08',
+    visualStyle: 'calm_vector_calendar_advisory',
+    visualMedium: 'corporate_vector',
+    castArchetype: 'geometric_aliens',
+    pacing: 'frantic',
+    storyMode: 'service_mismatch',
+    premise:
+      'During a civic emergency service recall, official Kess wants customer Rilo to return a borrowed Tuesday, but Rilo refuses because their appointment is still using its afternoon.',
+    tone: ['calm', 'urgent', 'bureaucratic'],
+    dialogue: [
+      {
+        speaker: 'Official Kess',
+        text: 'Return Tuesday before the next announcement.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Rilo',
+        text: 'My appointment still needs its afternoon.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Official Kess',
+        text: 'Keep the appointment. Remove the weekday.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Customer Rilo',
+        text: 'Then when should I arrive?',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Official Kess',
+        text: 'At the same time, without Tuesday.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Appointment Clerk',
+        text: 'We cannot admit an unlabelled afternoon.',
+        action: 'ENTER',
+      },
+      {
+        speaker: 'Customer Rilo',
+        text: 'Can Thursday supervise it briefly?',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Official Kess',
+        text: 'Thursday is not trained for afternoons.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Appointment Clerk',
+        text: 'I can offer an unsupervised lunchtime.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Customer Rilo',
+        text: 'Fine. Tuesday may leave after lunch.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact:
+      'Recalled weekdays may leave their appointments behind under temporary supervision.',
+    endingBeat:
+      'Kess seals Tuesday in a return envelope while the appointment clerk labels the remaining afternoon unaccompanied.',
+  },
+  {
+    channelNumber: 9_500_001_774,
+    channelName: 'Courtesy Continuity',
+    programmeTitle: 'Thank the Logo',
+    format: 'ident',
+    realityId: 'WIRE-IDENT-33',
+    visualStyle: 'minimal_neon_logo_continuity',
+    visualMedium: 'neon_wireframe',
+    castArchetype: 'talking_objects',
+    pacing: 'near_silent',
+    storyMode: 'format_literalism',
+    premise:
+      'In a continuity ident, announcer Venn wants the next programme title displayed, but the network logo refuses to leave until its full on-screen name is thanked aloud.',
+    tone: ['minimal', 'formal', 'tired'],
+    dialogue: [
+      {
+        speaker: 'Announcer Venn',
+        text: 'Our next programme begins now.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Network Logo',
+        text: 'You omitted the courtesy credit.',
+        action: 'FREEZE',
+      },
+      {
+        speaker: 'Announcer Venn',
+        text: 'Thank you, complete network logo.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Network Logo',
+        text: 'My registered name is considerably longer.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Announcer Venn',
+        text: 'Then the programme may thank you.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Some network logos require a spoken courtesy credit before leaving an ident.',
+    endingBeat:
+      'The next programme title squeezes beside the unmoved logo and displays a tiny thank-you caption.',
+  },
+  {
+    channelNumber: 7_830_119_452,
+    channelName: 'Rotating Compliment Workshop',
+    programmeTitle: 'Praise the Other Wall',
+    format: 'public_access',
+    realityId: 'INK-ROOM-72',
+    visualStyle: 'hand_inked_rotating_demonstration',
+    visualMedium: 'ink_monochrome',
+    castArchetype: 'paper_puppets',
+    pacing: 'conversational',
+    storyMode: 'visual_physics',
+    premise:
+      'At a public community demonstration, tutor Miri wants resident Odo to praise a portrait, but Odo refuses because every compliment rotates the display wall away from its speaker.',
+    tone: ['earnest', 'physical', 'awkward'],
+    dialogue: [
+      {
+        speaker: 'Tutor Miri',
+        text: 'Begin with one sincere visual compliment.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Resident Odo',
+        text: 'The frame is acceptably square.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Tutor Miri',
+        text: 'The wall barely considered that praise.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Portrait',
+        text: 'I require something personally inconvenient.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Resident Odo',
+        text: 'Your expression improves this entire room.',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Tutor Miri',
+        text: 'Excellent. The wall has chosen me.',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Portrait',
+        text: 'Now praise whichever side can still see me.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact: 'Compliments rotate certain display walls away from their speaker.',
+    endingBeat:
+      'The display wall rotates between Miri and Odo until the portrait faces an empty side of the studio.',
+  },
 ].map((draft) => generatedSegmentDraftSchema.parse(draft));
 
 async function existingProgrammeTitles(): Promise<Set<string>> {

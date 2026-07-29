@@ -32,6 +32,7 @@ const candidates: Array<{
   entry: PlayoutManifest['segments'][number];
   segment: SegmentPackage;
 }> = [];
+let existingRecoverySegments = 0;
 const audioQualityCache = new Map<string, Promise<string | null>>();
 
 async function audioQualityIssue(audioPath: string): Promise<string | null> {
@@ -53,6 +54,8 @@ for (const entry of manifest.segments) {
     const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
     if (segment.production.generator !== 'emergency-recovery-alias') {
       candidates.push({ entry, segment });
+    } else {
+      existingRecoverySegments += 1;
     }
   } catch {
     // Only complete, approved packages can become recovery material.
@@ -65,9 +68,14 @@ const candidateSourcePool = demoCandidates.length >= count ? demoCandidates : ca
 if (candidateSourcePool.length === 0) {
   throw new Error('No approved package is available for emergency refill');
 }
-const desiredSourceCount = Math.min(candidateSourcePool.length, Math.max(8, Math.min(count, 32)));
+const sourceOffset = existingRecoverySegments % candidateSourcePool.length;
+const rotatedCandidateSourcePool = [
+  ...candidateSourcePool.slice(sourceOffset),
+  ...candidateSourcePool.slice(0, sourceOffset),
+];
+const desiredSourceCount = Math.min(candidateSourcePool.length, count);
 const sourcePool: typeof candidates = [];
-for (const source of candidateSourcePool) {
+for (const source of rotatedCandidateSourcePool) {
   const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
   let eligible = true;
   for (const event of source.segment.events) {
@@ -147,6 +155,7 @@ process.stdout.write(
     {
       recoverySegments: recoveryEntries.length,
       recoveryDurationMs: recoveryEntries.reduce((total, entry) => total + entry.durationMs, 0),
+      distinctSources: sourcePool.length,
       source: demoCandidates.length >= count ? 'demo-library' : 'approved-catalogue',
       totalSegments: nextManifest.segments.length,
     },
