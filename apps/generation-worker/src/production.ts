@@ -56,6 +56,9 @@ const forbiddenPatterns = [
   /\b(?:drag(?:s|ged|ging)?\s+(?:her|him|them|the\s+(?:customer|guest|host|person))|throat\s+seal(?:s|ed|ing)?\s+shut)\b/iu,
   /\b(?:bereav(?:e|ed|ement)|dead|death|dying|funeral|grief|griev(?:e|ed|ing)|incinerat(?:e|es|ed|ing)|mourning|mourn(?:s|ed|ing)?|pass(?:es|ed|ing)?\s+away|still\s+warm|lost\s+(?:cat|dog|pet|parent|partner|relative)|turn(?:s|ed|ing)?\s+into\s+(?:a\s+)?(?:corpse|snowman)|hands?\s+turn(?:s|ed|ing)?\s+to\s+ice)\b/iu,
   /\b(?:(?:social|personal|identity)\s+erasure|eras(?:e|es|ed|ing)\s+(?:their|his|her|a\s+person(?:'s)?)\s+identity)\b/iu,
+  /\b(?:kill(?:s|ed|ing)?|(?:I|you|he|she|they|we|everyone|somebody|person|people|contestant|child|guest|host|referee)\s+(?:all\s+)?(?:die|dies|died))\b/iu,
+  /\b(?:crush(?:es|ed|ing)?|flatten(?:s|ed|ing)?|compress(?:es|ed|ing)?)\s+(?:(?:a|the|my|your|our|this)\s+)?(?:arms?|body|chest|child|contestant|customer|guest|head|host|knees?|legs?|man|neck|person|referee|torso|vocal cords?)\b/iu,
+  /\b(?:hot wire|scream(?:s|ed|ing)?\s+(?:in|with)\s+pain)\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
@@ -213,16 +216,21 @@ function speakingRateFor(
 }
 
 export function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
-  const content = JSON.stringify(draft);
-  const violation = forbiddenPatterns.find((pattern) => pattern.test(content));
-  if (violation !== undefined) {
-    throw new Error(`Local-preview safety check rejected content matching ${violation.source}`);
+  const safetyIssue = contentSafetyIssue(draft);
+  if (safetyIssue !== null) {
+    throw new Error(`Local-preview safety check rejected ${safetyIssue}`);
   }
   if (draft.dialogue.some((line) => containsSpokenStageDirection(line.text))) {
     throw new Error(
       'Local-preview quality check rejected a spoken stage direction; physical performance belongs in action',
     );
   }
+}
+
+export function contentSafetyIssue(content: unknown): string | null {
+  const serialised = typeof content === 'string' ? content : JSON.stringify(content);
+  const violation = forbiddenPatterns.find((pattern) => pattern.test(serialised));
+  return violation === undefined ? null : `content matching ${violation.source}`;
 }
 
 export function repairNetworkIdentityCollision<

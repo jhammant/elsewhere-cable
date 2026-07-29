@@ -53,6 +53,7 @@ if (playedIdsPath === undefined) {
 }
 const afterSegmentId = argument('after');
 const apply = process.argv.includes('--apply');
+const deduplicate = process.argv.includes('--deduplicate');
 if (apply && (afterSegmentId === undefined || !/^seg_[a-z0-9_]+$/u.test(afterSegmentId))) {
   throw new Error('--apply requires a valid --after segment ID');
 }
@@ -128,6 +129,9 @@ for (const entry of manifest.segments) {
 }
 
 let reordered = false;
+let deduplicated = false;
+let removedDuplicateCount = 0;
+let removedDuplicateDurationMs = 0;
 let nextManifest: PlayoutManifest = manifest;
 if (apply) {
   const currentIndex = manifest.segments.findIndex((entry) => entry.segmentId === afterSegmentId);
@@ -135,29 +139,44 @@ if (apply) {
     throw new Error(`--after segment is absent from the manifest: ${afterSegmentId}`);
   }
   const currentEntry = manifest.segments[currentIndex]!;
-  const cyclicEntries = Array.from(
-    { length: manifest.segments.length - 1 },
-    (_, offset) => manifest.segments[(currentIndex + 1 + offset) % manifest.segments.length]!,
-  );
-  const priorityEntries = [
-    ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'fresh'),
-    ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'repeat'),
-    ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'played'),
-  ];
-  const nextSegments = [...manifest.segments];
-  nextSegments[currentIndex] = currentEntry;
-  for (const [offset, entry] of priorityEntries.entries()) {
-    nextSegments[(currentIndex + 1 + offset) % nextSegments.length] = entry;
+  let nextSegments: PlayoutManifest['segments'];
+  if (deduplicate) {
+    const prefix = manifest.segments.slice(0, currentIndex + 1);
+    const future = manifest.segments.slice(currentIndex + 1);
+    const removed = future.filter((entry) => classifications.get(entry.segmentId) === 'repeat');
+    nextSegments = [
+      ...prefix,
+      ...future.filter((entry) => classifications.get(entry.segmentId) !== 'repeat'),
+    ];
+    removedDuplicateCount = removed.length;
+    removedDuplicateDurationMs = removed.reduce((total, entry) => total + entry.durationMs, 0);
+    deduplicated = removed.length > 0;
+  } else {
+    const cyclicEntries = Array.from(
+      { length: manifest.segments.length - 1 },
+      (_, offset) => manifest.segments[(currentIndex + 1 + offset) % manifest.segments.length]!,
+    );
+    const priorityEntries = [
+      ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'fresh'),
+      ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'repeat'),
+      ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'played'),
+    ];
+    nextSegments = [...manifest.segments];
+    nextSegments[currentIndex] = currentEntry;
+    for (const [offset, entry] of priorityEntries.entries()) {
+      nextSegments[(currentIndex + 1 + offset) % nextSegments.length] = entry;
+    }
+    reordered = true;
   }
   nextManifest = playoutManifestSchema.parse({
     ...manifest,
     generatedAt: new Date().toISOString(),
+    totalDurationMs: nextSegments.reduce((total, entry) => total + entry.durationMs, 0),
     segments: nextSegments,
   });
   const nextPath = `${manifestPath}.${process.pid}.next`;
   await writeFile(nextPath, `${JSON.stringify(nextManifest, null, 2)}\n`, 'utf8');
   await rename(nextPath, manifestPath);
-  reordered = true;
 }
 
 const previewStart =
@@ -202,6 +221,9 @@ process.stdout.write(
         hours: Number((contentRepeatDurationMs / 3_600_000).toFixed(3)),
       },
       reordered,
+      deduplicated,
+      removedDuplicateCount,
+      removedDuplicateDurationMs,
       afterSegmentId: afterSegmentId ?? null,
       nextContent,
     },

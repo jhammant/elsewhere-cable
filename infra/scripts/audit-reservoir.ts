@@ -12,6 +12,7 @@ import {
   speechAudioQualityIssue,
 } from '../../apps/generation-worker/src/providers.js';
 import { containsSpokenStageDirection } from '../../apps/generation-worker/src/dialogue-quality.js';
+import { legacyPackageQualityIssues } from '../../apps/generation-worker/src/package-quality.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -59,6 +60,7 @@ for (const [entryIndex, entry] of manifest.segments.entries()) {
   const reasons: string[] = [];
   try {
     const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
+    reasons.push(...legacyPackageQualityIssues(segment));
     for (const event of segment.events) {
       if (event.type !== 'speech.play') {
         continue;
