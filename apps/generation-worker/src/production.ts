@@ -244,23 +244,30 @@ async function writePreparedScripts(
   generator: string,
   model: string,
   optimisationBrief: OptimisationBrief | null,
-): Promise<PreparedScript[]> {
+): Promise<{ prepared: PreparedScript[]; rejectionReasons: string[] }> {
   const pendingRoot = path.join(queueRoot, 'pending');
   await mkdir(pendingRoot, { recursive: true });
   const prepared: PreparedScript[] = [];
+  const rejectionReasons: string[] = [];
   for (const draft of drafts) {
-    assertPreviewSafe(draft);
-    const script = preparedScriptSchema.parse({
-      schemaVersion: 1,
-      draftId: `draft_${randomUUID().replaceAll('-', '')}`,
-      preparedAt: new Date().toISOString(),
-      generator,
-      model,
-      ...(optimisationBrief === null
-        ? {}
-        : { optimisationBriefGeneratedAt: optimisationBrief.generatedAt }),
-      draft,
-    });
+    let script: PreparedScript;
+    try {
+      assertPreviewSafe(draft);
+      script = preparedScriptSchema.parse({
+        schemaVersion: 1,
+        draftId: `draft_${randomUUID().replaceAll('-', '')}`,
+        preparedAt: new Date().toISOString(),
+        generator,
+        model,
+        ...(optimisationBrief === null
+          ? {}
+          : { optimisationBriefGeneratedAt: optimisationBrief.generatedAt }),
+        draft,
+      });
+    } catch (error) {
+      rejectionReasons.push(error instanceof Error ? error.message : String(error));
+      continue;
+    }
     const targetPath = path.join(pendingRoot, `${script.draftId}.json`);
     const nextPath = `${targetPath}.${process.pid}.next`;
     try {
@@ -271,7 +278,7 @@ async function writePreparedScripts(
     }
     prepared.push(script);
   }
-  return prepared;
+  return { prepared, rejectionReasons };
 }
 
 async function archivePreparedScript(
@@ -809,13 +816,23 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     }
     const generator = options.demo ? 'demo-library' : options.llm!.id;
     const model = options.demo ? 'hand-authored-demo' : options.llm!.model;
-    const prepared = await writePreparedScripts(
+    const preparedResult = await writePreparedScripts(
       options.scriptQueueRoot!,
       completedDrafts,
       generator,
       model,
       options.optimisationBrief ?? null,
     );
+    const { prepared } = preparedResult;
+    if (prepared.length === 0) {
+      throw new Error(
+        `Batch produced no safely prepared scripts${
+          preparedResult.rejectionReasons.length === 0
+            ? ''
+            : `: ${preparedResult.rejectionReasons.join(' | ')}`
+        }`,
+      );
+    }
     const wallTimeMs = performance.now() - startedAt;
     return {
       mode: 'prepare-scripts',
@@ -828,7 +845,10 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       addedDurationMs: 0,
       wallTimeMs: Math.round(wallTimeMs),
       realtimeFactor: 0,
-      rejectionReasons: failures.filter((failure): failure is string => failure !== undefined),
+      rejectionReasons: [
+        ...failures.filter((failure): failure is string => failure !== undefined),
+        ...preparedResult.rejectionReasons,
+      ],
       outputRoot: options.scriptQueueRoot!,
       ttsProvider: 'not-used',
     };

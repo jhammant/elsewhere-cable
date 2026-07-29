@@ -273,6 +273,55 @@ describe('produceBatch', () => {
     expect(await readdir(path.join(scriptQueueRoot, 'completed'))).toHaveLength(2);
   });
 
+  it('keeps safe prepared scripts when another draft fails the final safety gate', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-safe-partial-queue-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    let proposalIndex = 0;
+    let scriptIndex = 0;
+    const llm: LlmProvider = {
+      id: 'mixed-safety-test-llm',
+      model: 'test-model',
+      generateProposal() {
+        const draft = demoDraft(proposalIndex);
+        proposalIndex += 1;
+        return Promise.resolve(generatedSegmentProposalSchema.parse(draft));
+      },
+      generateStructured() {
+        const draft = demoDraft(scriptIndex);
+        if (scriptIndex === 0) {
+          draft.dialogue[0]!.text = 'The red label bleeds through the paperwork overnight.';
+        }
+        scriptIndex += 1;
+        return Promise.resolve(draft);
+      },
+    };
+
+    const result = await produceBatch({
+      count: 2,
+      concurrency: 2,
+      outputRoot,
+      demo: false,
+      llm,
+      tts: null,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      prepareScriptsOnly: true,
+    });
+
+    expect(result.preparedScriptCount).toBe(1);
+    expect(result.rejectedSegmentCount).toBe(1);
+    expect(result.rejectionReasons).toEqual([
+      expect.stringContaining('safety check rejected content'),
+    ]);
+    expect(
+      (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>
+        file.endsWith('.json'),
+      ),
+    ).toHaveLength(1);
+  });
+
   it('commits completed novel segments when another batch slot is exhausted', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-partial-batch-'));
     temporaryDirectories.push(outputRoot);
