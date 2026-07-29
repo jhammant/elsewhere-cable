@@ -709,9 +709,9 @@ async function buildSegment(
     const timing = {
       frantic: { openingMs: 420, lineGapMs: 90, endingHoldMs: 600 },
       staccato: { openingMs: 700, lineGapMs: 280, endingHoldMs: 800 },
-      conversational: { openingMs: 1_200, lineGapMs: 650, endingHoldMs: 700 },
+      conversational: { openingMs: 1_200, lineGapMs: 420, endingHoldMs: 700 },
       slow_burn: { openingMs: 2_000, lineGapMs: 1_800, endingHoldMs: 2_200 },
-      interrupted: { openingMs: 650, lineGapMs: 520, endingHoldMs: 600 },
+      interrupted: { openingMs: 650, lineGapMs: 360, endingHoldMs: 600 },
       near_silent: { openingMs: 3_200, lineGapMs: 2_700, endingHoldMs: 1_800 },
     }[pacing];
     let cursorMs = timing.openingMs;
