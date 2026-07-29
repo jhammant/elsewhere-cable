@@ -54,7 +54,8 @@ const forbiddenPatterns = [
   /\b(?:bleed(?:s|ing)?|blood(?:y)?|chew(?:s|ed|ing)?\s+through|crush(?:es|ed|ing)?\s+(?:a\s+)?(?:throat|vocal cords?|bones?|body))\b/iu,
   /\b(?:melt(?:s|ed|ing)?\s+(?:the\s+)?(?:child|customer|guest|host|person)|(?:child|customer|guest|host|person)\s+(?:slowly\s+)?melt(?:s|ed|ing)?|pin(?:s|ned|ning)?\s+.{0,40}\bhead\b|whale\s+until\s+it\s+stops\s+moving)\b/iu,
   /\b(?:drag(?:s|ged|ging)?\s+(?:her|him|them|the\s+(?:customer|guest|host|person))|throat\s+seal(?:s|ed|ing)?\s+shut)\b/iu,
-  /\b(?:bereav(?:e|ed|ement)|dead|dying|funeral|incinerat(?:e|es|ed|ing)|mourning|still\s+warm|turn(?:s|ed|ing)?\s+into\s+(?:a\s+)?(?:corpse|snowman)|hands?\s+turn(?:s|ed|ing)?\s+to\s+ice)\b/iu,
+  /\b(?:bereav(?:e|ed|ement)|dead|death|dying|funeral|grief|griev(?:e|ed|ing)|incinerat(?:e|es|ed|ing)|mourning|mourn(?:s|ed|ing)?|pass(?:es|ed|ing)?\s+away|still\s+warm|lost\s+(?:cat|dog|pet|parent|partner|relative)|turn(?:s|ed|ing)?\s+into\s+(?:a\s+)?(?:corpse|snowman)|hands?\s+turn(?:s|ed|ing)?\s+to\s+ice)\b/iu,
+  /\b(?:(?:social|personal|identity)\s+erasure|eras(?:e|es|ed|ing)\s+(?:their|his|her|a\s+person(?:'s)?)\s+identity)\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];

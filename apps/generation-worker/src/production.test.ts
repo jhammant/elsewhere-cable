@@ -184,6 +184,17 @@ describe('produceBatch', () => {
     expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
   });
 
+  it('rejects grief and identity erasure anywhere in package metadata', () => {
+    const griefDraft = demoDraft(0);
+    griefDraft.premise =
+      'At a shopping desk, a host sells permanent grief after a customer lost their cat.';
+    expect(() => assertPreviewSafe(griefDraft)).toThrow('safety check rejected');
+
+    const erasureDraft = demoDraft(1);
+    erasureDraft.continuityFact = 'The product causes social erasure of its previous owner.';
+    expect(() => assertPreviewSafe(erasureDraft)).toThrow('safety check rejected');
+  });
+
   it('does not mistake a committee chair for an object with agency', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),
