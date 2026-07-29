@@ -270,12 +270,32 @@ export interface BatchResult {
   ttsProvider: string;
 }
 
+type AsyncLimiter = <T>(operation: () => Promise<T>) => Promise<T>;
+
+function createAsyncLimiter(limit: number): AsyncLimiter {
+  let active = 0;
+  const waiting: Array<() => void> = [];
+  return async <T>(operation: () => Promise<T>): Promise<T> => {
+    if (active >= limit) {
+      await new Promise<void>((resolve) => waiting.push(resolve));
+    }
+    active += 1;
+    try {
+      return await operation();
+    } finally {
+      active -= 1;
+      waiting.shift()?.();
+    }
+  };
+}
+
 async function buildSegment(
   draft: GeneratedSegmentDraft,
   outputRoot: string,
   generator: string,
   model: string,
   tts: TtsProvider,
+  withSpeechSlot: AsyncLimiter,
 ): Promise<SegmentPackage> {
   assertPreviewSafe(draft);
   const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
@@ -299,13 +319,15 @@ async function buildSegment(
         const line = draft.dialogue[index]!;
         const speechId = `speech_${index.toString().padStart(2, '0')}`;
         const voiceId = voiceFor(line.speaker, tts);
-        const result = await tts.synthesize({
-          speechId,
-          text: line.text,
-          voiceId,
-          speakingRate: speakingRateFor(pacing, line.speaker),
-          outputDirectory: segmentDirectory,
-        });
+        const result = await withSpeechSlot(async () =>
+          tts.synthesize({
+            speechId,
+            text: line.text,
+            voiceId,
+            speakingRate: speakingRateFor(pacing, line.speaker),
+            outputDirectory: segmentDirectory,
+          }),
+        );
         speech[index] = { line, speechId, voiceId, result };
       }
     };
@@ -654,6 +676,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
   );
 
   let nextProductionIndex = 0;
+  const withSpeechSlot = createAsyncLimiter(Math.max(1, options.tts.parallelism ?? 1));
   const productionWorker = async (): Promise<void> => {
     while (nextProductionIndex < drafts.length) {
       const index = nextProductionIndex;
@@ -669,6 +692,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           options.demo ? 'demo-library' : options.llm!.id,
           options.demo ? 'hand-authored-demo' : options.llm!.model,
           options.tts,
+          withSpeechSlot,
         );
       } catch (error) {
         failures[index] = error instanceof Error ? error.message : String(error);

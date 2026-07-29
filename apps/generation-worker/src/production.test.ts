@@ -93,6 +93,7 @@ describe('produceBatch', () => {
     };
     const tts: TtsProvider = {
       id: 'test-tts',
+      parallelism: 2,
       async synthesize(request: SpeechRequest): Promise<SpeechResult> {
         if (completedGenerations < 4) {
           ttsOverlappedGeneration = true;
