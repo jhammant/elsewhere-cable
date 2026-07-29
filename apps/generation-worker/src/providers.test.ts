@@ -3,11 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  draftStructuralExample,
   maximumPlausibleSpeechDurationMs,
+  OpenAiCompatibleProvider,
   OpenAiCompatibleTtsProvider,
+  proposalStructuralExample,
   speechAudioQualityIssue,
   speechTempoCorrection,
 } from './providers.js';
+import { demoDraft } from './creative.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -21,6 +25,89 @@ afterEach(async () => {
 });
 
 describe('OpenAiCompatibleTtsProvider', () => {
+  it('builds neutral structural examples from the assigned creative coordinates', () => {
+    const request = {
+      systemPrompt: 'Return JSON.',
+      userPrompt: `Create batch segment 71 using the news format.
+- Visual medium: pixel_broadcast.
+- Pacing: frantic.
+- Story mode: object_agency.`,
+    };
+    const proposal = JSON.parse(proposalStructuralExample(request)) as {
+      format: string;
+      visualMedium: string;
+      pacing: string;
+      storyMode: string;
+    };
+    const draft = JSON.parse(draftStructuralExample(request)) as {
+      dialogue: unknown[];
+    };
+
+    expect(proposal).toMatchObject({
+      format: 'news',
+      visualMedium: 'pixel_broadcast',
+      pacing: 'frantic',
+      storyMode: 'object_agency',
+    });
+    expect(draft.dialogue).toHaveLength(10);
+  });
+
+  it('can route editorial criticism to a smaller independent model', async () => {
+    const requests: Array<{ url: string; model: string }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request, init?: RequestInit) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (typeof init?.body !== 'string') {
+          throw new Error('Expected a JSON request body');
+        }
+        const body = JSON.parse(init.body) as { model: string };
+        requests.push({ url, model: body.model });
+        return Promise.resolve(
+          Response.json({
+            choices: [
+              {
+                finish_reason: 'stop',
+                message: {
+                  content: JSON.stringify({
+                    accepted: true,
+                    coherence: 8,
+                    comedyEscalation: 7,
+                    dialogueNaturalness: 8,
+                    endingEarned: 8,
+                    issues: [],
+                  }),
+                },
+              },
+            ],
+          }),
+        );
+      }),
+    );
+    const provider = new OpenAiCompatibleProvider(
+      'writer-model',
+      'http://writer.test/v1',
+      'writer',
+      {
+        model: 'critic-model',
+        baseUrl: 'http://critic.test/v1',
+        apiKey: 'critic',
+      },
+    );
+
+    await expect(provider.critiqueDraft(demoDraft(0))).resolves.toMatchObject({
+      accepted: true,
+      coherence: 8,
+    });
+    expect(requests).toEqual([
+      {
+        url: 'http://critic.test/v1/chat/completions',
+        model: 'critic-model',
+      },
+    ]);
+  });
+
   it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
     expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(7_000);
     expect(

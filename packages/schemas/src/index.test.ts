@@ -1,10 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import {
+  optimisationBriefSchema,
   playoutManifestSchema,
   playoutObservationSchema,
   preparedScriptSchema,
   segmentPackageSchema,
 } from './index.js';
+
+describe('optimisationBriefSchema', () => {
+  it('accepts a complete editorial direction longer than a list item', () => {
+    const editorialDirection =
+      'Anchor each segment in one social conflict, let every response change the situation, and end on a visible consequence that follows from the same comic rule instead of introducing an unrelated final image.';
+    const brief = optimisationBriefSchema.parse({
+      schemaVersion: 1,
+      generatedAt: '2026-07-29T18:00:00.000Z',
+      windowMinutes: 30,
+      sampleSize: 20,
+      scores: {
+        premiseClarity: 6,
+        comedyEscalation: 6,
+        dialogueCoherence: 6,
+        visualMatch: 6,
+        paceVariety: 6,
+        originality: 6,
+        shareability: 6,
+      },
+      increaseFormats: ['sitcom'],
+      increasePacing: ['staccato'],
+      avoidMotifs: ['costume rotation'],
+      preserveStrengths: ['visible cause and effect'],
+      editorialDirection,
+      delivery: {
+        isLive: true,
+        concurrentViewers: 1,
+        silenceRatio: 0,
+        freezeRatio: 0,
+        fallbackOccurrences: 0,
+      },
+    });
+
+    expect(brief.editorialDirection).toBe(editorialDirection);
+    expect(brief.editorialDirection.length).toBeGreaterThan(120);
+  });
+});
 
 describe('segmentPackageSchema', () => {
   it('rejects renderer events after the segment duration', () => {

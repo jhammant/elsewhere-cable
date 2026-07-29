@@ -66,6 +66,17 @@ export const pacingSchema = z.enum([
   'near_silent',
 ]);
 
+export const storyModeSchema = z.enum([
+  'social_protocol',
+  'service_mismatch',
+  'status_transfer',
+  'format_literalism',
+  'object_agency',
+  'product_consequence',
+  'semantic_contract',
+  'visual_physics',
+]);
+
 function isOptimisationSafeText(value: string): boolean {
   for (const character of value) {
     const codePoint = character.codePointAt(0) ?? 0;
@@ -80,6 +91,12 @@ const optimisationTextSchema = z
   .string()
   .min(1)
   .max(120)
+  .refine(isOptimisationSafeText, 'Text must not contain control characters or angle brackets');
+
+const optimisationDirectionSchema = z
+  .string()
+  .min(1)
+  .max(500)
   .refine(isOptimisationSafeText, 'Text must not contain control characters or angle brackets');
 
 export const optimisationBriefSchema = z.object({
@@ -102,7 +119,7 @@ export const optimisationBriefSchema = z.object({
   increasePacing: z.array(pacingSchema).max(3),
   avoidMotifs: z.array(optimisationTextSchema).max(12),
   preserveStrengths: z.array(optimisationTextSchema).max(8),
-  editorialDirection: optimisationTextSchema.max(500),
+  editorialDirection: optimisationDirectionSchema,
   delivery: z.object({
     isLive: z.boolean().nullable(),
     concurrentViewers: z.number().int().nonnegative().nullable(),
@@ -180,6 +197,7 @@ export const segmentPackageSchema = z
     visualMedium: visualMediumSchema.optional(),
     castArchetype: castArchetypeSchema.optional(),
     pacing: pacingSchema.optional(),
+    storyMode: storyModeSchema.optional(),
     tone: z.array(z.string().min(1).max(40)).min(1).max(6),
     events: z.array(segmentEventSchema).min(1),
     continuityUpdates: z.array(
@@ -294,6 +312,7 @@ export const generatedSegmentDraftSchema = z.object({
   visualMedium: visualMediumSchema,
   castArchetype: castArchetypeSchema,
   pacing: pacingSchema.optional(),
+  storyMode: storyModeSchema.optional(),
   premise: z.string().min(1).max(500),
   tone: z.array(z.string().min(1).max(40)).min(1).max(6),
   dialogue: z.array(generatedDialogueSchema).min(4).max(12),

@@ -126,19 +126,22 @@ prompt, macOS voice runtime or source AI service.
 
 ## Transfer to Endor
 
-SSH access was not available during implementation, so no deployment was attempted. Once access is
-configured, transfer prepared files over the private LAN or Tailscale without exposing the control
-API:
+Prepared content is transferred over the private LAN into a new release directory. The publish
+command validates every package, uses the current release as a hard-link base, and atomically swaps
+the `content/current` symlink only after the complete release is present:
 
 ```bash
-rsync -av data/segments/ endor:/private/elsewhere-cable/segments/
+pnpm endor:content:check -- --segments data/segments-live
+ELSEWHERE_LOCAL_SEGMENTS_DIR=data/segments-live pnpm endor:sync
 ```
 
-Set `ELSEWHERE_SEGMENTS_DIR` on Endor to that directory. Do not use a deleting sync until retention,
-currently-playing package protection and rollback rules exist.
+The browser refreshes the manifest between segments, so content publishes do not restart Chromium,
+FFmpeg, the container or the YouTube upload. `endor:sync` checks packages against the visual-medium
+set supported by Endor's currently running image before transferring them. Extended media remain
+off-air until a zero-drop renderer upgrade is available.
 
 ## Current boundary
 
-This vertical slice proves batch production and continuous local package playout. It does not yet
-capture the browser into FFmpeg, supervise processes, stream publicly, maintain ten minutes of
-generated buffer automatically or implement the persistent world database.
+Ghost-to-Endor batch production, atomic package playout, browser capture, VA-API encoding, audio
+watchdog recovery and public YouTube delivery are operational. The persistent world database,
+operator console and zero-drop renderer binary upgrade path remain later milestones.

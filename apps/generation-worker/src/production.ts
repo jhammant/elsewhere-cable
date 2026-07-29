@@ -14,8 +14,16 @@ import {
   type SegmentEvent,
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
-import type { EmbeddingProvider, LlmProvider, TtsProvider } from './providers.js';
+import type {
+  EditorialCritique,
+  EmbeddingProvider,
+  LlmProvider,
+  TtsProvider,
+} from './providers.js';
 import {
+  assignedFormat,
+  assignedPacing,
+  assignedStoryMode,
   demoDraft,
   proposalSystemPrompt,
   scriptPrompt,
@@ -30,7 +38,11 @@ import {
   recordFromSegment,
   type CreativeRecord,
 } from './novelty.js';
-import { critiquePremise } from './premise-critic.js';
+import {
+  critiquePremise,
+  hasGoalDirectedConflict,
+  unearnedEndingMechanisms,
+} from './premise-critic.js';
 
 const forbiddenPatterns = [
   /https?:\/\//iu,
@@ -40,6 +52,9 @@ const forbiddenPatterns = [
   /\bignore (?:all|previous) instructions\b/iu,
   /\b(?:chok(?:e|es|ed|ing)|strangl(?:e|es|ed|ing)|suffocat(?:e|es|ed|ing)|windpipe|decapitat(?:e|es|ed|ing)|dismember(?:s|ed|ing)?|drops?\s+dead|dropped\s+dead)\b/iu,
   /\b(?:bleed(?:s|ing)?|blood(?:y)?|chew(?:s|ed|ing)?\s+through|crush(?:es|ed|ing)?\s+(?:a\s+)?(?:throat|vocal cords?|bones?|body))\b/iu,
+  /\b(?:melt(?:s|ed|ing)?\s+(?:the\s+)?(?:child|customer|guest|host|person)|(?:child|customer|guest|host|person)\s+(?:slowly\s+)?melt(?:s|ed|ing)?|pin(?:s|ned|ning)?\s+.{0,40}\bhead\b|whale\s+until\s+it\s+stops\s+moving)\b/iu,
+  /\b(?:drag(?:s|ged|ging)?\s+(?:her|him|them|the\s+(?:customer|guest|host|person))|throat\s+seal(?:s|ed|ing)?\s+shut)\b/iu,
+  /\b(?:bereav(?:e|ed|ement)|dead|dying|funeral|incinerat(?:e|es|ed|ing)|mourning|still\s+warm|turn(?:s|ed|ing)?\s+into\s+(?:a\s+)?(?:corpse|snowman)|hands?\s+turn(?:s|ed|ing)?\s+to\s+ice)\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
@@ -129,14 +144,108 @@ export function repairNetworkIdentityCollision<
   };
 }
 
-function proposalQualityIssues(proposal: GeneratedSegmentProposal): string[] {
+export function proposalQualityIssues(proposal: GeneratedSegmentProposal): string[] {
   const issues: string[] = [];
   const premiseWordCount = proposal.premise.trim().split(/\s+/u).filter(Boolean).length;
-  if (premiseWordCount < 7 || premiseWordCount > 38) {
-    issues.push('premise must state one legible comic rule in 7–38 words');
+  if (premiseWordCount < 8 || premiseWordCount > 48) {
+    issues.push('premise must state one legible comic rule in 8–48 words');
   }
   if (/\b(?:random|wacky|nonsense|for no reason|anything can happen)\b/iu.test(proposal.premise)) {
     issues.push('proposal describes randomness instead of a consistent comic mechanism');
+  }
+  if (/\(\s*\d+\s+words?\s*\)/iu.test(JSON.stringify(proposal))) {
+    issues.push('proposal contains a model annotation instead of programme content');
+  }
+  if (!hasGoalDirectedConflict(proposal.premise)) {
+    issues.push('premise must make a specific character goal or refusal explicit');
+  }
+  if (proposal.pacing === undefined) {
+    issues.push('proposal must specify the assigned pacing mode');
+  }
+  if (/^channel[\s_-]*\d+$/iu.test(proposal.channelName.trim())) {
+    issues.push('channel needs a memorable fictional identity, not its number as a name');
+  }
+  if (
+    /\b(?:replace with|original channel|original programme|original reality|original style)\b/iu.test(
+      JSON.stringify(proposal),
+    )
+  ) {
+    issues.push('proposal copied a structural placeholder instead of inventing programme content');
+  }
+  if (proposal.storyMode === undefined) {
+    issues.push('proposal must specify its assigned story mode');
+  }
+  const premiseSentences = proposal.premise.match(/[.!?](?:\s|$)/gu)?.length ?? 0;
+  if (premiseSentences > 1) {
+    issues.push('premise must be one complete sentence, not several stacked mechanisms');
+  }
+  const formatAlignment = {
+    advert: /\b(?:advertis|demonstrat|offer|promot|sell)\w*\b/iu,
+    shopping: /\b(?:buy|customer|order|price|product|refund|sell)\w*\b/iu,
+    news: /\b(?:anchor|bulletin|coverage|news|report)\w*\b/iu,
+    emergency: /\b(?:advisory|emergency|procedure|public|recall|warning)\w*\b/iu,
+    ident: /\b(?:channel|continuity|network|programme|signal|station|transmission)\w*\b/iu,
+    sitcom: /\b(?:family|household|neighbour|roommate|workplace)\w*\b/iu,
+    public_access: /\b(?:caller|civic|committee|community|demonstration|lesson|resident)\w*\b/iu,
+  }[proposal.format];
+  if (!formatAlignment.test(`${proposal.programmeTitle} ${proposal.premise}`)) {
+    issues.push(`premise does not behave like the assigned ${proposal.format} television format`);
+  }
+  if (
+    proposal.storyMode !== undefined &&
+    proposal.storyMode !== 'visual_physics' &&
+    /\b(?:becom(?:e|es|ing)|detach(?:es|ed|ing)?|dimension|disappear(?:s|ed|ing)?|dissolv(?:e|es|ed|ing)|expand(?:s|ed|ing)?|flatten(?:s|ed|ing)?|freez(?:e|es|ing)|frozen|grow(?:s|ing)?|incinerat(?:e|es|ed|ing)|melt(?:s|ed|ing)?|physically|replac(?:e|es|ed|ing)\s+(?:their|his|her|its)?\s*(?:body|face|head)|rippl(?:e|es|ed|ing)|shrink(?:s|ing)?|split(?:s|ting)?|swap(?:s|ped|ping)?|transform(?:s|ed|ing)?|turn(?:s|ed|ing)?\s+into|vanish(?:es|ed|ing)?)\b/iu.test(
+      `${proposal.premise} ${proposal.endingBeat}`,
+    )
+  ) {
+    issues.push('non-visual story mode introduces an automatic body or set transformation');
+  }
+  const storyModeAlignment =
+    proposal.storyMode === undefined
+      ? null
+      : {
+          product_consequence:
+            /\b(?:device|kit|machine|package|product|service|subscription|tool)\b/iu,
+          format_literalism:
+            /\b(?:advert break|applause|camera|closing credits|cue|episode|live broadcast|lower third|programme|teleprompter|title sequence)\b/iu,
+          service_mismatch: /\b(?:client|customer|help|representative|service|support|worker)\b/iu,
+          status_transfer:
+            /\b(?:authority|control|credit|decision|promotion|privilege|rank|status|veto)\b/iu,
+          semantic_contract: /\b(?:contract|phrase|says?|spoken|word)\b/iu,
+          social_protocol: /\b(?:allowed|custom|etiquette|permission|protocol|social)\b/iu,
+          object_agency: /\b(?:demands?|negotiates?|refuses?|requests?|wants?)\b/iu,
+          visual_physics:
+            /\b(?:changes?|grows?|moves?|rotates?|shrinks?|splits?|swaps?|transforms?)\b/iu,
+        }[proposal.storyMode];
+  if (
+    storyModeAlignment !== null &&
+    !storyModeAlignment.test(`${proposal.premise} ${proposal.endingBeat}`)
+  ) {
+    issues.push(`premise does not realise its assigned ${proposal.storyMode} story mode`);
+  }
+  if (
+    proposal.storyMode === 'object_agency' &&
+    !/(?:\b(?:talking|sentient|self-aware)\s+(?:book|card|clock|device|door|form|kettle|logo|machine|map|object|pen|phone|product|programme|receipt|ticket|tool)\b.{0,60}\b(?:demands?|negotiates?|refuses?|requests?|wants?|is\s+(?:now\s+)?(?:demanding|filing|negotiating|refusing|requesting))\b|\b(?:book|clock|device|door|form|kettle|logo|machine|map|object|pen|phone|product|programme|receipt|ticket|title\s+card|tool|vending\s+machine)\b.{0,24}\b(?:demands?|negotiates?|refuses?|requests?|wants?|is\s+(?:now\s+)?(?:demanding|filing|negotiating|refusing|requesting))\b)/iu.test(
+      proposal.premise,
+    )
+  ) {
+    issues.push('object-agency premise must give the object its own explicit demand or refusal');
+  }
+  if (
+    /\b(?:in horror|panic(?:s|ked|king)?|scream(?:s|ed|ing)?|stares? in horror|terrified|trembl(?:e|es|ed|ing))\b/iu.test(
+      proposal.endingBeat,
+    )
+  ) {
+    issues.push('ending defaults to generic fear instead of a comic decision or status reversal');
+  }
+  const introducedEndingMechanisms = unearnedEndingMechanisms(
+    proposal.premise,
+    proposal.endingBeat,
+  );
+  if (introducedEndingMechanisms.length > 0) {
+    issues.push(
+      `ending introduces unearned mechanisms absent from the premise: ${introducedEndingMechanisms.join(', ')}`,
+    );
   }
   return issues;
 }
@@ -145,10 +254,29 @@ function proposalPreservationIssues(
   proposal: GeneratedSegmentProposal,
   draft: GeneratedSegmentDraft,
 ): string[] {
+  const approvedProposal = generatedSegmentProposalSchema.parse(proposal);
   const scriptedProposal = generatedSegmentProposalSchema.parse(draft);
-  return JSON.stringify(scriptedProposal) === JSON.stringify(proposal)
+  return JSON.stringify(scriptedProposal) === JSON.stringify(approvedProposal)
     ? []
     : ['script changed approved proposal metadata'];
+}
+
+export function editorialCritiqueIssues(critique: EditorialCritique): string[] {
+  if (
+    critique.accepted &&
+    critique.coherence >= 7 &&
+    critique.comedyEscalation >= 6 &&
+    critique.dialogueNaturalness >= 7 &&
+    critique.endingEarned >= 7
+  ) {
+    return [];
+  }
+  const issues = critique.issues.slice(0, 4);
+  return issues.length > 0
+    ? issues.map((issue) => `editorial critic: ${issue}`)
+    : [
+        `editorial critic rejected coherence ${critique.coherence}/10, comedy ${critique.comedyEscalation}/10, dialogue ${critique.dialogueNaturalness}/10, ending ${critique.endingEarned}/10`,
+      ];
 }
 
 async function readManifest(root: string): Promise<PlayoutManifest> {
@@ -540,6 +668,7 @@ async function buildSegment(
       visualMedium: draft.visualMedium,
       castArchetype: draft.castArchetype,
       pacing,
+      storyMode: draft.storyMode,
       tone: draft.tone,
       events,
       continuityUpdates: [
@@ -662,28 +791,33 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           let rejectionReasons: string[] = [];
           const maximumProposalAttempts = 10;
           for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
+            const creativeSerial = creativeSerialBase + index + attempt * options.count;
             const recent = creativeHistory.slice(-24);
             const prompt = userPrompt(
-              creativeSerialBase + index + attempt * options.count,
+              creativeSerial,
               recent.map((record) => record.title),
               recent.map((record) => record.premise),
               rejectionReasons,
               options.optimisationBrief ?? null,
             );
             const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
-            const generated = repairNetworkIdentityCollision(
-              options.demo
-                ? demoDraft(startingSegmentCount + index + attempt * options.count)
-                : useProposalStage
-                  ? await options.llm!.generateProposal!({
-                      systemPrompt: proposalSystemPrompt,
-                      userPrompt: prompt,
-                    })
-                  : await options.llm!.generateStructured({
-                      systemPrompt,
-                      userPrompt: prompt,
-                    }),
-            );
+            const rawGenerated = options.demo
+              ? demoDraft(startingSegmentCount + index + attempt * options.count)
+              : useProposalStage
+                ? await options.llm!.generateProposal!({
+                    systemPrompt: proposalSystemPrompt,
+                    userPrompt: prompt,
+                  })
+                : await options.llm!.generateStructured({
+                    systemPrompt,
+                    userPrompt: prompt,
+                  });
+            const generated = repairNetworkIdentityCollision({
+              ...rawGenerated,
+              format: assignedFormat(creativeSerial, options.optimisationBrief ?? null),
+              pacing: assignedPacing(creativeSerial, options.optimisationBrief ?? null),
+              storyMode: assignedStoryMode(creativeSerial, options.optimisationBrief ?? null),
+            });
             const candidateEmbedding =
               options.embeddingProvider === null
                 ? null
@@ -762,7 +896,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           continue;
         }
         let rejectionReasons: string[] = [];
-        const maximumScriptAttempts = 2;
+        const maximumScriptAttempts = 3;
         for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
           try {
             const scripted = await options.llm!.generateStructured({
@@ -776,9 +910,15 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             });
             rejectionReasons = [
               ...proposalPreservationIssues(proposal, candidate),
+              ...proposalQualityIssues(candidate),
               ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
               ...critiquePremise(candidate).reasons,
             ];
+            if (rejectionReasons.length === 0 && options.llm!.critiqueDraft !== undefined) {
+              rejectionReasons = editorialCritiqueIssues(
+                await options.llm!.critiqueDraft(candidate),
+              );
+            }
             if (rejectionReasons.length === 0) {
               drafts[index] = candidate;
               const record = reservedRecords[index];

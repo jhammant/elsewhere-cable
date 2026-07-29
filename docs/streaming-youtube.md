@@ -16,6 +16,9 @@ YouTube. It never captures the desktop, microphone or camera.
   reach playout.
 - A persistent Chromium profile records aired segment IDs, so container restarts and atomic queue
   replacements do not replay old material.
+- During a public broadcast, ordinary iteration is content-only. Do not run `endor:deploy`,
+  `endor:youtube:start`, `endor:youtube:stop` or restart the container merely to publish new
+  programmes.
 
 ## Deploy a local recording test
 
@@ -75,9 +78,9 @@ End the broadcast in YouTube Live Control Room as well.
 1280×720
 25 fps
 H.264 high profile
-4 Mbps target, 5 Mbps maximum
+1.6 Mbps target, 1.8 Mbps maximum
 2-second / 50-frame GOP
-AAC stereo, 48 kHz, 160 kbps
+AAC stereo, 48 kHz, 96 kbps
 RTMPS
 ```
 
@@ -86,10 +89,24 @@ The container prefers `h264_vaapi` through `/dev/dri/renderD128` and falls back 
 
 ## Verified Endor result
 
-The 28 July 2026 acceptance recording ran for 2 minutes 21 seconds with:
+The public 29 July 2026 run was observed continuously for more than eight hours with:
 
 - Radeon `h264_vaapi` at 1280×720 and 25 fps.
-- AAC stereo at 48 kHz; mean audio level -19.2 dB and peak -1.5 dB.
+- AAC stereo at 48 kHz; public samples around -16 to -20 dB mean and -1.3 to -1.7 dB peak.
 - Approximately 2.4–5.9 CPU cores during steady mixed 2D/3D playout.
-- Approximately 865 MiB RAM, within the 3 GiB hard container limit.
-- No dropped output frames after the one-frame capture startup adjustment.
+- Approximately 845–865 MiB RAM, within the 3 GiB hard container limit.
+- Zero container or uploader restarts during atomic content publishes.
+
+## Publish programmes without interrupting live output
+
+Audit the new packages, run the Endor compatibility check, then publish the release atomically:
+
+```bash
+pnpm reservoir:audit -- --segments data/segments-live --recent 8 --apply
+pnpm endor:content:check -- --segments data/segments-live
+ELSEWHERE_LOCAL_SEGMENTS_DIR=data/segments-live pnpm endor:sync
+```
+
+Confirm `restarts=0`, a ready controller and a continuing frame counter after every publish. A
+failed package request is marked played and skipped after a short static transition; repair it
+under a new segment ID rather than making the live browser retry a known-bad package.

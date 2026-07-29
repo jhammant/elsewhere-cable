@@ -10,6 +10,11 @@ if [ ! -r "$source_directory/manifest.json" ]; then
   exit 66
 fi
 
+if [ "${ELSEWHERE_ENDOR_EXTENDED_MEDIA:-0}" != "1" ]; then
+  pnpm exec tsx infra/scripts/check-endor-content-compatibility.ts \
+    --segments "$source_directory"
+fi
+
 release_id="$(date -u +%Y%m%dT%H%M%SZ)-$(git rev-parse --short HEAD)"
 remote_incoming="$remote_root/content/incoming/$release_id"
 remote_release="$remote_root/content/releases/$release_id"

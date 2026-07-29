@@ -75,6 +75,11 @@ async function main(): Promise<void> {
   const baseUrl =
     argument('base-url') ?? process.env.ELSEWHERE_LLM_BASE_URL ?? 'http://127.0.0.1:11434/v1';
   const apiKey = process.env.ELSEWHERE_LLM_API_KEY ?? 'ollama-local';
+  const criticModel = argument('critic-model') ?? process.env.ELSEWHERE_CRITIC_MODEL;
+  const criticBaseUrl =
+    argument('critic-base-url') ?? process.env.ELSEWHERE_CRITIC_BASE_URL ?? baseUrl;
+  const criticApiKey =
+    process.env.ELSEWHERE_CRITIC_API_KEY ?? process.env.ELSEWHERE_LLM_API_KEY ?? 'ollama-local';
   const outputRoot = path.resolve(
     workspaceRoot,
     argument('output') ?? process.env.ELSEWHERE_SEGMENTS_DIR ?? 'data/segments',
@@ -114,7 +119,20 @@ async function main(): Promise<void> {
           process.env.ELSEWHERE_TTS_API_KEY,
         );
   const llm =
-    demo || packagePreparedScripts ? null : new OpenAiCompatibleProvider(model, baseUrl, apiKey);
+    demo || packagePreparedScripts
+      ? null
+      : new OpenAiCompatibleProvider(
+          model,
+          baseUrl,
+          apiKey,
+          criticModel === undefined
+            ? null
+            : {
+                model: criticModel,
+                baseUrl: criticBaseUrl,
+                apiKey: criticApiKey,
+              },
+        );
   const embeddingProvider =
     demo || packagePreparedScripts
       ? null

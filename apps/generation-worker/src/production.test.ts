@@ -10,13 +10,27 @@ import {
 import { demoDraft } from './creative.js';
 import {
   assertPreviewSafe,
+  editorialCritiqueIssues,
   produceBatch,
+  proposalQualityIssues,
   repairNetworkIdentityCollision,
   semanticNoveltyIssue,
 } from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
 
 const temporaryDirectories: string[] = [];
+
+function universallyAlignedProposal(draft: ReturnType<typeof demoDraft>) {
+  const premise =
+    draft.channelNumber % 2 === 0
+      ? 'During an emergency news programme, a refrigerator wants a worker to offer its service, but the family customer refuses permission until a spoken contract transfers status and the studio camera moves.'
+      : "At a live community workplace channel, a worker's meeting minutes want to sell a news product, yet the customer refuses social permission; an emergency spoken contract reassigns rank whenever the studio camera rotates.";
+  return generatedSegmentProposalSchema.parse({
+    ...draft,
+    premise,
+    endingBeat: 'The customer signs the contract as the camera holds on the product.',
+  });
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -27,11 +41,85 @@ afterEach(async () => {
 });
 
 describe('produceBatch', () => {
+  it('requires the editorial critic to approve coherent, earned comedy', () => {
+    expect(
+      editorialCritiqueIssues({
+        accepted: true,
+        coherence: 8,
+        comedyEscalation: 7,
+        dialogueNaturalness: 8,
+        endingEarned: 8,
+        issues: [],
+      }),
+    ).toEqual([]);
+    expect(
+      editorialCritiqueIssues({
+        accepted: false,
+        coherence: 4,
+        comedyEscalation: 5,
+        dialogueNaturalness: 3,
+        endingEarned: 2,
+        issues: ['The final line narrates an unearned transformation.'],
+      }),
+    ).toEqual(['editorial critic: The final line narrates an unearned transformation.']);
+  });
+
+  it('rejects a surreal mechanism that has no explicit character goal', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...demoDraft(0),
+      channelName: 'Channel 82910473',
+      pacing: undefined,
+      premise:
+        'Inside a laundrette, every laundry basket grows another corner whenever the service bell rings. (14 words)',
+    });
+
+    expect(proposalQualityIssues(proposal)).toEqual(
+      expect.arrayContaining([
+        'premise must make a specific character goal or refusal explicit',
+        'proposal must specify the assigned pacing mode',
+        'channel needs a memorable fictional identity, not its number as a name',
+        'proposal contains a model annotation instead of programme content',
+      ]),
+    );
+  });
+
+  it('rejects a proposal whose ending invents unrelated story physics', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...demoDraft(0),
+      endingBeat: 'The committee chair suddenly transforms into a municipal staircase.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toEqual(
+      expect.arrayContaining([expect.stringContaining('unearned mechanisms')]),
+    );
+  });
+
   it('rejects cruel or graphic harm before preparing speech', () => {
     const draft = demoDraft(0);
     draft.dialogue[0]!.text = 'The harness is choking the contestant until they drop dead.';
 
     expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
+  it('rejects bereavement and bodily harm as shortcuts for comedy stakes', () => {
+    const draft = demoDraft(0);
+    draft.dialogue[0]!.text = "My cat's passing left the body still warm.";
+
+    expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
+  it('does not mistake a committee chair for an object with agency', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      format: 'public_access',
+      storyMode: 'object_agency',
+      premise:
+        "At a community advice desk, the committee chair wants a resident's pen to sign a ruling while the resident refuses to surrender it.",
+    });
+
+    expect(proposalQualityIssues(proposal)).toContain(
+      'object-agency premise must give the object its own explicit demand or refusal',
+    );
   });
 
   it('rejects bracketed stage directions before preparing speech', () => {
@@ -75,7 +163,7 @@ describe('produceBatch', () => {
     const llm: LlmProvider = {
       id: 'test-llm',
       model: 'test-model',
-      async generateStructured() {
+      async generateStructured(request) {
         const index = draftIndex;
         draftIndex += 1;
         active += 1;
@@ -84,6 +172,22 @@ describe('produceBatch', () => {
         active -= 1;
         completedGenerations += 1;
         const draft = demoDraft(index);
+        const pacing = request.userPrompt.match(/- Pacing: ([a-z_]+)\./u)?.[1] ?? 'conversational';
+        const dialogueCount =
+          {
+            frantic: 10,
+            staccato: 8,
+            conversational: 6,
+            slow_burn: 6,
+            interrupted: 4,
+            near_silent: 4,
+          }[pacing] ?? 6;
+        draft.dialogue = Array.from({ length: dialogueCount }, (_, dialogueIndex) => ({
+          ...draft.dialogue[dialogueIndex % draft.dialogue.length]!,
+          text: `${draft.dialogue[dialogueIndex % draft.dialogue.length]!.text} Beat ${
+            dialogueIndex + 1
+          }.`,
+        }));
         draft.endingBeat =
           'The final compliance notice continues past the available broadcast-safe graphic area because the committee has mistaken length for authority. '.repeat(
             2,
@@ -286,10 +390,26 @@ describe('produceBatch', () => {
       generateProposal() {
         const draft = demoDraft(proposalIndex);
         proposalIndex += 1;
-        return Promise.resolve(generatedSegmentProposalSchema.parse(draft));
+        return Promise.resolve(universallyAlignedProposal(draft));
       },
-      generateStructured() {
+      generateStructured(request) {
         const draft = demoDraft(scriptIndex);
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        const dialogueCount = {
+          frantic: 10,
+          staccato: 8,
+          conversational: 6,
+          slow_burn: 6,
+          interrupted: 4,
+          near_silent: 4,
+        }[proposal.pacing ?? 'conversational'];
+        draft.dialogue = Array.from({ length: dialogueCount }, (_, index) => ({
+          ...draft.dialogue[index % draft.dialogue.length]!,
+          text: `${draft.dialogue[index % draft.dialogue.length]!.text} Beat ${index + 1}.`,
+        }));
         if (scriptIndex === 0) {
           draft.dialogue[0]!.text = 'The red label bleeds through the paperwork overnight.';
         }
@@ -402,7 +522,7 @@ describe('produceBatch', () => {
   it('screens a premise before requesting its full script', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-two-stage-'));
     temporaryDirectories.push(outputRoot);
-    const draft = demoDraft(7);
+    const draft = demoDraft(0);
     let proposalCalls = 0;
     let scriptCalls = 0;
     const llm: LlmProvider = {
@@ -410,11 +530,29 @@ describe('produceBatch', () => {
       model: 'test-model',
       generateProposal() {
         proposalCalls += 1;
-        return Promise.resolve(generatedSegmentProposalSchema.parse(draft));
+        return Promise.resolve(universallyAlignedProposal(draft));
       },
-      generateStructured() {
+      generateStructured(request) {
         scriptCalls += 1;
-        return Promise.resolve(draft);
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        const dialogueCount = {
+          frantic: 10,
+          staccato: 8,
+          conversational: 6,
+          slow_burn: 6,
+          interrupted: 4,
+          near_silent: 4,
+        }[proposal.pacing ?? 'conversational'];
+        return Promise.resolve({
+          ...draft,
+          dialogue: Array.from({ length: dialogueCount }, (_, index) => ({
+            ...draft.dialogue[index % draft.dialogue.length]!,
+            text: `${draft.dialogue[index % draft.dialogue.length]!.text} Beat ${index + 1}.`,
+          })),
+        });
       },
     };
     const tts: TtsProvider = {

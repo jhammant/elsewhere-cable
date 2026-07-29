@@ -48,4 +48,27 @@ describe('premise critic', () => {
       expect.arrayContaining([expect.stringContaining('generic warnings or peril')]),
     );
   });
+
+  it('rejects rule exposition and tragedy shortcuts', () => {
+    const exposition = demoDraft(0);
+    exposition.dialogue[0]!.text = 'The rule forces me to surrender my chair immediately.';
+    exposition.dialogue[1]!.text =
+      'The law takes effect whenever you mention your childhood trauma.';
+
+    expect(critiquePremise(exposition).reasons).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('explain the rule'),
+        expect.stringContaining('unearned tragedy'),
+      ]),
+    );
+  });
+
+  it('rejects an ending that invents a transformation absent from the premise', () => {
+    const unrelatedEnding = demoDraft(0);
+    unrelatedEnding.endingBeat = 'The committee table suddenly shrinks into a postage stamp.';
+
+    expect(critiquePremise(unrelatedEnding).reasons).toEqual(
+      expect.arrayContaining([expect.stringContaining('unearned mechanisms')]),
+    );
+  });
 });
