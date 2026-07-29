@@ -287,11 +287,17 @@ describe('produceBatch', () => {
     const endingGraphic = firstSegment.events.find(
       (event) => event.type === 'graphic.show' && event.graphic === 'WARNING',
     );
-    expect(
-      endingGraphic?.type === 'graphic.show' ? endingGraphic.text.length : 0,
-    ).toBeLessThanOrEqual(180);
-    expect(endingGraphic?.type === 'graphic.show' ? endingGraphic.text.endsWith('…') : false).toBe(
-      true,
+    expect(endingGraphic).toBeUndefined();
+    const lastSpeech = firstSegment.events.filter((event) => event.type === 'speech.play').at(-1);
+    const payoffAction = firstSegment.events
+      .filter((event) => event.type === 'character.action')
+      .at(-1);
+    expect(payoffAction?.atMs).toBeGreaterThanOrEqual(
+      lastSpeech?.type === 'speech.play' ? lastSpeech.atMs + lastSpeech.durationMs : 0,
+    );
+    expect(payoffAction?.type).toBe('character.action');
+    expect(['IDLE', 'PAUSE', 'FREEZE']).not.toContain(
+      payoffAction?.type === 'character.action' ? payoffAction.action : null,
     );
   });
 

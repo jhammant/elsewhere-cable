@@ -68,14 +68,55 @@ function slug(value: string): string {
     .slice(0, 48);
 }
 
-function onScreenText(value: string, maximumLength = 180): string {
-  if (value.length <= maximumLength) {
-    return value;
+type CharacterAction = Extract<SegmentEvent, { type: 'character.action' }>['action'];
+
+function endingCharacter(draft: GeneratedSegmentDraft): string {
+  const ending = draft.endingBeat.toLowerCase();
+  let bestSpeaker = draft.dialogue.at(-1)?.speaker ?? draft.dialogue[0]?.speaker ?? 'character';
+  let bestScore = 0;
+  for (const { speaker } of draft.dialogue) {
+    const score = (speaker.toLowerCase().match(/[a-z]{3,}/gu) ?? []).filter((part) =>
+      ending.includes(part),
+    ).length;
+    if (score > bestScore) {
+      bestSpeaker = speaker;
+      bestScore = score;
+    }
   }
-  const candidate = value.slice(0, maximumLength - 1);
-  const lastSpace = candidate.lastIndexOf(' ');
-  const boundary = lastSpace >= maximumLength * 0.7 ? lastSpace : candidate.length;
-  return `${candidate.slice(0, boundary).trimEnd()}…`;
+  return bestSpeaker;
+}
+
+function endingAction(draft: GeneratedSegmentDraft): CharacterAction {
+  const ending = draft.endingBeat.toLowerCase();
+  if (/\b(?:arrives?|appears?|enters?|returns?)\b/iu.test(ending)) {
+    return 'ENTER';
+  }
+  if (/\b(?:cuts?\s+the\s+feed|departs?|disappears?|exits?|leaves?)\b/iu.test(ending)) {
+    return 'EXIT';
+  }
+  if (
+    /\b(?:hangs?|hands?|holds?|installs?|pins?|places?|points?|signs?|stamps?|unveils?)\b/iu.test(
+      ending,
+    )
+  ) {
+    return 'POINT_AT';
+  }
+  if (/\b(?:faces?|looks?|watches?)\b/iu.test(ending)) {
+    return 'LOOK_AT';
+  }
+  if (/\b(?:angry|argues?|objects?|refuses?)\b/iu.test(ending)) {
+    return 'REACTION_ANGRY';
+  }
+  if (/\b(?:alarm|astonished|shocked|surprised)\b/iu.test(ending)) {
+    return 'REACTION_SHOCKED';
+  }
+  const finalDialogueAction = draft.dialogue.at(-1)?.action;
+  return finalDialogueAction === undefined ||
+    finalDialogueAction === 'IDLE' ||
+    finalDialogueAction === 'PAUSE' ||
+    finalDialogueAction === 'FREEZE'
+    ? 'REACTION_NEUTRAL'
+    : finalDialogueAction;
 }
 
 function voiceFor(name: string, tts: TtsProvider): string {
@@ -619,7 +660,7 @@ async function buildSegment(
       conversational: { openingMs: 1_200, lineGapMs: 650, endingHoldMs: 700 },
       slow_burn: { openingMs: 2_000, lineGapMs: 1_800, endingHoldMs: 2_200 },
       interrupted: { openingMs: 650, lineGapMs: 520, endingHoldMs: 600 },
-      near_silent: { openingMs: 3_200, lineGapMs: 2_700, endingHoldMs: 3_500 },
+      near_silent: { openingMs: 3_200, lineGapMs: 2_700, endingHoldMs: 1_800 },
     }[pacing];
     let cursorMs = timing.openingMs;
     speech.forEach(({ line, speechId, voiceId, result }, index) => {
@@ -665,13 +706,30 @@ async function buildSegment(
           transition: 'SIGNAL_LOSS',
         });
       }
+      if (timing.lineGapMs >= 1_500 && index < speech.length - 1) {
+        const reactingLine = speech[index + 1]?.line;
+        if (reactingLine !== undefined) {
+          events.push({
+            atMs: cursorMs + result.durationMs + Math.floor(timing.lineGapMs / 2),
+            type: 'character.action',
+            characterId: `character_${slug(reactingLine.speaker)}`,
+            action: 'REACTION_NEUTRAL',
+          });
+        }
+      }
       cursorMs += result.durationMs + (index === speech.length - 1 ? 120 : timing.lineGapMs);
+    });
+    const payoffSpeaker = endingCharacter(draft);
+    events.push({
+      atMs: cursorMs,
+      type: 'camera.cut',
+      camera: 'CAMERA_WIDE',
     });
     events.push({
       atMs: cursorMs,
-      type: 'graphic.show',
-      graphic: 'WARNING',
-      text: onScreenText(draft.endingBeat),
+      type: 'character.action',
+      characterId: `character_${slug(payoffSpeaker)}`,
+      action: endingAction(draft),
     });
     events.push({
       atMs: cursorMs + timing.endingHoldMs,
