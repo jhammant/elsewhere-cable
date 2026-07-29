@@ -896,7 +896,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           continue;
         }
         let rejectionReasons: string[] = [];
-        const maximumScriptAttempts = 3;
+        const maximumScriptAttempts = 5;
         for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
           try {
             const scripted = await options.llm!.generateStructured({
