@@ -1174,6 +1174,12 @@ const storyModeMechanismVariants: Record<
   ],
 };
 
+export function mechanismVariantsForStoryMode(
+  storyMode: NonNullable<GeneratedSegmentProposal['storyMode']>,
+): readonly string[] {
+  return storyModeMechanismVariants[storyMode];
+}
+
 const comicTriggers = [
   'someone completes a sentence with a concrete noun',
   'a presenter makes direct eye contact with the main camera',
@@ -1922,6 +1928,7 @@ export function userPrompt(
     castArchetypes?: readonly GeneratedSegmentDraft['castArchetype'][];
     catalogueSize?: number;
     noveltyExclusions?: readonly string[];
+    mechanismVariant?: string;
   } = {},
   previousProposal: GeneratedSegmentProposal | null = null,
 ): string {
@@ -1945,9 +1952,11 @@ export function userPrompt(
   // local inference on old mechanisms that the semantic gate will correctly reject.
   // visual_physics already has a large combinatorial trigger/element/transform space.
   const mechanismVariants =
-    (recentCreativeCoordinates.catalogueSize ?? 0) >= 1_000 && storyMode !== 'visual_physics'
-      ? allMechanismVariants.slice(-12)
-      : allMechanismVariants;
+    recentCreativeCoordinates.mechanismVariant !== undefined
+      ? [recentCreativeCoordinates.mechanismVariant]
+      : (recentCreativeCoordinates.catalogueSize ?? 0) >= 1_000 && storyMode !== 'visual_physics'
+        ? allMechanismVariants.slice(-12)
+        : allMechanismVariants;
   const mechanismVariant =
     mechanismVariants[axisIndex(serial, 0x3f5297b, mechanismVariants.length)]!;
   const relationshipPressure =

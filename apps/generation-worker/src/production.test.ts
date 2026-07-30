@@ -18,6 +18,7 @@ import {
   previewSafetyIssues,
   proposalCritiqueIssues,
   proposalQualityIssues,
+  rankMechanismVariantsByNovelty,
   repairNetworkIdentityCollision,
   semanticNoveltyCollisionPremise,
   semanticNoveltyIssue,
@@ -1520,6 +1521,23 @@ describe('produceBatch', () => {
     expect(issue).not.toBeNull();
     expect(semanticNoveltyCollisionPremise(issue!)).toBe(premise);
     expect(semanticNoveltyCollisionPremise('proposal critic: unrelated')).toBeNull();
+  });
+
+  it('ranks mechanism seeds by distance from the aired catalogue', () => {
+    const ranked = rankMechanismVariantsByNovelty(
+      ['saturated mechanism', 'fresh mechanism', 'middle mechanism'],
+      [
+        [1, 0],
+        [0, 1],
+        [0.7, 0.7],
+      ],
+      [
+        [1, 0],
+        [0.9, 0.1],
+      ],
+    );
+
+    expect(ranked).toEqual(['fresh mechanism', 'middle mechanism', 'saturated mechanism']);
   });
 
   it('allows thematic overlap when the comic mechanism is not a close paraphrase', () => {

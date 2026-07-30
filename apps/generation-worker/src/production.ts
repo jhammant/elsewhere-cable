@@ -29,6 +29,7 @@ import {
   assignedVisualMedium,
   demoDraft,
   dialogueArchitectureIssues,
+  mechanismVariantsForStoryMode,
   proposalSystemPrompt,
   repairDialogueArchitecture,
   scriptPrompt,
@@ -1044,6 +1045,30 @@ function cosineSimilarity(left: readonly number[], right: readonly number[]): nu
   return denominator === 0 ? 0 : dotProduct / denominator;
 }
 
+export function rankMechanismVariantsByNovelty(
+  variants: readonly string[],
+  variantEmbeddings: readonly (readonly number[])[],
+  historyEmbeddings: readonly (readonly number[])[],
+): string[] {
+  if (variants.length !== variantEmbeddings.length) {
+    throw new Error('Mechanism variants and embeddings must have equal lengths');
+  }
+  return variants
+    .map((variant, index) => ({
+      variant,
+      index,
+      nearestSimilarity: historyEmbeddings.reduce(
+        (nearest, historyEmbedding) =>
+          Math.max(nearest, cosineSimilarity(variantEmbeddings[index] ?? [], historyEmbedding)),
+        -1,
+      ),
+    }))
+    .sort(
+      (left, right) => left.nearestSimilarity - right.nearestSimilarity || left.index - right.index,
+    )
+    .map(({ variant }) => variant);
+}
+
 export function semanticNoveltyIssue(
   premise: string,
   embedding: readonly number[],
@@ -1413,6 +1438,29 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       options.embeddingProvider === null
         ? []
         : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
+    const mechanismRankingCache = new Map<
+      NonNullable<GeneratedSegmentProposal['storyMode']>,
+      Promise<readonly string[]>
+    >();
+    const rankedMechanismVariants = (
+      storyMode: NonNullable<GeneratedSegmentProposal['storyMode']>,
+    ): Promise<readonly string[]> => {
+      const existing = mechanismRankingCache.get(storyMode);
+      if (existing !== undefined) {
+        return existing;
+      }
+      const variants = mechanismVariantsForStoryMode(storyMode);
+      const ranking =
+        options.embeddingProvider === null
+          ? Promise.resolve(variants)
+          : options.embeddingProvider
+              .embed(variants)
+              .then((embeddings) =>
+                rankMechanismVariantsByNovelty(variants, embeddings, semanticHistory),
+              );
+      mechanismRankingCache.set(storyMode, ranking);
+      return ranking;
+    };
     const proposals = new Array<GeneratedSegmentProposal | undefined>(options.count);
     const reservedRecords = new Array<CreativeRecord | undefined>(options.count);
     for (const [index, queued] of queuedApprovedProposals.slice(0, options.count).entries()) {
@@ -1591,6 +1639,17 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               .filter(
                 (medium): medium is GeneratedSegmentDraft['visualMedium'] => medium !== undefined,
               );
+            const storyMode = assignedStoryMode(creativeSerial, options.optimisationBrief ?? null);
+            const mechanismRanking =
+              creativeHistory.length >= 1_000
+                ? await rankedMechanismVariants(storyMode)
+                : mechanismVariantsForStoryMode(storyMode);
+            const mechanismCandidateCount = Math.min(12, mechanismRanking.length);
+            const mechanismVariant =
+              mechanismRanking[(creativeCoordinateAttempt + index) % mechanismCandidateCount];
+            if (mechanismVariant === undefined) {
+              throw new Error(`No mechanism variant is available for ${storyMode}`);
+            }
             const prompt = userPrompt(
               creativeSerial,
               recent.map((record) => record.title),
@@ -1602,6 +1661,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 castArchetypes: recentCastArchetypes,
                 catalogueSize: creativeHistory.length,
                 noveltyExclusions: noveltyCollisionPremises,
+                mechanismVariant,
               },
               structuralRepairProposal,
             );

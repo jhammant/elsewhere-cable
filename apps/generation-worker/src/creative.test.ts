@@ -9,6 +9,7 @@ import {
   demoDraft,
   dialogueArchitectureIssues,
   dialogueSpeakerPattern,
+  mechanismVariantsForStoryMode,
   proposalSystemPrompt,
   repairDialogueArchitecture,
   scriptPrompt,
@@ -136,6 +137,18 @@ describe('generation prompts', () => {
     expect(mechanisms).not.toContain(
       'the product delivers apologies before their buyers decide what they regret',
     );
+  });
+
+  it('uses a novelty-ranked mechanism override without changing its story family', () => {
+    const storyMode = assignedStoryMode(1_933);
+    const override = mechanismVariantsForStoryMode(storyMode).at(1)!;
+    const prompt = userPrompt(1_933, [], [], [], null, {
+      catalogueSize: 2_000,
+      mechanismVariant: override,
+    });
+
+    expect(prompt).toContain(`Story mode: ${storyMode}.`);
+    expect(prompt).toContain(`Mechanism variant: ${override}. Treat this`);
   });
 
   it('gives novelty retries bounded catalogue collisions without exposing control markup', () => {
