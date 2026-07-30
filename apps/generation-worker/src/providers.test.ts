@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { generatedSegmentProposalSchema } from '@elsewhere-cable/schemas';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   draftStructuralExample,
@@ -254,6 +255,69 @@ describe('OpenAiCompatibleTtsProvider', () => {
         model: 'proposal-model',
         temperature: 0.92,
         presencePenalty: 0.3,
+      },
+    ]);
+  });
+
+  it('uses the critic endpoint to reject proposals with unearned endings', async () => {
+    const requests: Array<{ url: string; schemaName: string | undefined }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request, init?: RequestInit) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (typeof init?.body !== 'string') {
+          throw new Error('Expected a JSON request body');
+        }
+        const body = JSON.parse(init.body) as {
+          response_format?: { json_schema?: { name?: string } };
+        };
+        requests.push({
+          url,
+          schemaName: body.response_format?.json_schema?.name,
+        });
+        return Promise.resolve(
+          Response.json({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    accepted: false,
+                    clarity: 8,
+                    mechanismIntegrity: 7,
+                    endingCausality: 3,
+                    stageability: 7,
+                    comedyPotential: 6,
+                    issues: ['The ending introduces an unrelated kitchen certificate.'],
+                  }),
+                },
+              },
+            ],
+          }),
+        );
+      }),
+    );
+    const provider = new OpenAiCompatibleProvider(
+      'writer-model',
+      'http://writer.test/v1',
+      'writer',
+      {
+        model: 'critic-model',
+        baseUrl: 'http://critic.test/v1',
+        apiKey: 'critic',
+      },
+    );
+
+    await expect(
+      provider.critiqueProposal(generatedSegmentProposalSchema.parse(demoDraft(0))),
+    ).resolves.toMatchObject({
+      accepted: false,
+      endingCausality: 3,
+    });
+    expect(requests).toEqual([
+      {
+        url: 'http://critic.test/v1/chat/completions',
+        schemaName: 'elsewhere_proposal_critique',
       },
     ]);
   });

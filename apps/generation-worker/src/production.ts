@@ -18,6 +18,7 @@ import type {
   EditorialCritique,
   EmbeddingProvider,
   LlmProvider,
+  ProposalCritique,
   TtsProvider,
 } from './providers.js';
 import {
@@ -603,6 +604,25 @@ export function editorialCritiqueIssues(critique: EditorialCritique): string[] {
     ? issues.map((issue) => `editorial critic: ${issue}`)
     : [
         `editorial critic rejected coherence ${critique.coherence}/10, comedy ${critique.comedyEscalation}/10, dialogue ${critique.dialogueNaturalness}/10, ending ${critique.endingEarned}/10`,
+      ];
+}
+
+export function proposalCritiqueIssues(critique: ProposalCritique): string[] {
+  if (
+    critique.accepted &&
+    critique.clarity >= 7 &&
+    critique.mechanismIntegrity >= 7 &&
+    critique.endingCausality >= 7 &&
+    critique.stageability >= 7 &&
+    critique.comedyPotential >= 6
+  ) {
+    return [];
+  }
+  const issues = critique.issues.slice(0, 4);
+  return issues.length > 0
+    ? issues.map((issue) => `proposal critic: ${issue}`)
+    : [
+        `proposal critic rejected clarity ${critique.clarity}/10, mechanism ${critique.mechanismIntegrity}/10, ending ${critique.endingCausality}/10, stageability ${critique.stageability}/10, comedy ${critique.comedyPotential}/10`,
       ];
 }
 
@@ -1433,6 +1453,31 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               options.embeddingProvider === null
                 ? null
                 : (await options.embeddingProvider.embed([generated.premise]))[0];
+            const preliminarySemanticIssue =
+              candidateEmbedding === null || candidateEmbedding === undefined
+                ? null
+                : semanticNoveltyIssue(
+                    generated.premise,
+                    candidateEmbedding,
+                    [...creativeHistory, ...semanticRejectedAttemptHistory],
+                    [...semanticHistory, ...rejectedAttemptEmbeddings],
+                  );
+            const preliminaryProposalIssues = useProposalStage
+              ? [
+                  ...conceptNoveltyIssues(generated, [
+                    ...creativeHistory,
+                    ...rejectedAttemptHistory,
+                  ]),
+                  ...(preliminarySemanticIssue === null ? [] : [preliminarySemanticIssue]),
+                  ...proposalQualityIssues(generated),
+                ]
+              : [];
+            const proposalEditorialIssues =
+              useProposalStage &&
+              preliminaryProposalIssues.length === 0 &&
+              options.llm!.critiqueProposal !== undefined
+                ? proposalCritiqueIssues(await options.llm!.critiqueProposal(generated))
+                : [];
             const accepted = await withNoveltyGate(() => {
               const conceptHistory = [...creativeHistory, ...rejectedAttemptHistory];
               const semanticConceptHistory = [
@@ -1453,7 +1498,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 ...conceptNoveltyIssues(generated, conceptHistory),
                 ...(semanticIssue === null ? [] : [semanticIssue]),
                 ...(useProposalStage
-                  ? proposalQualityIssues(generated)
+                  ? [...proposalQualityIssues(generated), ...proposalEditorialIssues]
                   : [
                       ...dialogueNoveltyIssues(
                         (generated as GeneratedSegmentDraft).dialogue,

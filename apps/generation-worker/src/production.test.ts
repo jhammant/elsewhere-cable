@@ -16,6 +16,7 @@ import {
   preparedScriptFailureIsQuarantinable,
   produceBatch,
   previewSafetyIssues,
+  proposalCritiqueIssues,
   proposalQualityIssues,
   repairNetworkIdentityCollision,
   semanticNoveltyIssue,
@@ -159,6 +160,103 @@ describe('produceBatch', () => {
         issues: ['The final line narrates an unearned transformation.'],
       }),
     ).toEqual(['editorial critic: The final line narrates an unearned transformation.']);
+  });
+
+  it('requires the proposal critic to approve one causal stageable story', () => {
+    expect(
+      proposalCritiqueIssues({
+        accepted: true,
+        clarity: 8,
+        mechanismIntegrity: 8,
+        endingCausality: 8,
+        stageability: 8,
+        comedyPotential: 7,
+        issues: [],
+      }),
+    ).toEqual([]);
+    expect(
+      proposalCritiqueIssues({
+        accepted: false,
+        clarity: 7,
+        mechanismIntegrity: 6,
+        endingCausality: 3,
+        stageability: 7,
+        comedyPotential: 6,
+        issues: ['The ending introduces an unrelated kitchen certificate.'],
+      }),
+    ).toEqual(['proposal critic: The ending introduces an unrelated kitchen certificate.']);
+  });
+
+  it('does not spend script attempts on a proposal whose ending critic rejects it', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-proposal-critic-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    let proposalCalls = 0;
+    let proposalCriticCalls = 0;
+    let scriptCalls = 0;
+    const llm: LlmProvider = {
+      id: 'proposal-critic-test-llm',
+      model: 'test-model',
+      generateProposal() {
+        const proposal = universallyAlignedProposal(demoDraft(proposalCalls));
+        proposalCalls += 1;
+        return Promise.resolve(proposal);
+      },
+      critiqueProposal() {
+        proposalCriticCalls += 1;
+        return Promise.resolve({
+          accepted: false,
+          clarity: 8,
+          mechanismIntegrity: 8,
+          endingCausality: 3,
+          stageability: 8,
+          comedyPotential: 7,
+          issues: ['The ending introduces an unrelated kitchen certificate.'],
+        });
+      },
+      generateStructured(request) {
+        scriptCalls += 1;
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        const draft = demoDraft(1);
+        return Promise.resolve({
+          ...draft,
+          dialogue: architectureAlignedDialogue(draft, proposal),
+        });
+      },
+      critiqueDraft() {
+        return Promise.resolve({
+          accepted: true,
+          coherence: 8,
+          comedyEscalation: 8,
+          dialogueNaturalness: 8,
+          endingEarned: 8,
+          issues: [],
+        });
+      },
+    };
+
+    await expect(
+      produceBatch({
+        count: 1,
+        concurrency: 1,
+        outputRoot,
+        demo: false,
+        llm,
+        tts: null,
+        embeddingProvider: null,
+        scriptQueueRoot,
+        prepareScriptsOnly: true,
+      }),
+    ).rejects.toThrow('Could not produce a novel premise after 16 attempts');
+
+    expect(proposalCalls).toBe(16);
+    expect(proposalCriticCalls).toBeGreaterThan(0);
+    expect(proposalCriticCalls).toBeLessThan(proposalCalls);
+    expect(scriptCalls).toBe(0);
   });
 
   it('rejects a surreal mechanism that has no explicit character goal', () => {
