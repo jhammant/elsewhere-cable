@@ -376,6 +376,7 @@ reported separately so a tiny early audience cannot distort the quality evaluato
 - Reliability: ${latest.reliability?.toFixed(1) ?? 'unknown'}
 - Novelty: ${latest.novelty?.toFixed(1) ?? 'unknown'}
 - Diversity: ${latest.diversity?.toFixed(1) ?? 'unknown'}
+- Direct visual quality: ${latest.visualQuality?.toFixed(1) ?? 'unknown'}
 - Concurrent viewers: ${latest.concurrentViewers ?? 'unknown'}
 
 ## Runway

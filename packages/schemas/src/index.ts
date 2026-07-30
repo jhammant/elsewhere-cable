@@ -99,6 +99,27 @@ const optimisationDirectionSchema = z
   .max(500)
   .refine(isOptimisationSafeText, 'Text must not contain control characters or angle brackets');
 
+export const visualQualityObservationSchema = z.object({
+  model: z
+    .string()
+    .min(1)
+    .max(160)
+    .refine(
+      isOptimisationSafeText,
+      'Model name must not contain control characters or angle brackets',
+    ),
+  sampledFrames: z.number().int().min(1).max(12),
+  composition: z.number().min(0).max(10),
+  legibility: z.number().min(0).max(10),
+  styleDistinctness: z.number().min(0).max(10),
+  visibleAction: z.number().min(0).max(10),
+  overlaySafety: z.number().min(0).max(10),
+  changeOfPace: z.number().min(0).max(10),
+  overall: z.number().min(0).max(10),
+  strongestEvidence: optimisationDirectionSchema,
+  biggestProblem: optimisationDirectionSchema,
+});
+
 export const optimisationBriefSchema = z.object({
   schemaVersion: z.literal(1),
   generatedAt: z.string().datetime(),
@@ -127,6 +148,7 @@ export const optimisationBriefSchema = z.object({
     freezeRatio: z.number().min(0).max(1).nullable(),
     fallbackOccurrences: z.number().int().nonnegative(),
   }),
+  visualQuality: visualQualityObservationSchema.optional(),
   windowMetrics: z
     .object({
       uniqueProgrammes: z.number().int().nonnegative(),
@@ -350,6 +372,7 @@ export type SegmentPackage = z.infer<typeof segmentPackageSchema>;
 export type PlayoutManifest = z.infer<typeof playoutManifestSchema>;
 export type PlayoutObservation = z.infer<typeof playoutObservationSchema>;
 export type OptimisationBrief = z.infer<typeof optimisationBriefSchema>;
+export type VisualQualityObservation = z.infer<typeof visualQualityObservationSchema>;
 export type GeneratedSegmentDraft = z.infer<typeof generatedSegmentDraftSchema>;
 export type GeneratedSegmentProposal = z.infer<typeof generatedSegmentProposalSchema>;
 export type PreparedScript = z.infer<typeof preparedScriptSchema>;

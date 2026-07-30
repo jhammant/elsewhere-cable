@@ -7,6 +7,7 @@ export interface QualityScorecard {
   reliability: number | null;
   novelty: number | null;
   diversity: number | null;
+  visualQuality: number | null;
   experienceIndex: number;
   freshRunwayHours: number | null;
   runwayReadiness: number | null;
@@ -128,6 +129,7 @@ export function qualityScorecard(
     reliability: reliability === null ? null : rounded(reliability),
     novelty: novelty === null ? null : rounded(novelty),
     diversity: diversity === null ? null : rounded(diversity),
+    visualQuality: brief.visualQuality?.overall ?? null,
     experienceIndex: rounded(experienceIndex),
     freshRunwayHours: freshRunwayHours === null ? null : rounded(freshRunwayHours),
     runwayReadiness: runwayReadiness === null ? null : rounded(runwayReadiness),

@@ -37,10 +37,24 @@ describe('optimisationBriefSchema', () => {
         freezeRatio: 0,
         fallbackOccurrences: 0,
       },
+      visualQuality: {
+        model: 'qwen/qwen3-vl-8b',
+        sampledFrames: 6,
+        composition: 7,
+        legibility: 8,
+        styleDistinctness: 8,
+        visibleAction: 7,
+        overlaySafety: 9,
+        changeOfPace: 7,
+        overall: 7.7,
+        strongestEvidence: 'Two visibly different rendering systems appeared in one sample.',
+        biggestProblem: 'Overlapping shapes made one flat scene harder to read.',
+      },
     });
 
     expect(brief.editorialDirection).toBe(editorialDirection);
     expect(brief.editorialDirection.length).toBeGreaterThan(120);
+    expect(brief.visualQuality?.overall).toBe(7.7);
   });
 });
 

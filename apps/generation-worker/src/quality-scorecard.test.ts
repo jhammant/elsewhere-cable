@@ -79,6 +79,28 @@ describe('channel quality scorecard', () => {
     expect(result.freshRunwayHours).toBe(12);
   });
 
+  it('reports direct visual evidence separately from text and delivery proxies', () => {
+    const result = qualityScorecard(
+      brief({
+        visualQuality: {
+          model: 'qwen/qwen3-vl-8b',
+          sampledFrames: 6,
+          composition: 7,
+          legibility: 8,
+          styleDistinctness: 8,
+          visibleAction: 7,
+          overlaySafety: 9,
+          changeOfPace: 7,
+          overall: 7.7,
+          strongestEvidence: 'The sample contains two visibly distinct rendering systems.',
+          biggestProblem: 'One flat scene contains overlapping background shapes.',
+        },
+      }),
+    );
+
+    expect(result.visualQuality).toBe(7.7);
+  });
+
   it('keeps only measured gains that preserve every guardrail', () => {
     const baseline = qualityScorecard(brief());
     const better = qualityScorecard(
