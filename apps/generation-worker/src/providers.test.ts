@@ -160,7 +160,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
   });
 
   it('can route premise proposals to a smaller independent model', async () => {
-    const requests: Array<{ url: string; model?: string }> = [];
+    const requests: Array<{ url: string; model: string | undefined }> = [];
     vi.stubGlobal(
       'fetch',
       vi.fn((input: string | URL | Request, init?: RequestInit) => {
