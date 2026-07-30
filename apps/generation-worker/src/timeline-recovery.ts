@@ -11,11 +11,11 @@ export const recoveryTimingTargets: Record<
   Pacing,
   { firstSpeechMs: number; dialogueGapMs: number; tailMs: number }
 > = {
-  frantic: { firstSpeechMs: 540, dialogueGapMs: 90, tailMs: 1_120 },
-  staccato: { firstSpeechMs: 820, dialogueGapMs: 280, tailMs: 1_320 },
-  conversational: { firstSpeechMs: 1_000, dialogueGapMs: 420, tailMs: 1_220 },
+  frantic: { firstSpeechMs: 400, dialogueGapMs: 80, tailMs: 600 },
+  staccato: { firstSpeechMs: 500, dialogueGapMs: 160, tailMs: 750 },
+  conversational: { firstSpeechMs: 550, dialogueGapMs: 220, tailMs: 700 },
   slow_burn: { firstSpeechMs: 1_200, dialogueGapMs: 900, tailMs: 1_800 },
-  interrupted: { firstSpeechMs: 770, dialogueGapMs: 360, tailMs: 1_120 },
+  interrupted: { firstSpeechMs: 500, dialogueGapMs: 180, tailMs: 700 },
   near_silent: { firstSpeechMs: 1_400, dialogueGapMs: 1_000, tailMs: 2_200 },
 };
 
@@ -122,18 +122,13 @@ export function compactRecoverySegment(
   }
 
   const speechCompactedDurationMs = segment.durationMs - compacted.removedDurationMs;
-  const desiredDurationMs = Math.max(
-    8_000,
-    lastSpeechEndMs + recoveryTimingTargets[pacing].tailMs,
-  );
+  const desiredDurationMs = Math.max(5_200, lastSpeechEndMs + recoveryTimingTargets[pacing].tailMs);
   const nextDurationMs = Math.min(speechCompactedDurationMs, desiredDurationMs);
   const tailDurationRemovedMs = speechCompactedDurationMs - nextDurationMs;
   const endingGraphicIndex = lastEventIndex(
     compacted.events,
     (event) =>
-      event.type === 'graphic.show' &&
-      event.graphic === 'WARNING' &&
-      event.atMs >= lastSpeechEndMs,
+      event.type === 'graphic.show' && event.graphic === 'WARNING' && event.atMs >= lastSpeechEndMs,
   );
   const endingTransitionIndex = lastEventIndex(
     compacted.events,

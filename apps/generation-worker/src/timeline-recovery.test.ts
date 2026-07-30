@@ -40,7 +40,7 @@ describe('delivery timeline recovery', () => {
   });
 
   it('leaves already compact frantic dialogue unchanged', () => {
-    const events = [speech(540, 2_000, 0), speech(2_630, 1_800, 1)];
+    const events = [speech(400, 2_000, 0), speech(2_480, 1_800, 1)];
 
     expect(compactSpeechTimeline(events, 'frantic')).toEqual({
       events,
@@ -110,7 +110,7 @@ describe('delivery timeline recovery', () => {
     const sourceStatic = source.events.filter((event) => event.type === 'audio.static');
     const nextStatic = result.segment.events.filter((event) => event.type === 'audio.static');
 
-    expect(nextSpeech.map(({ atMs }) => atMs)).toEqual([540, 2_630]);
+    expect(nextSpeech.map(({ atMs }) => atMs)).toEqual([400, 2_480]);
     expect(nextSpeech).toHaveLength(sourceSpeech.length);
     nextSpeech.forEach((event, index) => {
       expect(event).toEqual({ ...sourceSpeech[index]!, atMs: event.atMs });
@@ -120,12 +120,12 @@ describe('delivery timeline recovery', () => {
       expect(event).toEqual({ ...sourceStatic[index]!, atMs: event.atMs });
     });
     expect(result.segment.pacing).toBe('frantic');
-    expect(result.segment.durationMs).toBe(8_000);
-    expect(result.timelineDurationRemovedMs).toBe(12_000);
+    expect(result.segment.durationMs).toBe(5_200);
+    expect(result.timelineDurationRemovedMs).toBe(14_800);
     expect(result.speechGapsTightened).toBe(1);
-    expect(result.tailDurationRemovedMs).toBe(6_630);
-    expect(
-      result.segment.events.every((event) => event.atMs < result.segment.durationMs),
-    ).toBe(true);
+    expect(result.tailDurationRemovedMs).toBe(9_280);
+    expect(result.segment.events.every((event) => event.atMs < result.segment.durationMs)).toBe(
+      true,
+    );
   });
 });
