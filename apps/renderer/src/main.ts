@@ -2,6 +2,7 @@ import './style.css';
 import { calculateFrameStats, type FrameStats } from './metrics.js';
 import { HybridBroadcastScene } from './hybrid-scene.js';
 import { PlayoutEngine } from './playout.js';
+import { DeferredRendererActivation, rendererRuntimeMode } from './runtime.js';
 
 interface BenchmarkResult extends FrameStats {
   completed: boolean;
@@ -18,6 +19,9 @@ interface BenchmarkResult extends FrameStats {
 declare global {
   interface Window {
     __ELSEWHERE_BENCHMARK__: BenchmarkResult | null;
+    __ELSEWHERE_RENDERER_READY__: boolean;
+    __ELSEWHERE_RENDERER_ACTIVE__: boolean;
+    __ELSEWHERE_ACTIVATE__: () => Promise<boolean>;
   }
 }
 
@@ -38,7 +42,8 @@ const broadcastTime = requiredElement<HTMLTimeElement>('#broadcast-time');
 const scene = new HybridBroadcastScene(canvas, canvas2d);
 const renderer = scene.getRendererInfo();
 const params = new URLSearchParams(window.location.search);
-const benchmarkMode = params.has('benchmark');
+const runtimeMode = rendererRuntimeMode(params);
+const standbyMode = runtimeMode === 'standby';
 const benchmarkSeconds = Math.max(3, Number(params.get('seconds') ?? 15));
 const targetFps = 25;
 const targetFrameTimeMs = 1000 / targetFps;
@@ -49,9 +54,23 @@ let renderAccumulatorMs = 0;
 let recentFrameTimes: number[] = [];
 let benchmarkStart = previousFrame;
 window.__ELSEWHERE_BENCHMARK__ = null;
+window.__ELSEWHERE_RENDERER_READY__ = false;
+window.__ELSEWHERE_RENDERER_ACTIVE__ = false;
 
 rendererApi.textContent = renderer.api;
 rendererApi.title = `${renderer.vendor} — ${renderer.device}`;
+if (standbyMode) {
+  broadcast.classList.add('handover-standby');
+}
+
+const activation = new DeferredRendererActivation(async () => {
+  const playout = new PlayoutEngine(scene);
+  await playout.start();
+  broadcast.classList.remove('handover-standby');
+  broadcast.dataset.rendererActive = 'true';
+  window.__ELSEWHERE_RENDERER_ACTIVE__ = true;
+});
+window.__ELSEWHERE_ACTIVATE__ = () => activation.activate();
 
 function updateClock(now: number): void {
   const totalSeconds = Math.floor(now / 1000);
@@ -89,6 +108,10 @@ function animate(now: number): void {
 
   scene.render();
   updateClock(now);
+  if (!window.__ELSEWHERE_RENDERER_READY__) {
+    window.__ELSEWHERE_RENDERER_READY__ = true;
+    broadcast.dataset.rendererReady = 'true';
+  }
 
   if (frameTimes.length % 15 === 0 && recentFrameTimes.length > 0) {
     fpsValue.textContent = calculateFrameStats(recentFrameTimes, targetFps).averageFps.toFixed(0);
@@ -116,9 +139,8 @@ requestAnimationFrame((now) => {
   requestAnimationFrame(animate);
 });
 
-if (!benchmarkMode) {
-  const playout = new PlayoutEngine(scene);
-  void playout.start();
+if (runtimeMode === 'live') {
+  void window.__ELSEWHERE_ACTIVATE__();
 }
 
 window.addEventListener('beforeunload', () => {

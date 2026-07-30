@@ -137,8 +137,25 @@ ELSEWHERE_LOCAL_SEGMENTS_DIR=data/segments-live pnpm endor:sync
 
 The browser refreshes the manifest between segments, so content publishes do not restart Chromium,
 FFmpeg, the container or the YouTube upload. `endor:sync` checks packages against the visual-medium
-set supported by Endor's currently running image before transferring them. Extended media remain
-off-air until a zero-drop renderer upgrade is available.
+set supported by Endor's currently running renderer before transferring them.
+
+Renderer-only releases use a separate no-drop handover:
+
+```bash
+pnpm endor:renderer:refresh
+```
+
+The command refuses a dirty worktree, builds the renderer, installs the bundle atomically and
+launches it in the inactive Chromium A/B profile. The incoming page displays an intentional
+“Changing reality” continuity slate but starts no playout or audio. It restores all segment IDs
+already observed on Endor, loads a real next segment, and only then becomes active. FFmpeg,
+PulseAudio, the playout controller, container and RTMPS uploader remain running throughout. If the
+incoming renderer fails before activation, the old browser remains on air and the previous bundle
+is restored.
+
+This path is only for renderer HTML, CSS and browser JavaScript that remains compatible with the
+currently running controller and segment schema. Controller, encoder, dependency or schema changes
+still require a separately planned maintenance deployment.
 
 During public playout, Ghost can set `ELSEWHERE_RECOVERY_REFILL_COUNT=12` as the maximum emergency
 refill and `ELSEWHERE_RECOVERY_MIN_AHEAD_MINUTES=15` as the live-cursor threshold. Ghost adds
@@ -153,6 +170,6 @@ availability but are not counted as original writing.
 
 ## Current boundary
 
-Ghost-to-Endor batch production, atomic package playout, browser capture, VA-API encoding, audio
-watchdog recovery and public YouTube delivery are operational. The persistent world database,
-operator console and zero-drop renderer binary upgrade path remain later milestones.
+Ghost-to-Endor batch production, atomic package playout, browser capture, no-drop renderer bundle
+handover, VA-API encoding, audio watchdog recovery and public YouTube delivery are operational. The
+persistent world database and operator console remain later milestones.

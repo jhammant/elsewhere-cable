@@ -17,7 +17,12 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-mkdir -p "$XDG_RUNTIME_DIR" "$ELSEWHERE_CHROMIUM_PROFILE" /recordings
+set -- $(node /usr/local/bin/elsewhere-chromium-handover launch-settings)
+chromium_profile=$1
+chromium_debug_port=$2
+chromium_slot=$3
+
+mkdir -p "$XDG_RUNTIME_DIR" "$chromium_profile" /recordings
 chmod 0700 "$XDG_RUNTIME_DIR"
 
 # This profile is private to the broadcast container. Chromium leaves its
@@ -26,9 +31,9 @@ chmod 0700 "$XDG_RUNTIME_DIR"
 # active profile. No Chromium process exists at this point, so remove only the
 # three profile-local singleton artefacts before launching it.
 rm -f \
-  "$ELSEWHERE_CHROMIUM_PROFILE/SingletonLock" \
-  "$ELSEWHERE_CHROMIUM_PROFILE/SingletonCookie" \
-  "$ELSEWHERE_CHROMIUM_PROFILE/SingletonSocket"
+  "$chromium_profile/SingletonLock" \
+  "$chromium_profile/SingletonCookie" \
+  "$chromium_profile/SingletonSocket"
 
 # A failed encoder start can leave Xvfb's lock files in the container's
 # writable layer. Removing only this private display's files makes restarts
@@ -91,12 +96,17 @@ chromium \
   --use-angle=vulkan \
   --use-gl=angle \
   --media-cache-size=104857600 \
-  --user-data-dir="$ELSEWHERE_CHROMIUM_PROFILE" \
+  --remote-debugging-address=127.0.0.1 \
+  --remote-debugging-port="$chromium_debug_port" \
+  --remote-allow-origins='*' \
+  --user-data-dir="$chromium_profile" \
   --window-position=0,0 \
   --window-size=1280,720 \
   --kiosk \
   "http://127.0.0.1:${ELSEWHERE_PORT}/?broadcast=1" &
 browser_pid=$!
+node /usr/local/bin/elsewhere-chromium-handover \
+  record-active "$chromium_slot" container-start >/tmp/elsewhere-renderer-active.json
 
 ELSEWHERE_AUDIO_QUIET_SECONDS=${ELSEWHERE_AUDIO_QUIET_SECONDS:-2} \
   sh /usr/local/bin/elsewhere-audio-watchdog >/tmp/elsewhere-audio-watchdog.log 2>&1 &

@@ -110,3 +110,33 @@ ELSEWHERE_LOCAL_SEGMENTS_DIR=data/segments-live pnpm endor:sync
 Confirm `restarts=0`, a ready controller and a continuing frame counter after every publish. A
 failed package request is marked played and skipped after a short static transition; repair it
 under a new segment ID rather than making the live browser retry a known-bad package.
+
+## Refresh renderer visuals without stopping YouTube
+
+Renderer-only changes can be handed over while FFmpeg keeps the existing RTMPS session open:
+
+```bash
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm endor:renderer:refresh -- preflight
+pnpm endor:renderer:refresh
+```
+
+The refresh command requires a clean commit. It alternates between private Chromium profiles on
+debug ports bound only inside the container. The incoming renderer:
+
+1. Opens silently behind a full-screen Elsewhere Cable continuity slate.
+2. Proves that its first frame rendered.
+3. Restores played segment IDs from Endor telemetry.
+4. Loads and validates a real segment before taking over.
+5. Becomes active, then terminates only the previous Chromium profile.
+
+The command never restarts the container, controller, encoder or uploader. A failure before the
+handover kills only the incoming browser and restores the previous renderer bundle. After a
+successful refresh, verify the health endpoint still reports `ready`, the container restart count
+is unchanged, telemetry records a new `segment.started`, and speech is audible before making
+further visual changes.
+
+Do not use this command for playout-controller, schema, FFmpeg, PulseAudio, operating-system or
+dependency changes. Those need a maintenance deployment with an explicit fallback plan.

@@ -35,6 +35,7 @@
     "reservoir:energise": "tsx infra/scripts/energise-reservoir.ts",
     "reservoir:content-runway": "tsx infra/scripts/content-runway.ts",
     "endor:content:check": "tsx infra/scripts/check-endor-content-compatibility.ts",
+    "endor:renderer:refresh": "sh infra/scripts/refresh-endor-renderer.sh",
     "optimise:once": "tsx infra/scripts/optimisation-loop.ts --once",
     "optimise:loop": "tsx infra/scripts/optimisation-loop.ts",
     "generate:live": "sh infra/scripts/generate-ghost-live.sh once",
