@@ -90,7 +90,7 @@ refill_recovery_if_needed() {
     pnpm exec tsx infra/scripts/emergency-refill.ts \
       --segments "$output_root" \
       --count "$recovery_refill_count" \
-      --target endor-running-b3c2ed1
+      --target endor-renderer-106cd82
     return 0
   fi
   echo "Observed recovery runway is healthy; no replay aliases added."
