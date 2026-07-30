@@ -808,17 +808,100 @@ describe('produceBatch', () => {
     ).toHaveLength(1);
   });
 
-  it('abandons a repeatedly rejected script after four rewrites so the next batch can vary the premise', async () => {
+  it('reuses an approved premise for another bounded script cycle', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-script-retry-limit-'));
     temporaryDirectories.push(root);
     const outputRoot = path.join(root, 'segments');
     const scriptQueueRoot = path.join(root, 'scripts');
     const draft = demoDraft(0);
+    let proposalCalls = 0;
     let scriptCalls = 0;
     const llm: LlmProvider = {
       id: 'critic-rejection-test-llm',
       model: 'test-model',
       generateProposal() {
+        proposalCalls += 1;
+        return Promise.resolve(universallyAlignedProposal(draft));
+      },
+      generateStructured(request) {
+        scriptCalls += 1;
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        return Promise.resolve({
+          ...draft,
+          dialogue: architectureAlignedDialogue(draft, proposal),
+        });
+      },
+      critiqueDraft() {
+        return Promise.resolve({
+          accepted: scriptCalls > 4,
+          coherence: scriptCalls > 4 ? 8 : 5,
+          comedyEscalation: scriptCalls > 4 ? 8 : 5,
+          dialogueNaturalness: scriptCalls > 4 ? 8 : 5,
+          endingEarned: scriptCalls > 4 ? 8 : 5,
+          issues:
+            scriptCalls > 4
+              ? []
+              : ['The approved premise is not producing a coherent playable scene.'],
+        });
+      },
+    };
+
+    await expect(
+      produceBatch({
+        count: 1,
+        concurrency: 1,
+        outputRoot,
+        demo: false,
+        llm,
+        tts: null,
+        embeddingProvider: null,
+        scriptQueueRoot,
+        prepareScriptsOnly: true,
+      }),
+    ).rejects.toThrow('Could not script approved premise after 4 attempts');
+    expect(scriptCalls).toBe(4);
+    expect(proposalCalls).toBe(1);
+    expect(await readdir(path.join(scriptQueueRoot, 'proposals', 'pending'))).toHaveLength(1);
+
+    const result = await produceBatch({
+      count: 1,
+      concurrency: 1,
+      outputRoot,
+      demo: false,
+      llm,
+      tts: null,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      prepareScriptsOnly: true,
+    });
+
+    expect(result.preparedScriptCount).toBe(1);
+    expect(scriptCalls).toBe(5);
+    expect(proposalCalls).toBe(1);
+    expect(await readdir(path.join(scriptQueueRoot, 'proposals', 'pending'))).toHaveLength(0);
+    expect(
+      (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>
+        file.endsWith('.json'),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('retires an approved premise after three failed script cycles', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-proposal-retirement-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    const draft = demoDraft(0);
+    let proposalCalls = 0;
+    let scriptCalls = 0;
+    const llm: LlmProvider = {
+      id: 'critic-retirement-test-llm',
+      model: 'test-model',
+      generateProposal() {
+        proposalCalls += 1;
         return Promise.resolve(universallyAlignedProposal(draft));
       },
       generateStructured(request) {
@@ -843,8 +926,7 @@ describe('produceBatch', () => {
         });
       },
     };
-
-    await expect(
+    const run = async () =>
       produceBatch({
         count: 1,
         concurrency: 1,
@@ -855,9 +937,22 @@ describe('produceBatch', () => {
         embeddingProvider: null,
         scriptQueueRoot,
         prepareScriptsOnly: true,
-      }),
-    ).rejects.toThrow('Could not script approved premise after 4 attempts');
-    expect(scriptCalls).toBe(4);
+      });
+
+    await expect(run()).rejects.toThrow('Could not script approved premise after 4 attempts');
+    await expect(run()).rejects.toThrow('Could not script approved premise after 4 attempts');
+    await expect(run()).rejects.toThrow('Could not script approved premise after 4 attempts');
+
+    expect(proposalCalls).toBe(1);
+    expect(scriptCalls).toBe(12);
+    expect(await readdir(path.join(scriptQueueRoot, 'proposals', 'pending'))).toHaveLength(0);
+    const failedFiles = await readdir(path.join(scriptQueueRoot, 'proposals', 'failed'));
+    expect(failedFiles).toHaveLength(1);
+    const failed = JSON.parse(
+      await readFile(path.join(scriptQueueRoot, 'proposals', 'failed', failedFiles[0]!), 'utf8'),
+    ) as { retryCycles: number; lastFailure: string };
+    expect(failed.retryCycles).toBe(3);
+    expect(failed.lastFailure).toContain('Could not script approved premise after 4 attempts');
   });
 
   it('commits completed novel segments when another batch slot is exhausted', async () => {

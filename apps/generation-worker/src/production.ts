@@ -668,6 +668,17 @@ interface QueuedPreparedScript {
   script: PreparedScript;
 }
 
+interface QueuedApprovedProposal {
+  filePath: string;
+  proposalId: string;
+  preparedAt: string;
+  retryCycles: number;
+  proposal: GeneratedSegmentProposal;
+  lastFailure?: string;
+}
+
+const maximumApprovedProposalRetryCycles = 3;
+
 async function readPreparedScripts(
   queueRoot: string,
   limit = Number.POSITIVE_INFINITY,
@@ -699,16 +710,133 @@ async function readPreparedScripts(
   }
 }
 
+function parseQueuedApprovedProposal(value: unknown, filePath: string): QueuedApprovedProposal {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('Queued approved proposal must be an object');
+  }
+  const record = value as Record<string, unknown>;
+  if (record.schemaVersion !== 1) {
+    throw new Error('Queued approved proposal schema version is unsupported');
+  }
+  if (typeof record.proposalId !== 'string' || !/^proposal_[a-z0-9]+$/u.test(record.proposalId)) {
+    throw new Error('Queued approved proposal has an invalid id');
+  }
+  if (typeof record.preparedAt !== 'string' || !Number.isFinite(Date.parse(record.preparedAt))) {
+    throw new Error('Queued approved proposal has an invalid preparation time');
+  }
+  if (
+    typeof record.retryCycles !== 'number' ||
+    !Number.isInteger(record.retryCycles) ||
+    record.retryCycles < 1 ||
+    record.retryCycles >= maximumApprovedProposalRetryCycles
+  ) {
+    throw new Error('Queued approved proposal has an invalid retry count');
+  }
+  return {
+    filePath,
+    proposalId: record.proposalId,
+    preparedAt: record.preparedAt,
+    retryCycles: record.retryCycles,
+    proposal: generatedSegmentProposalSchema.parse(record.proposal),
+    ...(typeof record.lastFailure === 'string'
+      ? { lastFailure: record.lastFailure.slice(0, 4_000) }
+      : {}),
+  };
+}
+
+async function readApprovedProposals(
+  queueRoot: string,
+  limit = Number.POSITIVE_INFINITY,
+): Promise<QueuedApprovedProposal[]> {
+  const pendingRoot = path.join(queueRoot, 'proposals', 'pending');
+  try {
+    const proposals: QueuedApprovedProposal[] = [];
+    for (const fileName of await readdir(pendingRoot)) {
+      if (!/^proposal_[a-z0-9]+\.json$/u.test(fileName)) {
+        continue;
+      }
+      const filePath = path.join(pendingRoot, fileName);
+      try {
+        proposals.push(
+          parseQueuedApprovedProposal(JSON.parse(await readFile(filePath, 'utf8')), filePath),
+        );
+      } catch {
+        // A concurrently moved or corrupt proposal is not eligible for another script pass.
+      }
+    }
+    return proposals
+      .sort(
+        (left, right) =>
+          left.preparedAt.localeCompare(right.preparedAt) ||
+          left.proposalId.localeCompare(right.proposalId),
+      )
+      .slice(0, limit);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function recordApprovedProposalFailure(
+  queueRoot: string,
+  proposal: GeneratedSegmentProposal,
+  previous: QueuedApprovedProposal | undefined,
+  failure: string,
+): Promise<void> {
+  const proposalId = previous?.proposalId ?? `proposal_${randomUUID().replaceAll('-', '')}`;
+  const retryCycles = (previous?.retryCycles ?? 0) + 1;
+  const destination = retryCycles >= maximumApprovedProposalRetryCycles ? 'failed' : 'pending';
+  const destinationRoot = path.join(queueRoot, 'proposals', destination);
+  await mkdir(destinationRoot, { recursive: true });
+  const targetPath = path.join(destinationRoot, `${proposalId}.json`);
+  const nextPath = `${targetPath}.${process.pid}.${randomUUID()}.next`;
+  try {
+    await writeFile(
+      nextPath,
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          proposalId,
+          preparedAt: previous?.preparedAt ?? new Date().toISOString(),
+          retryCycles,
+          proposal,
+          lastFailure: failure.slice(0, 4_000),
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+    await rename(nextPath, targetPath);
+  } finally {
+    await rm(nextPath, { force: true });
+  }
+  if (previous !== undefined && path.resolve(previous.filePath) !== path.resolve(targetPath)) {
+    await rm(previous.filePath, { force: true });
+  }
+}
+
+async function removeApprovedProposal(proposal: QueuedApprovedProposal): Promise<void> {
+  await rm(proposal.filePath, { force: true });
+}
+
 async function writePreparedScripts(
   queueRoot: string,
   drafts: readonly GeneratedSegmentDraft[],
   generator: string,
   model: string,
   optimisationBrief: OptimisationBrief | null,
-): Promise<{ prepared: PreparedScript[]; rejectionReasons: string[] }> {
+): Promise<{
+  prepared: PreparedScript[];
+  preparedDrafts: GeneratedSegmentDraft[];
+  rejectionReasons: string[];
+}> {
   const pendingRoot = path.join(queueRoot, 'pending');
   await mkdir(pendingRoot, { recursive: true });
   const prepared: PreparedScript[] = [];
+  const preparedDrafts: GeneratedSegmentDraft[] = [];
   const rejectionReasons: string[] = [];
   for (const draft of drafts) {
     let script: PreparedScript;
@@ -738,8 +866,9 @@ async function writePreparedScripts(
       await rm(nextPath, { force: true });
     }
     prepared.push(script);
+    preparedDrafts.push(draft);
   }
-  return { prepared, rejectionReasons };
+  return { prepared, preparedDrafts, rejectionReasons };
 }
 
 async function archivePreparedScript(
@@ -1147,6 +1276,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     options.packagePreparedScripts === true ? queuedPreparedScripts.length : options.count;
   const drafts = new Array<GeneratedSegmentDraft | undefined>(workingCount);
   const failures = new Array<string | undefined>(workingCount);
+  const queuedProposalSources = new Array<QueuedApprovedProposal | undefined>(workingCount);
   if (options.packagePreparedScripts === true) {
     for (const [index, queued] of queuedPreparedScripts.entries()) {
       drafts[index] = queued.script.draft;
@@ -1171,12 +1301,32 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         ),
       );
     }
+    const queuedApprovedProposals =
+      options.prepareScriptsOnly === true &&
+      !options.demo &&
+      options.llm?.generateProposal !== undefined &&
+      options.scriptQueueRoot !== undefined
+        ? await readApprovedProposals(options.scriptQueueRoot)
+        : [];
+    const queuedProposalRecords = queuedApprovedProposals.map(({ proposal }) => ({
+      title: proposal.programmeTitle,
+      premise: proposal.premise,
+      dialogue: [],
+      visualMedium: proposal.visualMedium,
+      castArchetype: proposal.castArchetype,
+    }));
+    creativeHistory.push(...queuedProposalRecords);
     const semanticHistory =
       options.embeddingProvider === null
         ? []
         : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
     const proposals = new Array<GeneratedSegmentProposal | undefined>(options.count);
     const reservedRecords = new Array<CreativeRecord | undefined>(options.count);
+    for (const [index, queued] of queuedApprovedProposals.slice(0, options.count).entries()) {
+      proposals[index] = queued.proposal;
+      queuedProposalSources[index] = queued;
+      reservedRecords[index] = queuedProposalRecords[index];
+    }
     let nextIndex = 0;
     let noveltyGate = Promise.resolve();
     const withNoveltyGate = async <T>(operation: () => T): Promise<T> => {
@@ -1197,6 +1347,9 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       while (nextIndex < options.count) {
         const index = nextIndex;
         nextIndex += 1;
+        if (proposals[index] !== undefined || drafts[index] !== undefined) {
+          continue;
+        }
         try {
           let rejectionReasons: string[] = [];
           const proposalRejectionCounts = new Map<string, number>();
@@ -1435,6 +1588,24 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         scriptWorker(),
       ),
     );
+    if (
+      options.prepareScriptsOnly === true &&
+      options.scriptQueueRoot !== undefined &&
+      options.llm?.generateProposal !== undefined
+    ) {
+      for (const [index, proposal] of proposals.entries()) {
+        const failure = failures[index];
+        if (proposal === undefined || failure === undefined || drafts[index] !== undefined) {
+          continue;
+        }
+        await recordApprovedProposalFailure(
+          options.scriptQueueRoot,
+          proposal,
+          queuedProposalSources[index],
+          failure,
+        );
+      }
+    }
   }
 
   const completedDrafts = drafts.filter(
@@ -1457,6 +1628,15 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       options.optimisationBrief ?? null,
     );
     const { prepared } = preparedResult;
+    const preparedDraftSet = new Set(preparedResult.preparedDrafts);
+    await Promise.all(
+      drafts.map(async (draft, index) => {
+        const queuedProposal = queuedProposalSources[index];
+        if (draft !== undefined && queuedProposal !== undefined && preparedDraftSet.has(draft)) {
+          await removeApprovedProposal(queuedProposal);
+        }
+      }),
+    );
     if (prepared.length === 0) {
       throw new Error(
         `Batch produced no safely prepared scripts${
