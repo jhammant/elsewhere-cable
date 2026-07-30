@@ -105,10 +105,18 @@ describe('generation prompts', () => {
     const combinations = prompts.map((_prompt, index) => `${anchors[index]}|${mechanisms[index]}`);
 
     expect(new Set(anchors).size).toBeGreaterThanOrEqual(42);
-    expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(70);
-    expect(new Set(combinations).size).toBeGreaterThan(800);
+    expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(120);
+    expect(new Set(combinations).size).toBeGreaterThan(1_000);
     expect(prompts[0]).toContain('Preserve the two incompatible wants');
     expect(prompts[0]).toContain('Treat the ordinary visual anchor as the concrete subject');
+  });
+
+  it('draws visual-physics scenes from a broad trigger pool', () => {
+    const triggers = Array.from({ length: 1_200 }, (_, serial) => userPrompt(serial, []))
+      .map((prompt) => prompt.match(/Comic trigger: (.+)\./u)?.[1])
+      .filter((trigger): trigger is string => trigger !== undefined);
+
+    expect(new Set(triggers).size).toBeGreaterThanOrEqual(35);
   });
 
   it('uses every Endor-compatible visual renderer and alternates 2D against 3D history', () => {
