@@ -205,6 +205,46 @@ export const assetLibraryManifestSchema = z
     }
   });
 
+export const assetGrowthRequestSchema = z.object({
+  schemaVersion: z.literal(1),
+  requestId: z
+    .string()
+    .regex(/^asset_request_[a-z0-9_]+$/u)
+    .max(140),
+  requestKey: z
+    .string()
+    .regex(/^[a-z0-9_]+$/u)
+    .max(120),
+  requestedAt: z.string().datetime(),
+  requestedBy: z.literal('optimisation-loop'),
+  status: z.literal('pending'),
+  priority: z.number().int().min(1).max(100),
+  kind: assetKindSchema,
+  role: z
+    .string()
+    .regex(/^[a-z0-9_]+$/u)
+    .max(80),
+  objective: z.string().min(20).max(500),
+  constraints: z.array(z.string().min(3).max(240)).min(3).max(16),
+  programmeIds: z
+    .array(
+      z
+        .string()
+        .regex(/^[a-z0-9_]+$/u)
+        .max(120),
+    )
+    .max(12)
+    .default([]),
+  evidence: z.object({
+    currentKindCount: z.number().int().min(0),
+    targetKindCount: z.number().int().min(1),
+    visualMatchScore: z.number().min(0).max(10).optional(),
+    styleDistinctnessScore: z.number().min(0).max(10).optional(),
+    visibleActionScore: z.number().min(0).max(10).optional(),
+    editorialDirection: z.string().max(800).optional(),
+  }),
+});
+
 export const audiencePatternSchema = z.enum([
   'visible_transformation',
   'bounded_challenge',
@@ -527,3 +567,4 @@ export type PreparedScript = z.infer<typeof preparedScriptSchema>;
 export type AssetKind = z.infer<typeof assetKindSchema>;
 export type AssetLibraryEntry = z.infer<typeof assetLibraryEntrySchema>;
 export type AssetLibraryManifest = z.infer<typeof assetLibraryManifestSchema>;
+export type AssetGrowthRequest = z.infer<typeof assetGrowthRequestSchema>;

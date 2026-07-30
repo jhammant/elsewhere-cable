@@ -932,6 +932,15 @@ async function runWindow(): Promise<void> {
   try {
     await execFileAsync(
       path.join(workspaceRoot, 'node_modules/.bin/tsx'),
+      [path.join(workspaceRoot, 'infra/scripts/plan-asset-library-growth.ts')],
+      { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 },
+    );
+  } catch (error) {
+    reportObserverError('asset library growth planning', error);
+  }
+  try {
+    await execFileAsync(
+      path.join(workspaceRoot, 'node_modules/.bin/tsx'),
       [
         path.join(workspaceRoot, 'infra/scripts/optimisation-scorecard.ts'),
         '--history',

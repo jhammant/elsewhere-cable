@@ -17,6 +17,18 @@ Run its integrity and coverage audit with:
 pnpm assets:audit
 ```
 
+Queue the next measured production gap with:
+
+```bash
+pnpm assets:plan
+```
+
+The 30-minute optimisation loop runs both commands. Planning appends one bounded,
+rights-safe request at a time under `data/asset-library/requests/`; it never blocks
+playout or silently admits generated output to the production catalog. Image, audio,
+model and style workers may fulfil these requests offline, but the normal audit, preview,
+provenance and guarded renderer handover still apply.
+
 The audit validates the versioned schema, local-only URIs, unique IDs, file sizes and
 SHA-256 hashes. It writes the current coverage report to:
 
