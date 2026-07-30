@@ -498,7 +498,7 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
           service_mismatch: /\b(?:client|customer|help|representative|service|support|worker)\b/iu,
           status_transfer:
             /\b(?:authority|control|credit|decision|promotion|privilege|rank|status|veto)\b/iu,
-          semantic_contract: /\b(?:contract|phrase|says?|spoken|word)\b/iu,
+          semantic_contract: /\b(?:contract|phrase|said|says?|saying|spoken|word)\b/iu,
           social_protocol: /\b(?:allowed|custom|etiquette|permission|protocol|social)\b/iu,
           object_agency: /\b(?:demands?|negotiates?|refuses?|requests?|wants?)\b/iu,
           visual_physics:

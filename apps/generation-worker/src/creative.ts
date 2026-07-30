@@ -237,7 +237,7 @@ Begin every premise with the assigned physical setting using At, In, Inside, On 
 
 The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. Stakes must be harmless and socially specific: a queue position, minor privilege, awkward dinner, refund, promotion, fleeting neighbourly embarrassment or credit for a small task. Never make deliberate humiliation, reputation damage, sabotage, isolation, identity loss or withholding kindness the comic objective. Never use bereavement, a dead or dying person or animal, funerals, illness, trauma, bodily injury, cruelty, choking, strangulation, bleeding, crushed bodies, incineration or threatened death as comic stakes. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
 Elsewhere Cable is the network identity, not a channel name or programme title.
-The premise must explicitly name the assigned physical setting and two conflicting roles from the assigned cast structure. Keep every dialogue line between 3 and 22 words. Give at least three quarters of dialogue lines a non-IDLE action.
+The premise must explicitly name the assigned physical setting and two conflicting roles from the assigned scene frame. Keep every dialogue line between 3 and 22 words. Give at least three quarters of dialogue lines a non-IDLE action.
 
 Use only these formats: advert, public_access, news, shopping, sitcom, emergency, ident.
 Use only these actions: IDLE, ENTER, EXIT, LOOK_AT, POINT_AT, REACTION_NEUTRAL, REACTION_CONFUSED, REACTION_SHOCKED, REACTION_ANGRY, PAUSE, FREEZE.
@@ -485,122 +485,159 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
   ],
 };
 
-const performanceDynamics = [
-  'one character’s bluff unravels through increasingly specific ordinary details',
-  'a dismissed character becomes indispensable and remains politely aware of it',
-  'two rivals compete to appear less emotionally invested than the other',
-  'a private disagreement stays courteous while its visible consequence becomes public',
-  'a guest repeatedly prepares to leave but needs one honest answer first',
-  'two characters discover they want the same outcome and then compete for authorship',
-  'a confident explanation becomes a reluctant request for help',
-  'a minor confession creates an unexpected but fragile alliance',
-  'an apparent victory becomes unwanted responsibility, and its winner tries to give it back without losing face',
-  'an expert protects their status while a novice solves the practical problem in embarrassingly plain language',
-  'two allies maintain a shared public story while quietly disagreeing about the one detail that would make it useful',
-  'a performer keeps addressing the camera while their off-camera negotiation becomes the more important scene',
-  'one role deliberately loses a petty contest because winning would make the other person leave',
-  'a group sustains one polite fiction until a newcomer asks the most ordinary possible question',
-  'the least expressive participant makes the only consequential choice and leaves everyone else performing around it',
-  'two rivals discover a shared preference, then compete to prove who disliked it first',
+// These describe recognisable television situations without prescribing a surreal rule. The
+// story-mode variant below supplies the one and only comic mechanism. Keeping those jobs separate
+// prevents a proposal from accidentally combining (for example) a magical caption, a contractual
+// phrase and an autonomous product in the same 45-second fragment.
+const formatSituationFrames: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
+  advert: [
+    'a live tabletop demonstration in which the spokesperson needs one clear proof shot and the guest needs one private detail kept outside it',
+    'a single-take showroom pitch where the owner needs to recover the demonstrated item without contradicting their endorsement',
+    'a side-by-side trade-booth comparison where each demonstrator is privately attached to the supposedly inferior option',
+    'a garden-workshop before-and-after test whose presenter needs both sides to support the same claim',
+    'a pharmacy-counter service advert where the representative and customer disagree about which ordinary result counts as success',
+    'a wedding-gift demonstration where the spokesperson needs one usable quote from relatives protecting incompatible versions of the same event',
+    'a beach-kiosk product trial where the seller needs one clear demonstration before the tide reaches the counter',
+    'a travelling lift-showroom pitch where the owner needs the product returned before the doors reach their floor',
+  ],
+  shopping: [
+    'a rotating-plinth demonstration where two hosts compete to explain the same ordinary feature',
+    'a final-call sale where the host needs one honest order and the caller needs the least glamorous option left available',
+    'a kitchen-counter product consultation where the buyer needs a practical answer before the countdown expires',
+    'a warehouse walk-and-talk where a caller needs the presenter to locate one plain item among extravagant substitutes',
+    'a quiet craft-desk unboxing where the presenter needs each reveal to look premium and the caller needs one useful flaw shown accurately',
+    'a jewellery-turntable sale where two hosts need opposite details of the same object acknowledged',
+    'a mobile family-reunion sale where the caller wants only the minor bundle item and the host must justify the main product',
+    'a greenhouse sales consultation where the host and buyer disagree about what choosing a customer should mean',
+  ],
+  news: [
+    'a rolling local bulletin where two witnesses use different accurate names for the same tiny event',
+    'a roadside live report where the anchor needs a clean headline and the reporter needs one awkward local detail included',
+    'a weather-wall report where the presenter must explain one neighbourhood result to the resident living through it',
+    'a breaking-news correction where the anchor and correspondent must agree which ordinary fact changed',
+    'a studio evidence review where the presenter needs one object on the desk to support a disputed account',
+    'a sports-desk interview where the commentator needs a ceremonial winner and the witness needs the useful work recognised',
+    'a kitchen-table bulletin where a visiting relative is also the only available eyewitness',
+    'a live report from a queue where the reporter needs its front identified and every participant has a different practical reason',
+  ],
+  sitcom: [
+    'a family lunch where one relative needs to leave gracefully and another needs one small favour completed first',
+    'a shared-kitchen cold open where flatmates protect incompatible explanations for the same ordinary object',
+    'a workplace break-room scene where colleagues need one background task completed without making it anybody’s permanent job',
+    'a restaurant closing scene where the regular customer and staff each need the other to end the visit',
+    'a laundrette dispute where two neighbours need the same machine for different socially awkward reasons',
+    'a spare-bedroom preparation where relatives disagree about what an expected guest will find welcoming',
+    'a band rehearsal where friends need to perform one routine gesture as though it were spontaneous',
+    'a birthday-lunch setup where every participant needs one harmless detail positioned out of view',
+  ],
+  emergency: [
+    'a calm fictional advisory where the spokesperson needs one harmless procedure followed and a caller needs one narrow social exception',
+    'a coordination-desk update where two neighbours each insist the other should receive the same minor exception',
+    'a terminal information update where the announcer and traveller need the same small delay described differently',
+    'a public-information demonstration where the official and resident disagree about the socially useful final step',
+    'a fictional hotline call where the presenter needs to close one case and the caller needs its useful delay preserved',
+    'a customer-service advisory where a staff member must classify one borrowed household item before its owner arrives',
+    'a radio warning where the presenter and caller need the same harmless instruction interpreted differently',
+    'a hotel-lobby advisory where the concierge must return one misplaced booking and the guest needs its mistake retained',
+  ],
+  ident: [
+    'a ten-second station introduction where the announcer needs to name the next programme and finish on the clock',
+    'an empty-studio now-and-next card where two outgoing presenters need the other programme introduced first',
+    'a cable-routing announcement where the continuity team needs one disputed channel named without delaying the next',
+    'a minimalist logo assembly where the craftsperson and announcer disagree about which piece is ready for broadcast',
+    'a disputed-schedule handover where the outgoing guest needs one tiny correction before the sign-off',
+    'a painted title-card workshop where one missing detail must be resolved before transmission',
+    'a continuity-sofa link where the previous cast need a dignified cue to leave',
+    'a numbered-studio-door search where the announcer needs to introduce a programme before finding its room',
+  ],
+  public_access: [
+    'a municipal hearing where the chair needs one usable decision and the resident needs room to reject it politely',
+    'a community-hall call-in where the host needs to give one usable answer and the caller needs room to reject it politely',
+    'a local-history slideshow where the host and eyewitness need one accurate caption worded differently',
+    'a neighbourhood advice desk where a resident needs one practical exception and the volunteer needs the general advice to remain useful',
+    'a village-hall demonstration where the late attendee understands the ordinary task better than its presenter',
+    'a basement talent slot where contestants need the quiet scenery helper’s work acknowledged without ending the act',
+    'a relationship phone-in where the caller needs one phrase clarified before a relative in the room hears it',
+    'an amateur craft lesson where the presenter and caller disagree about which practical result counts as finished',
+  ],
+};
+
+const ordinaryVisualAnchors = [
+  'the last clean mug',
+  'a dented blue lunchbox',
+  'one unclaimed red umbrella',
+  'a duplicate brass key',
+  'a half-completed crossword',
+  'an unopened apology card',
+  'a chipped serving plate',
+  'a folded tablecloth',
+  'a borrowed step ladder',
+  'a family photograph with one blank space',
+  'a cardboard model bridge',
+  'a theatre programme with one name circled',
+  'a box of mismatched screws',
+  'a faded team scarf',
+  'a gift tag with no recipient',
+  'a pot of overwatered basil',
+  'a stack of blank labels',
+  'one half-knitted sleeve',
+  'a trophy with a loose base',
+  'a shopping list written in two handwritings',
+  'a sealed biscuit tin',
+  'a chair with a freshly repaired leg',
+  'an empty picture frame',
+  'a casserole in the wrong dish',
+  'a jar containing one button',
+  'a carefully wrapped extension cable',
+  'a clock set seven minutes slow',
+  'an unused name badge',
+  'a pair of indoor sunglasses',
+  'a parcel addressed only in pencil',
+  'a spare wheel from a toy pram',
+  'a hand-painted exit sign',
+  'a folder of restaurant menus',
+  'a tiny silver bell',
+  'a roll of floral wallpaper',
+  'three identical wooden spoons',
+  'an accordion with one silent key',
+  'a ceremonial tea towel',
+  'a framed bus timetable',
+  'a bowl holding one plum',
+  'a miniature garden gate',
+  'a raincoat with two owner labels',
+  'an instruction leaflet missing step four',
+  'a cushion embroidered with the wrong date',
+  'a thermos filled with room-temperature water',
+  'a paper crown folded inside-out',
+  'a shoebox of unsent postcards',
+  'one glove attached to a long ribbon',
 ] as const;
 
-const relationshipTextures = [
-  'siblings who agree on the facts but not on who should admit them',
-  'former colleagues competing to appear least nostalgic',
-  'a long-term neighbour and a newcomer who have promised each other the same favour',
-  'a mentor whose status depends on a protégé’s embarrassingly plain method',
-  'adult cousins concealing the same unfashionable preference from each other',
-  'two familiar voices that recognise each other but refuse to mention it',
-  'former bandmates who remember one tiny success for incompatible reasons',
-  'an owner and repairer who both need one useful flaw left untouched',
-  'long-time teammates each trying to give the other credit for an accidental victory',
-  'a parent and adult child protecting opposite versions of the same family anecdote',
-  'two friends, one of whom secretly wants an irritating ritual to continue',
-  'a supervisor and worker who each want the other to accept an unwanted promotion',
-  'two volunteers who have independently promised the same good chair to somebody else',
-  'a guide and visitor competing to appear less impressed',
-  'former housemates disputing who inherited one ordinary mug',
-  'distant relatives trying to perform a familiarity neither currently feels',
-  'two public rivals who privately share one extremely dull hobby',
-  'the person who performed and the person who made it possible disagreeing about which invisible task mattered',
-  'two people who remember the same routine encounter as separate triumphs',
-  'a tutor protecting a lesson after the pupil finds a kinder practical method',
-  'two committee veterans who each insist the other invented the tradition',
-  'two participants who both dislike the subject’s glamorous reputation',
-  'two participants who each need the other to make the final goodbye',
-  'two neighbours maintaining a shared excuse after both have forgotten who it was for',
-  'an expert and amateur who want the same result but need opposite explanations to be true',
-  'two relatives each pretending the other chose the family custom',
-  'a confident speaker and quiet helper who disagree about whether the helper is already in charge',
-  'two observers protecting different harmless details from the same tiny event',
-  'two acquaintances who realise they have been recommending the same unwanted item',
-  'two friends negotiating which one is allowed to be more relieved',
-] as const;
-
-const ordinaryObjectiveSeeds = [
-  'retrieve a borrowed object before its owner recognises it',
-  'leave five minutes early without appearing eager to leave',
-  'keep one unfashionable preference out of the official version',
-  'persuade the other role to stay for one final practical task',
-  'accept credit without having to give a speech',
-  'avoid being selected for a ceremonial role',
-  'correct a mispronounced name without interrupting the programme',
-  'swap one chair for a mundane but private reason',
-  'return a gift while preserving the giver’s pride',
-  'prove a routine has been learned without performing it',
-  'keep one useful flaw from being repaired',
-  'move an appointment away from an awkward acquaintance',
-  'obtain the plainest available version of the thing being discussed',
-  'finish an apology without reopening the original disagreement',
-  'let the novice lead without admitting help is needed',
-  'admit a misunderstanding before it becomes an on-screen caption',
-  'keep an old nickname out of the lower third',
-  'borrow an ordinary item for one additional day',
-  'convince the other role to claim an idea neither actually likes',
-  'finish the meeting before the unwanted refreshments arrive',
-  'keep a background responsibility from becoming a public job title',
-  'change one accurate word before a relative sees it',
-  'decline a promotion while still looking sincerely grateful',
-  'persuade the other role to stop improving the situation',
-  'postpone explaining one harmless family habit',
-  'prove attendance without appearing on camera',
-  'choose the deliberately dull option without insulting its maker',
-  'avoid delivering a flattering statement that is true for the wrong reason',
-  'preserve one useful delay until an awkward encounter has passed',
-  'end the interaction before both roles admit they want it to continue',
-] as const;
-
-const ordinaryFailureCosts = [
-  'sit through a second farewell',
-  'perform a thank-you live on camera',
-  'share the journey home with the opposing role',
-  'explain the preference to a relative already waiting nearby',
-  'become the next demonstration subject',
-  'surrender the good chair',
-  'host the next meeting',
-  'put their full name on a handmade sign',
-  'accept an unwanted commemorative item',
-  'make the promised phone call immediately',
-  'spend lunch beside their rival',
-  'keep the disputed item prominently visible at home',
-  'wear a lanyard containing the original spelling mistake',
-  'introduce the opposing role as the expert',
-  'admit they kept an ordinary reminder for sentimental reasons',
-  'stay for the group photograph',
-  'take home the leftovers nobody requested',
-  'rename an ordinary object in front of a guest',
-  'join the follow-up committee',
-  'reveal that they know the entire jingle',
-  'return the neighbour’s spare key',
-  'perform the closing announcement',
-  'accept applause for a task they wanted kept private',
-  'share the only umbrella',
-  'repeat the family portrait',
-  'display the certificate in the kitchen',
-  'use the unwanted formal title for the rest of the day',
-  'explain why there is no receipt',
-  'attend one more rehearsal',
-  'write the other role a perfectly sincere recommendation',
+const visibleSceneBusiness = [
+  'sort the anchor into two labelled trays',
+  'wrap and unwrap the anchor without damaging the paper',
+  'measure the anchor against an obviously unsuitable space',
+  'photograph the anchor while keeping one detail out of frame',
+  'pass the anchor down the cast in a disputed order',
+  'assemble a display around the anchor one piece at a time',
+  'test the anchor three times with visibly different results',
+  'clean the anchor while negotiating who must take it home',
+  'label the anchor, remove the label and write a more honest one',
+  'pack the anchor for a journey nobody will name directly',
+  'compare the anchor with two plainly inferior substitutes',
+  'rehearse presenting the anchor to an absent visitor',
+  'balance the anchor on a deliberately overformal plinth',
+  'draw a simple diagram of the anchor and revise it after each answer',
+  'count the anchor as part of three different inventories',
+  'move the anchor between seats whenever social leverage changes',
+  'demonstrate the anchor from opposing sides of the same table',
+  'repair one harmless detail while protecting another',
+  'hide the anchor in increasingly unconvincing visible places',
+  'prepare the anchor for a group photograph',
+  'trade the anchor for small practical concessions',
+  'read its ordinary label aloud and dispute only one word',
+  'carry the anchor toward the exit, then find one concrete reason to return',
+  'place the anchor at the centre and make every character work around it',
 ] as const;
 
 const formatPresentationGrammars: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
@@ -666,6 +703,58 @@ const formatPresentationGrammars: Record<GeneratedSegmentProposal['format'], rea
     'a painted title-card workshop shown live while one missing letter argues from off frame',
     'a test-card rehearsal where the announcer and alignment shapes disagree about what comes next',
     'a full-screen now-and-next card repeatedly interrupted by tiny live windows from both competing programmes',
+  ],
+};
+
+const broadcastGraphicPackages: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
+  advert: [
+    'oversized hand-lettered claims, a single proof meter and abrupt comparison cards',
+    'restrained monochrome captions interrupted by one aggressively colourful price-free guarantee',
+    'split-screen labels, numbered evidence stamps and a tiny legal line that remains readable',
+    'catalogue cutout typography, rotating feature badges and a persistent product-name corner bug',
+    'warm testimonial captions with one cold technical readout tracking the demonstration',
+  ],
+  shopping: [
+    'stacked price panels, a calmly shrinking countdown and a caller window with its own colour key',
+    'luxury serif product cards interrupted by blunt warehouse inventory labels',
+    'a tiled catalogue grid where the active item receives a thick animated border',
+    'handwritten value calculations, oversized quantity digits and a deliberately modest order banner',
+    'a rotating product nameplate, three feature lamps and a vertical availability gauge',
+  ],
+  news: [
+    'a severe lower third, a narrow correction ticker and one diagram occupying the opposite corner',
+    'regional-news map labels, an evidence counter and a headline that becomes more specific',
+    'split-screen location straps with mismatched clocks and a restrained breaking-story ribbon',
+    'paper-clipped photograph panels, typewritten captions and one live red annotation',
+    'a clean anchor nameplate, boxed witness quotes and a diagram legend that updates visibly',
+  ],
+  sitcom: [
+    'a brief handmade episode title, tiny reaction captions and no persistent information panel',
+    'bright freeze-frame name cards followed by an unobtrusive domestic channel bug',
+    'a family-photo title treatment whose labels sit beside rather than over the cast',
+    'soft painted scene dividers and one recurring object label used only for the central prop',
+    'blocky opening-credit fragments that retreat completely once dialogue begins',
+  ],
+  emergency: [
+    'calm fictional advisory cards, a harmless procedure number and a soft progress strip',
+    'a measured checklist, one caller-status panel and an unmistakably fantastical service seal',
+    'two-column instruction diagrams with rounded icons and no real-world alarm colours',
+    'a municipal information ribbon, a contained-area map and a reassuringly slow phase counter',
+    'a fictional hotline panel, large plain-language captions and one exception-request box',
+  ],
+  ident: [
+    'huge geometric channel digits, a tiny disputed origin label and a six-frame logo assembly',
+    'a full-screen station clock, narrow now-and-next type and separate safe zones for every numeral',
+    'hand-painted letters, registration crosses and a miniature programme window',
+    'three floating logo tiles, a vertical signal meter and a single-line continuity caption',
+    'a cable-box channel card with impossible numbering and a visibly uncertain schedule line',
+  ],
+  public_access: [
+    'handmade lower thirds, a lopsided caller box and a felt-tip topic card',
+    'library-noticeboard typography, pinned name labels and a simple two-choice diagram',
+    'photocopied programme cards, an analogue phone indicator and handwritten corrections',
+    'community-hall title cards, mismatched participant captions and a patient call timer',
+    'overhead demonstration labels, numbered paper arrows and a small local-service seal',
   ],
 };
 
@@ -904,84 +993,6 @@ const comicTriggers = [
   'the prize is revealed',
   'the scene becomes completely silent',
 ] as const;
-
-const castStructures = [
-  'an overprepared host, a customer who wants a refund and the supervisor who designed the policy',
-  'a confident trainee, a veteran employee protecting their status and one impatient regular',
-  'two rival presenters and a junior floor manager who has the final decision',
-  'two siblings hiding the same mistake from a neighbour who needs an honest answer',
-  'a sales host, a sceptical demonstrator and the product’s previous owner',
-  'a solemn newsreader, a field reporter with a personal stake and a map that demands an apology',
-  'three paper-puppet committee members who share one official stamp',
-  'a translucent host, a human camera operator and the caller whose complaint started the programme',
-  'an exhausted coach, two beginners with opposite goals and a scoreboard applying the rules literally',
-  'a mismatched double act and a highly competent animal acting as their union representative',
-  'two experts who need the same job and an ordinary witness neither can afford to contradict',
-  'a presenter desperate to finish, a guest desperate to confess and a producer protecting the schedule',
-  'an elderly amateur, a nervous champion and the official who accidentally favours the amateur',
-  'a calm announcer, a caller who recognises them and an assistant trying to end the call',
-  'three argumentative plants seeking planning permission from the only ordinary human present',
-  'a chairperson, a complainant and a clerk who has quietly been following the disputed rule for years',
-] as const;
-
-const formatCasts: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
-  advert: [
-    'one spokesperson, one sceptical demonstrator and the product’s existing owner',
-    'one service representative and a testimonial guest who regrets agreeing',
-    'an exhausted inventor, an overly honest neighbour and the appliance representing itself',
-    'a retired stage magician, a delivery driver and the household object neither will endorse',
-    'three rival brand mascots sharing one costume assistant and one working sample',
-    'a serene product expert, a furious repairer and a talking instruction leaflet',
-  ],
-  shopping: [
-    'one sales host, one demonstrator and one call-in customer',
-    'two rival hosts and the product’s previous owner',
-    'a ventriloquist sales host, the returned product and a caller who recognises its voice',
-    'an aristocratic bargain hunter, a warehouse picker and one self-pricing ornament',
-    'two exhausted overnight hosts and a very alert caller buying for somebody else',
-    'a miniature presenter, a full-sized demonstrator and the prop demanding equal billing',
-  ],
-  news: [
-    'one anchor, one field reporter and one personally involved local official',
-    'two correspondents and the ordinary witness neither can dismiss',
-    'a sports commentator, a talking trophy and the groundskeeper who saw everything',
-    'a weather presenter, a neighbourhood cloud and the resident refusing its forecast',
-    'one solemn anchor, two competing eyewitness objects and an impatient camera operator',
-    'a kitchen-table newsreader, their visiting relative and the caption correcting both',
-  ],
-  sitcom: [
-    'two household members with incompatible goals and one arriving visitor',
-    'two colleagues competing for status and their unimpressed supervisor',
-    'three flatmates of radically different sizes and the neighbour borrowing their ceiling',
-    'a talking sofa, its exhausted owner and the guest it has already chosen',
-    'two retired rivals sharing a kitchen and the delivery person who remembers their old act',
-    'a meticulous office plant, its careless desk-mate and the temporary manager seeking advice',
-  ],
-  emergency: [
-    'one calm spokesperson, one procedure author and one resident requesting an exception',
-    'one local official, one caller and the junior employee who understands the instructions',
-    'a soothing announcer, an argumentative warning light and the caretaker who installed it',
-    'two neighbours offering each other the same exception and a baffled coordination officer',
-    'a hotel concierge, a misplaced afternoon and the guest who has dinner plans inside it',
-    'one utilities presenter, a talking fuse box and the resident hosting an awkward reunion',
-  ],
-  ident: [
-    'one continuity announcer, one off-screen scheduler and one programme element that can speak',
-    'one announcer and two logo elements negotiating their order',
-    'a hand-painted letter, a digital numeral and the craftsperson asked to introduce both',
-    'two outgoing sitcom characters and the announcer trying to release them from the schedule',
-    'a station clock, a very late presenter and the title card covering for them',
-    'three geometric logo pieces and the silent stagehand who knows their correct arrangement',
-  ],
-  public_access: [
-    'one clerk, one complainant and the junior official already living under the disputed policy',
-    'one call-in host, one resident and one quiet committee chair',
-    'an amateur craft host, a highly competent object and the caller taking the object’s side',
-    'three argumentative houseplants and the only ordinary gardener in the committee room',
-    'a basement talent-show host, the quiet scenery helper and two contestants avoiding victory',
-    'a relationship presenter broadcasting from home, their caller and the relative in the next room',
-  ],
-};
 
 const formatAnchorTerms: Record<GeneratedSegmentProposal['format'], string> = {
   advert: 'advertise, demonstrate, offer, promote or sell',
@@ -1682,20 +1693,16 @@ export function userPrompt(
 ): string {
   const serial = Math.abs(index);
   const format = assignedFormat(serial, optimisationBrief);
-  const settingPool = [...formatSettings[format], ...settings];
+  const settingPool = formatSettings[format];
+  const situationIndex = axisIndex(serial, 0x2f6e2b1, settingPool.length);
   const setting =
-    settingPool[axisIndex(serial, 0x2f6e2b1, settingPool.length)] ??
-    settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
+    settingPool[situationIndex] ?? settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
   const storyMode = assignedStoryMode(serial, optimisationBrief);
-  const storyFrames = formatStoryFrames[format];
-  const storyModeIndex = formatStoryModes[format].indexOf(storyMode);
-  const originalityRecovery = (optimisationBrief?.scores.originality ?? 10) <= 5;
-  const storyFrameIndex = originalityRecovery
-    ? storyModeIndex + formatStoryModes[format].length
-    : axisIndex(serial, 0x36abf51, storyFrames.length);
+  const situationFrames = formatSituationFrames[format];
   const storyFrame =
-    storyFrames[storyFrameIndex] ??
-    storyEngines[axisIndex(serial, 0x36abf51, storyEngines.length)]!;
+    situationFrames[situationIndex % situationFrames.length] ??
+    formatStoryFrames[format][axisIndex(serial, 0x37bcf62, formatStoryFrames[format].length)] ??
+    storyEngines[axisIndex(serial, 0x37bcf62, storyEngines.length)]!;
   const storyScale = storyScales[axisIndex(serial, 0x3bce725, storyScales.length)]!;
   const mechanismFamily = storyModes.find(({ id }) => id === storyMode)!;
   const mechanismVariants = storyModeMechanismVariants[storyMode];
@@ -1703,21 +1710,14 @@ export function userPrompt(
     mechanismVariants[axisIndex(serial, 0x3f5297b, mechanismVariants.length)]!;
   const usesVisualPhysics = storyMode === 'visual_physics';
   const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
-  const castPool = formatCasts[format];
-  const cast =
-    castPool[axisIndex(serial, 0x63d835f, castPool.length)] ??
-    castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
-  const performanceDynamic =
-    performanceDynamics[axisIndex(serial, 0x6f922b3, performanceDynamics.length)]!;
-  const relationshipTexture =
-    relationshipTextures[axisIndex(serial, 0x70c951d, relationshipTextures.length)]!;
-  const ordinaryObjective =
-    ordinaryObjectiveSeeds[axisIndex(serial, 0x71d06e3, ordinaryObjectiveSeeds.length)]!;
-  const ordinaryFailureCost =
-    ordinaryFailureCosts[axisIndex(serial, 0x72eb49f, ordinaryFailureCosts.length)]!;
-  const presentationPool = formatPresentationGrammars[format];
-  const presentationGrammar =
-    presentationPool[axisIndex(serial, 0x75a34c1, presentationPool.length)]!;
+  const ordinaryVisualAnchor =
+    ordinaryVisualAnchors[axisIndex(serial, 0x71d06e3, ordinaryVisualAnchors.length)]!;
+  const graphicPool = broadcastGraphicPackages[format];
+  const graphicPackage =
+    graphicPool[axisIndex(serial, 0x75a34c1, graphicPool.length)] ??
+    formatPresentationGrammars[format][
+      axisIndex(serial, 0x75a34c1, formatPresentationGrammars[format].length)
+    ]!;
   const visualMedium = assignedVisualMedium(serial, recentCreativeCoordinates.visualMediums ?? []);
   const castArchetype = assignedCastArchetype(
     serial,
@@ -1799,27 +1799,24 @@ ${retryBlock}
 ${optimisationBlock}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.
-- Format-specific comedy frame: ${storyFrame}.
+- Format-specific scene frame: ${storyFrame}. This defines only the recognisable television situation and character business; it contains no surreal mechanism.
 - Television-format anchor: include at least one of these words literally in the premise: ${formatAnchorTerms[format]}.
 - Scope ceiling: ${storyScale}. Never exceed it.
 - Story mode: ${storyMode}.
 - Comedy mechanism family: ${mechanismFamily.direction}.
 - Mechanism variant: ${mechanismVariant}. Treat this as the exact subtype of the comedy mechanism, not as a second rule.
 ${physicalMechanismBlock}
-- Cast structure: ${cast}.
-- Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast structure and readable role differences.
-- Performance dynamic: ${performanceDynamic}. This shapes the acting and relationship beats, not the surreal mechanism.
-- Underlying relationship: ${relationshipTexture}.
-- Concrete private objective: one established role must ${ordinaryObjective}.
-- Ordinary cost of failure: that same role must ${ordinaryFailureCost}.
+- Cast scope: use only the two or three speaking roles already named or implied by the format-specific scene frame. Do not invent a narrator, producer, expert, helper or caller merely to explain the rule.
+- Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast scope and readable role differences.
+- Ordinary visual anchor: ${ordinaryVisualAnchor}. Name this exact concrete object in the premise and make it matter to the characters. It remains physically ordinary unless the assigned story mode explicitly gives this same object agency or visual physics.
 - Programme-title contract: every distinctive subject noun in the title must be named literally in the premise.
-- Broadcast presentation: ${presentationGrammar}. Treat this as camera and graphic grammar only; it cannot add a second story mechanism, an unseen narrator or extra cast.
+- Graphic package: ${graphicPackage}. Treat this as typography and overlay grammar only; keep every channel number and caption inside its safe zone and never turn graphic behaviour into a story mechanism.
 - Dialogue architecture: ${dialogueShape}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
-Use the format-specific frame as the whole story. Apply the story mode inside that frame; it is not permission to add a second mechanism. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
-Treat the assigned relationship, private objective and cost of failure as the human specifics inside the one format-specific frame. Translate them onto roles already present in the assigned cast; do not add another character, subplot, rule or surreal mechanism to accommodate them. State the concrete objective and blocking role or rule directly in the premise. Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
+Use the format-specific scene frame as the whole television setup and the single mechanism variant as the whole surreal rule. Do not copy a second rule from another coordinate. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
+Treat the ordinary visual anchor as the concrete subject inside the one format-specific frame; do not add another character, subplot, rule or surreal mechanism to accommodate it. Preserve the two incompatible wants already named in the scene frame, then let the single mechanism variant complicate those wants. Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
 The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. A conflict need not be another refusal: use concealment, temptation, rivalry, loyalty, embarrassment, a fragile alliance or a change of mind where the assigned frame permits it. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
 Do not default to clerks, permits, waivers, penalties, policies, employee benefits or customer-satisfaction scores unless the assigned coordinates specifically require one. continuityFact will appear as a mid-programme broadcast graphic: make it a unique 5–16 word in-world fact, never an action, direction or generic slogan.
@@ -1853,6 +1850,10 @@ export function scriptPrompt(
   );
   const dialogueShape = assignedDialogueShapeForCoordinates(proposal);
   const speakerPattern = dialogueSpeakerPattern(dialogueShape);
+  const visibleBusiness =
+    visibleSceneBusiness[
+      axisIndex(Math.abs(proposal.channelNumber), 0x72eb49f, visibleSceneBusiness.length)
+    ]!;
   const liveEditorialCorrections =
     optimisationBrief === null
       ? []
@@ -1913,6 +1914,7 @@ ${retryCorrections.map((correction) => `- ${correction}`).join('\n')}
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
+Visible blocking: throughout the exchange, the cast must ${visibleBusiness}. Refer to the approved premise's central object while doing it. This is practical stage business, never a new rule or source of magic.
 ${liveEditorialBlock}${retryCorrectionBlock}Dialogue architecture: ${dialogueShape}
 Required speaker rhythm: ${speakerPattern}. Map A, B and C only to roles already established in the premise. Preserve consecutive turns exactly where shown; a second turn by one role must advance or revise their goal rather than repeat their previous line.
 Follow that architecture exactly using only roles already present in the premise. Do not invent a narrator, unseen speaker or new participant merely to satisfy the architecture.

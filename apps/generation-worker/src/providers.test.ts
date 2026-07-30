@@ -109,6 +109,25 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(proposal.premise).not.toContain('refuses because');
   });
 
+  it('carries the exact assigned mechanism into the proposal example', () => {
+    const proposal = JSON.parse(
+      proposalStructuralExample({
+        systemPrompt: 'Return JSON.',
+        userPrompt: `Create batch segment 72 using the sitcom format.
+- Physical setting: a shared kitchen.
+- Story mode: semantic_contract.
+- Mechanism variant: saying fine assigns the speaker the last clean mug. Treat this as the exact subtype of the comedy mechanism.
+- Visual medium: paper_cutout.
+- Pacing: slow_burn.`,
+      }),
+    ) as { premise: string };
+
+    expect(proposal.premise).toContain('saying fine assigns the speaker the last clean mug');
+    expect(proposal.premise).not.toContain('exact comic rule');
+    expect(proposal.premise).not.toContain('one harmless social consequence');
+    expect(proposal.premise).not.toContain('one spoken phrase');
+  });
+
   it('can route editorial criticism to a smaller independent model', async () => {
     const requests: Array<{ url: string; model: string; systemPrompt: string }> = [];
     vi.stubGlobal(

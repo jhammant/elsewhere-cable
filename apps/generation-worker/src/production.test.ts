@@ -1294,8 +1294,9 @@ describe('produceBatch', () => {
     expect(scriptCalls).toBe(1);
     const coordinates = proposalPrompts.map(
       (prompt) =>
-        prompt.match(/Mandatory creative coordinates[\s\S]*?Use the format-specific frame/u)?.[0] ??
-        '',
+        prompt.match(
+          /Mandatory creative coordinates[\s\S]*?Use the format-specific scene frame/u,
+        )?.[0] ?? '',
     );
     expect(coordinates[1]).toBe(coordinates[0]);
     expect(coordinates[2]).not.toBe(coordinates[1]);

@@ -32,20 +32,21 @@ describe('generation prompts', () => {
 
     const coordinateBlocks = prompts.map(
       (prompt) =>
-        prompt.match(/Mandatory creative coordinates[\s\S]*?Use the format-specific frame/u)?.[0] ??
-        '',
+        prompt.match(
+          /Mandatory creative coordinates[\s\S]*?Use the format-specific scene frame/u,
+        )?.[0] ?? '',
     );
     expect(new Set(coordinateBlocks).size).toBe(prompts.length);
     for (const prompt of prompts) {
       expect(prompt).toContain('Mandatory creative coordinates');
       expect(prompt).toContain('Physical setting:');
-      expect(prompt).toContain('Format-specific comedy frame:');
+      expect(prompt).toContain('Format-specific scene frame:');
       expect(prompt).toContain('Television-format anchor:');
       expect(prompt).toContain('Scope ceiling:');
       expect(prompt).toContain('Comedy mechanism family:');
       expect(prompt).toContain('Mechanism variant:');
-      expect(prompt).toContain('Cast structure:');
-      expect(prompt).toContain('Broadcast presentation:');
+      expect(prompt).toContain('Cast scope:');
+      expect(prompt).toContain('Graphic package:');
       expect(prompt).toContain('Visual medium:');
       expect(prompt).toContain('Visual production grammar:');
       expect(prompt).toContain('Pacing:');
@@ -73,18 +74,20 @@ describe('generation prompts', () => {
     expect(proposalSystemPrompt).toContain('endingBeat pays off only');
   });
 
-  it('draws locations and casts from broad production pools', () => {
+  it('draws locations and recognisable television situations from broad production pools', () => {
     const prompts = Array.from({ length: 420 }, (_, serial) => userPrompt(serial, []));
     const locations = prompts.map(
       (prompt) => prompt.match(/Physical setting: (.+)\.\n/u)?.[1] ?? '',
     );
-    const casts = prompts.map((prompt) => prompt.match(/Cast structure: (.+)\.\n/u)?.[1] ?? '');
+    const situations = prompts.map(
+      (prompt) => prompt.match(/Format-specific scene frame: (.+)\. This defines/u)?.[1] ?? '',
+    );
 
-    expect(new Set(locations).size).toBeGreaterThan(28);
-    expect(new Set(casts).size).toBeGreaterThan(30);
+    expect(new Set(locations).size).toBeGreaterThan(45);
+    expect(new Set(situations).size).toBeGreaterThan(45);
   });
 
-  it('crosses relationship, objective and consequence seeds to escape catalogue saturation', () => {
+  it('crosses ordinary anchors and mechanisms to escape saturation', () => {
     const prompts = Array.from({ length: 1_200 }, (_, serial) =>
       userPrompt(
         serial,
@@ -93,31 +96,19 @@ describe('generation prompts', () => {
         ['premise semantically repeats'],
       ),
     );
-    const relationships = prompts.map(
-      (prompt) => prompt.match(/Underlying relationship: (.+)\.\n/u)?.[1] ?? '',
-    );
-    const objectives = prompts.map(
-      (prompt) =>
-        prompt.match(/Concrete private objective: one established role must (.+)\.\n/u)?.[1] ?? '',
-    );
-    const costs = prompts.map(
-      (prompt) =>
-        prompt.match(/Ordinary cost of failure: that same role must (.+)\.\n/u)?.[1] ?? '',
+    const anchors = prompts.map(
+      (prompt) => prompt.match(/Ordinary visual anchor: (.+)\. Name this exact/u)?.[1] ?? '',
     );
     const mechanisms = prompts.map(
       (prompt) => prompt.match(/Mechanism variant: (.+)\. Treat this/u)?.[1] ?? '',
     );
-    const combinations = prompts.map(
-      (_prompt, index) =>
-        `${relationships[index]}|${objectives[index]}|${costs[index]}|${mechanisms[index]}`,
-    );
+    const combinations = prompts.map((_prompt, index) => `${anchors[index]}|${mechanisms[index]}`);
 
-    expect(new Set(relationships).size).toBeGreaterThanOrEqual(25);
-    expect(new Set(objectives).size).toBeGreaterThanOrEqual(25);
-    expect(new Set(costs).size).toBeGreaterThanOrEqual(25);
+    expect(new Set(anchors).size).toBeGreaterThanOrEqual(42);
     expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(70);
     expect(new Set(combinations).size).toBeGreaterThan(800);
-    expect(prompts[0]).toContain('Translate them onto roles already present in the assigned cast');
+    expect(prompts[0]).toContain('Preserve the two incompatible wants');
+    expect(prompts[0]).toContain('Treat the ordinary visual anchor as the concrete subject');
   });
 
   it('uses every Endor-compatible visual renderer and alternates 2D against 3D history', () => {
@@ -226,16 +217,17 @@ describe('generation prompts', () => {
     ).toContain(`Cast archetype: ${assigned}.`);
   });
 
-  it('varies recognisable broadcast presentation independently of the comedy rule', () => {
+  it('varies safe graphic packages independently of the comedy rule', () => {
     const prompts = Array.from({ length: 420 }, (_, serial) => userPrompt(serial, []));
-    const presentations = prompts.map(
-      (prompt) => prompt.match(/Broadcast presentation: (.+)\. Treat/u)?.[1] ?? '',
+    const graphicPackages = prompts.map(
+      (prompt) => prompt.match(/Graphic package: (.+)\. Treat/u)?.[1] ?? '',
     );
 
-    expect(new Set(presentations).size).toBeGreaterThanOrEqual(40);
+    expect(new Set(graphicPackages).size).toBeGreaterThanOrEqual(32);
     for (const prompt of prompts) {
-      expect(prompt).toContain('camera and graphic grammar only');
-      expect(prompt).toContain('cannot add a second story mechanism');
+      expect(prompt).toContain('typography and overlay grammar only');
+      expect(prompt).toContain('inside its safe zone');
+      expect(prompt).toContain('never turn graphic behaviour into a story mechanism');
     }
   });
 
@@ -620,7 +612,7 @@ describe('generation prompts', () => {
     ).toBe(true);
     for (let serial = 0; serial < 70; serial += 1) {
       const frame =
-        userPrompt(serial, [], [], [], brief).match(/Format-specific comedy frame: (.+)\n/u)?.[1] ??
+        userPrompt(serial, [], [], [], brief).match(/Format-specific scene frame: (.+)\n/u)?.[1] ??
         '';
       expect(frame).not.toMatch(
         /\b(?:customer refuses|clerk refuses|contractually|workplace benefit)\b/iu,
@@ -628,47 +620,51 @@ describe('generation prompts', () => {
     }
   });
 
-  it('pairs every story mode with a compatible single comedy frame', () => {
+  it('keeps the television frame mechanism-free and supplies one compatible story mechanism', () => {
     for (let serial = 0; serial < 140; serial += 1) {
       const prompt = userPrompt(serial, []);
-      const frame = prompt.match(/Format-specific comedy frame: (.+)\n/u)?.[1] ?? '';
+      const frame = prompt.match(/Format-specific scene frame: (.+)\n/u)?.[1] ?? '';
+      const mechanism = prompt.match(/Comedy mechanism family: (.+)\.\n/u)?.[1] ?? '';
       const storyMode = assignedStoryMode(serial);
       const aligned =
         storyMode === 'product_consequence'
-          ? /\bproduct\b/iu.test(frame)
+          ? /\bproduct\b/iu.test(mechanism)
           : storyMode === 'service_mismatch'
-            ? /\b(?:customer|service)\b/iu.test(frame)
+            ? /\b(?:customer|service|worker)\b/iu.test(mechanism)
             : storyMode === 'status_transfer'
-              ? /\b(?:authority|credit|promotion)\b/iu.test(frame)
+              ? /\b(?:authority|status)\b/iu.test(mechanism)
               : storyMode === 'format_literalism'
-                ? /\b(?:broadcast|bulletin|camera|caption|continuity|programme|warning)\b/iu.test(
-                    frame,
-                  )
+                ? /\btelevision convention\b/iu.test(mechanism)
                 : storyMode === 'object_agency'
-                  ? /\b(?:form|logo|map|object|product|receipt|talking)\b/iu.test(frame)
+                  ? /\bobject\b/iu.test(mechanism)
                   : storyMode === 'semantic_contract'
-                    ? /\bphrase\b/iu.test(frame)
+                    ? /\bphrase\b/iu.test(mechanism)
                     : storyMode === 'social_protocol'
-                      ? /\b(?:custom|procedure|protocol)\b/iu.test(frame)
-                      : /\bassigned visible trigger\b/iu.test(frame);
+                      ? /\betiquette rule\b/iu.test(mechanism)
+                      : /\bvisible trigger\b/iu.test(mechanism);
       expect(aligned, `${serial} ${storyMode}`).toBe(true);
+      expect(frame).not.toMatch(
+        /\b(?:contractually|demands credit|refuses its title|transfers authority)\b/iu,
+      );
     }
   });
 
-  it('gives the late-cycle ident title card an explicit object-agency refusal', () => {
+  it('can pair an ident frame with a single object-agency mechanism', () => {
     const prompt = Array.from({ length: 2_000 }, (_, serial) => userPrompt(serial, [])).find(
-      (candidate) => candidate.includes('A now-and-next title card'),
+      (candidate) =>
+        candidate.includes('using the ident format') &&
+        candidate.includes('Story mode: object_agency'),
     );
 
     expect(prompt).toBeDefined();
     expect(prompt).toContain('Story mode: object_agency');
-    expect(prompt).toMatch(
-      /Format-specific comedy frame: A now-and-next title card refuses .+ until granted/iu,
-    );
+    expect(prompt).toContain('Format-specific scene frame:');
+    expect(prompt).toContain('Comedy mechanism family: one ordinary object');
   });
 
   it('keeps stage directions out of spoken dialogue', () => {
     expect(userPrompt(12, [], [], [])).toContain('Mandatory creative coordinates');
+    expect(scriptPrompt(demoDraft(0))).toContain('Visible blocking: throughout the exchange');
     expect(scriptPrompt(demoDraft(0))).toContain(
       'never put stage directions, visual labels, bracketed actions',
     );
