@@ -1959,6 +1959,7 @@ export function userPrompt(
         : allMechanismVariants;
   const mechanismVariant =
     mechanismVariants[axisIndex(serial, 0x3f5297b, mechanismVariants.length)]!;
+  const generatedComedyKernel = mechanismVariant.startsWith('Rule: ');
   const relationshipPressure =
     relationshipPressures[axisIndex(serial, 0x4b31c27, relationshipPressures.length)]!;
   const tacticProgression =
@@ -2013,12 +2014,27 @@ export function userPrompt(
     visual_physics: `write the causal chain explicitly: when ${comicTrigger}, the ${affectedSetElement} ${transformation}, which produces only the assigned social-status consequence`,
   };
   const physicalMechanismBlock = usesVisualPhysics
-    ? `- Comic trigger: ${comicTrigger}.
+    ? generatedComedyKernel
+      ? `- Visual-physics kernel contract: use only the trigger, changed set element, transformation and social consequence already named in the mechanism variant. Add no second trigger, transformation or random physics.`
+      : `- Comic trigger: ${comicTrigger}.
 - Affected set element: ${affectedSetElement}.
 - Transformation: the affected elements ${transformation}.
 - Escalation rhythm: ${escalation}.`
     : `- Automatic set transformations are forbidden for this attempt.
 - Keep the surreal consequence social, contractual, emotional, financial or procedural, with only fleeting embarrassment and no deliberate reputation damage.`;
+  const mechanismCoordinationBlock = generatedComedyKernel
+    ? `- Kernel-first constraint: the generated mechanism, protagonist goal, opposing goal and earned payoff are the entire causal story. The format-specific frame supplies only a recognisable television situation and two role types; ignore any goal, prop or ending suggested by that frame when it conflicts with the kernel.
+- Kernel role mapping: assign protagonist goal to the first active role and opposing goal to the second active role. Map the earned payoff directly onto those same roles with no relationship-pressure, tactic or payoff-shape rule added here.`
+    : `- Relationship pressure: ${relationshipPressure}. Apply this only to the roles already present in the scene frame.
+- Tactic progression: ${tacticProgression}. These are changes of conversational strategy, never extra rules, tests or powers.
+- Payoff shape: ${payoffShape}. Earn this social outcome using only the assigned mechanism, roles and ordinary visual anchor.`;
+  const ordinaryVisualAnchorBlock = generatedComedyKernel
+    ? `- Concrete anchor contract: choose one ordinary concrete noun already present in the generated kernel and show that same thing in the premise and payoff. Do not require an additional random prop.`
+    : `- Ordinary visual anchor: ${ordinaryVisualAnchor}. Name this exact concrete object in the premise and make it matter to the characters. It remains physically ordinary unless the assigned story mode explicitly gives this same object agency or visual physics.`;
+  const storyAssemblyBlock = generatedComedyKernel
+    ? `Use the format-specific scene frame only to establish the television format, physical setting and two active role types. The kernel's protagonist goal and opposing goal are the only character wants; map them onto those roles without importing desires from the frame. The kernel's earned payoff is the only ending outcome. Use one concrete kernel noun as the visible anchor and introduce no other required object, mechanism, social rule, relationship pressure or payoff shape.`
+    : `Use the format-specific scene frame as the whole television setup and the single mechanism variant as the whole surreal rule. Do not copy a second rule from another coordinate. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
+Treat the ordinary visual anchor as the concrete subject inside the one format-specific frame; do not add another character, subplot, rule or surreal mechanism to accommodate it. Moving, displaying, labelling or discussing the anchor is ordinary character business and cannot create a second automatic consequence. Preserve the two incompatible wants already named in the scene frame, sharpen them with the assigned relationship pressure, then let the single mechanism variant complicate those wants. The tactic progression varies how the roles pursue those wants; it never changes how the mechanism works. The payoff shape is a social consequence of the same conflict, not an additional ending rule.`;
   const optimisationBlock =
     optimisationBrief === null
       ? ''
@@ -2176,21 +2192,19 @@ Mandatory creative coordinates for this attempt:
 - Comedy-kernel contract: when the mechanism variant explicitly names protagonist goal, opposing goal and earned payoff, preserve those three relationships exactly. The premise must state both goals; endingBeat must realise that payoff using only the rule.
 - Story-mode acceptance contract: ${storyModeAcceptanceContract[storyMode]}.
 - Mechanism ownership: keep the participant named by the mechanism as its subject from premise through endingBeat. Do not make another role inherit its consequence unless this exact variant explicitly transfers it.
-- Relationship pressure: ${relationshipPressure}. Apply this only to the roles already present in the scene frame.
-- Tactic progression: ${tacticProgression}. These are changes of conversational strategy, never extra rules, tests or powers.
-- Payoff shape: ${payoffShape}. Earn this social outcome using only the assigned mechanism, roles and ordinary visual anchor.
+${mechanismCoordinationBlock}
 ${physicalMechanismBlock}
 - Cast scope: use only the two or three speaking roles already named or implied by the format-specific scene frame. Do not invent a narrator, producer, expert, helper or caller merely to explain the rule.
 - Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast scope and readable role differences.
-- Ordinary visual anchor: ${ordinaryVisualAnchor}. Name this exact concrete object in the premise and make it matter to the characters. It remains physically ordinary unless the assigned story mode explicitly gives this same object agency or visual physics.
+${ordinaryVisualAnchorBlock}
 - Programme-title contract: every distinctive subject noun in the title must be named literally in the premise.
 - Graphic package: ${graphicPackage}. Treat this as typography and overlay grammar only; keep every channel number and caption inside its safe zone and never turn graphic behaviour into a story mechanism.
 - Dialogue architecture: ${dialogueShape}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
-Use the format-specific scene frame as the whole television setup and the single mechanism variant as the whole surreal rule. Do not copy a second rule from another coordinate. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
-Treat the ordinary visual anchor as the concrete subject inside the one format-specific frame; do not add another character, subplot, rule or surreal mechanism to accommodate it. Moving, displaying, labelling or discussing the anchor is ordinary character business and cannot create a second automatic consequence. Preserve the two incompatible wants already named in the scene frame, sharpen them with the assigned relationship pressure, then let the single mechanism variant complicate those wants. The tactic progression varies how the roles pursue those wants; it never changes how the mechanism works. The payoff shape is a social consequence of the same conflict, not an additional ending rule. Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
+${storyAssemblyBlock}
+Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
 The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. A conflict need not be another refusal: use concealment, temptation, rivalry, loyalty, embarrassment, a fragile alliance or a change of mind where the assigned frame permits it. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
 Do not default to clerks, permits, waivers, penalties, policies, employee benefits or customer-satisfaction scores unless the assigned coordinates specifically require one. continuityFact will appear as a mid-programme broadcast graphic: make it a unique 5–16 word in-world fact, never an action, direction or generic slogan.

@@ -151,6 +151,25 @@ describe('generation prompts', () => {
     expect(prompt).toContain(`Mechanism variant: ${override}. Treat this`);
   });
 
+  it('keeps generated comedy kernels free of conflicting random story coordinates', () => {
+    const kernel =
+      'Rule: Touching the spare teaspoon assigns hosting duty | Protagonist goal: The host wants to serve tea | Opposing goal: The guest wants to leave with the teaspoon | Earned payoff: The guest hosts while the host leaves';
+    const prompt = userPrompt(1_933, [], [], [], null, {
+      catalogueSize: 2_000,
+      mechanismVariant: kernel,
+    });
+
+    expect(prompt).toContain(`Mechanism variant: ${kernel}. Treat this`);
+    expect(prompt).toContain('Kernel-first constraint:');
+    expect(prompt).toContain("The kernel's protagonist goal and opposing goal");
+    expect(prompt).toContain("The kernel's earned payoff is the only ending outcome");
+    expect(prompt).toContain('choose one ordinary concrete noun already present');
+    expect(prompt).not.toContain('- Relationship pressure:');
+    expect(prompt).not.toContain('- Tactic progression:');
+    expect(prompt).not.toContain('- Payoff shape:');
+    expect(prompt).not.toContain('- Ordinary visual anchor:');
+  });
+
   it('gives novelty retries bounded catalogue collisions without exposing control markup', () => {
     const prompt = userPrompt(17, [], [], ['premise semantically repeats'], null, {
       catalogueSize: 2_000,
