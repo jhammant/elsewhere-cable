@@ -31,6 +31,7 @@ import {
   userPrompt,
 } from './creative.js';
 import { containsSpokenStageDirection } from './dialogue-quality.js';
+import { energiseVisualTimeline } from './visual-energiser.js';
 import {
   conceptNoveltyIssues,
   dialogueNoveltyIssues,
@@ -63,6 +64,13 @@ const forbiddenPatterns = [
   /\bdissolv(?:e|es|ed|ing)?\s+into\s+(?:the\s+)?ocean\b/iu,
   /\b(?:sharks?|animals?)\s+eat(?:s|en|ing)?\s+(?:whoever|people|person|you|him|her|them)\b/iu,
   /\b(?:ruin(?:s|ed|ing)?|destroy(?:s|ed|ing)?|damage(?:s|d|ing)?)\s+(?:(?:a|the|your|their|his|her|my)\s+)?reputation\b/iu,
+  /\b(?:fused|locked)\b.{0,48}\b(?:body|counter|limbs?|person|wall)\b/iu,
+  /\baccelerat(?:e|es|ed|ing)\b.{0,64}\binto\b.{0,40}\bwall\b/iu,
+  /\b(?:bleeds?|bled|nosebleed|knees?\s+(?:buckle|buckles|buckled|give|gives|gave)\s+out|crushing gravity|sharp spike|jagged metal)\b/iu,
+  /\b(?:rail|pipe|metal)\b.{0,48}\b(?:ankles?|throat|windpipe)\b/iu,
+  /\b(?:(?:I am|I'm|you are|you're|we are|we're|they are|they're|the (?:host|guest|contestant|customer))\s+.{0,28}\b(?:buried|caged|locked|pinned|tied|trapped)|(?:buried|caged|locked|pinned|tied|trapped)\s+.{0,28}\b(?:arms?|ankles?|body|feet|head|knees?|legs?|me|us|you))\b/iu,
+  /\b(?:hold your breath|stop breathing|strip(?:ping)? (?:the|your|my|a) shirt|remove (?:an?|one) clothing item)\b/iu,
+  /\b(?:explode(?:s|d|ing)?\s+(?:the\s+)?studio|studio\s+explode(?:s|d|ing)?|violently rotat(?:e|es|ed|ing))\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
@@ -847,12 +855,13 @@ async function buildSegment(
         audioPrepared: true,
       },
     });
+    const energisedSegment = energiseVisualTimeline(segment).segment;
     await writeFile(
       path.join(segmentDirectory, 'segment.json'),
-      `${JSON.stringify(segment, null, 2)}\n`,
+      `${JSON.stringify(energisedSegment, null, 2)}\n`,
       'utf8',
     );
-    return segment;
+    return energisedSegment;
   } catch (error) {
     await rm(segmentDirectory, { recursive: true, force: true });
     throw error;

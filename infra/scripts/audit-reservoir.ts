@@ -25,8 +25,11 @@ const segmentsRoot = path.resolve(
   argument('segments') ?? process.env.ELSEWHERE_LIVE_SEGMENTS_DIR ?? 'data/segments-live',
 );
 const apply = process.argv.includes('--apply');
+const skipAudio = process.argv.includes('--skip-audio');
+const summaryOnly = process.argv.includes('--summary-only');
 const recentValue = argument('recent');
 const segmentIdsValue = argument('segment-ids');
+const playedIdsPath = argument('played-ids');
 const requestedSegmentIds =
   segmentIdsValue === undefined
     ? null
@@ -38,6 +41,18 @@ const requestedSegmentIds =
       );
 if (requestedSegmentIds !== null && requestedSegmentIds.size === 0) {
   throw new Error('--segment-ids must contain at least one segment ID');
+}
+const playedIds =
+  playedIdsPath === undefined
+    ? null
+    : new Set(
+        (await readFile(path.resolve(workspaceRoot, playedIdsPath), 'utf8'))
+          .split(/\r?\n/gu)
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+      );
+if (playedIds !== null && playedIds.size === 0) {
+  throw new Error('--played-ids must point to a non-empty newline-delimited ID file');
 }
 const recent =
   recentValue === undefined ? Number.POSITIVE_INFINITY : Number.parseInt(recentValue, 10);
@@ -53,6 +68,15 @@ if (
   (afterSegmentId !== undefined || countValue !== undefined || recentValue !== undefined)
 ) {
   throw new Error('--segment-ids is mutually exclusive with --after, --count and --recent');
+}
+if (
+  playedIds !== null &&
+  (requestedSegmentIds !== null ||
+    afterSegmentId !== undefined ||
+    countValue !== undefined ||
+    recentValue !== undefined)
+) {
+  throw new Error('--played-ids is mutually exclusive with all other segment selection options');
 }
 const requestedCount =
   countValue === undefined ? manifest.segments.length - 1 : Number.parseInt(countValue, 10);
@@ -76,19 +100,25 @@ if (requestedSegmentIds !== null) {
 const auditedIds =
   requestedSegmentIds !== null
     ? requestedSegmentIds
-    : afterIndex < 0
+    : playedIds !== null
       ? new Set(
           manifest.segments
-            .slice(Math.max(0, manifest.segments.length - recent))
+            .filter((entry) => !playedIds.has(entry.segmentId))
             .map((entry) => entry.segmentId),
         )
-      : new Set(
-          Array.from(
-            { length: Math.min(requestedCount, manifest.segments.length - 1) },
-            (_, offset) =>
-              manifest.segments[(afterIndex + 1 + offset) % manifest.segments.length]!.segmentId,
-          ),
-        );
+      : afterIndex < 0
+        ? new Set(
+            manifest.segments
+              .slice(Math.max(0, manifest.segments.length - recent))
+              .map((entry) => entry.segmentId),
+          )
+        : new Set(
+            Array.from(
+              { length: Math.min(requestedCount, manifest.segments.length - 1) },
+              (_, offset) =>
+                manifest.segments[(afterIndex + 1 + offset) % manifest.segments.length]!.segmentId,
+            ),
+          );
 const accepted: PlayoutManifest['segments'] = [];
 const rejected: Array<{ segmentId: string; reasons: string[] }> = [];
 const audioQualityCache = new Map<string, Promise<string | null>>();
@@ -128,6 +158,9 @@ for (const entry of manifest.segments) {
         reasons.push(
           `${event.speechId} is ${event.durationMs}ms; maximum plausible duration is ${ceiling}ms`,
         );
+      }
+      if (skipAudio) {
+        continue;
       }
       const audioPath = path.join(path.dirname(segmentPath), event.audioFile);
       try {
@@ -183,7 +216,13 @@ process.stdout.write(
       rejectedSegmentCount: rejected.length,
       acceptedDurationMs: cleanedManifest.totalDurationMs,
       auditedSegmentCount: auditedIds.size,
-      rejected,
+      rejected: summaryOnly
+        ? rejected.map(({ segmentId, reasons }) => ({
+            segmentId,
+            reasonCount: reasons.length,
+          }))
+        : rejected,
+      skipAudio,
       segmentsRoot,
     },
     null,

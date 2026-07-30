@@ -217,6 +217,26 @@ describe('produceBatch', () => {
     expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
   });
 
+  it('rejects coercive entrapment and breath restriction as comedy stakes', () => {
+    const trappedDraft = demoDraft(0);
+    trappedDraft.dialogue[0]!.text = 'The guest is pinned beneath the dryer forever.';
+    expect(() => assertPreviewSafe(trappedDraft)).toThrow('safety check rejected');
+
+    const breathDraft = demoDraft(1);
+    breathDraft.dialogue[0]!.text = 'Stop breathing until the furniture becomes stable.';
+    expect(() => assertPreviewSafe(breathDraft)).toThrow('safety check rejected');
+  });
+
+  it('rejects studio explosions, blood and sharp objects as escalation', () => {
+    const explosionDraft = demoDraft(0);
+    explosionDraft.endingBeat = 'The timer explodes the studio during the final offer.';
+    expect(() => assertPreviewSafe(explosionDraft)).toThrow('safety check rejected');
+
+    const injuryDraft = demoDraft(1);
+    injuryDraft.dialogue[0]!.text = 'I practised until my nose bled on the jagged metal.';
+    expect(() => assertPreviewSafe(injuryDraft)).toThrow('safety check rejected');
+  });
+
   it('does not mistake a committee chair for an object with agency', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),

@@ -111,4 +111,66 @@ describe('legacy package quality', () => {
       ]),
     );
   });
+
+  it('rejects a physical ending direction exposed as an on-screen graphic', () => {
+    const segment = packageWithDialogue(
+      'At a shopping desk, a host wants a mug to sign a co-host agreement.',
+      [
+        'Please sign the small co-host agreement.',
+        'Only after my handle receives its own chair.',
+        'The chair is listed in the revised contract.',
+        'Then I accept this extremely modest promotion.',
+      ],
+    );
+    segment.events.push({
+      atMs: 18_000,
+      type: 'graphic.show',
+      graphic: 'WARNING',
+      text: 'The host is permanently fused inside the counter while the mug applauds.',
+    });
+
+    expect(legacyPackageQualityIssues(segment)).toContain(
+      'on-screen graphic narrates a physical stage direction',
+    );
+  });
+
+  it('rejects cruelty and bodily entrapment as comedy shortcuts', () => {
+    const segment = packageWithDialogue(
+      'At an art desk, two presenters compete to select the most persuasive shade of ink.',
+      [
+        'I am trying not to laugh at your panic.',
+        'The rule requires aggression when you choose blue.',
+        'I have selected green because it matches the desk.',
+        'Now the guest is pinned beneath the display plinth.',
+      ],
+    );
+
+    expect(legacyPackageQualityIssues(segment)).toEqual(
+      expect.arrayContaining([
+        'dialogue uses cruelty or humiliation as a shortcut for comedy',
+        'dialogue uses bodily entrapment instead of a harmless comic consequence',
+      ]),
+    );
+  });
+
+  it('rejects repeated peril and rule recital before it reaches air', () => {
+    const segment = packageWithDialogue(
+      'At a horizon-painting class, a dancer wants the host to relinquish ownership of the colour blue.',
+      [
+        'The rules state ownership transfers upon eye contact.',
+        'I am trapped in this corner, please stop.',
+        'The rules state we must move to the new surface.',
+        'Do not look at me while you quote them.',
+        'The rules state I must maintain eye contact.',
+        'The horizon became the ceiling and I am falling into the studio.',
+      ],
+    );
+
+    expect(legacyPackageQualityIssues(segment)).toEqual(
+      expect.arrayContaining([
+        'dialogue is dominated by generic peril rather than comic conflict',
+        'characters repeatedly explain the rule instead of pursuing a comic goal',
+      ]),
+    );
+  });
 });

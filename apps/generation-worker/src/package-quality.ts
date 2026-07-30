@@ -5,9 +5,15 @@ import { unearnedEndingMechanisms } from './premise-critic.js';
 const narratedPhysicalActionPattern =
   /^\s*(?:I am|I'm)\s+(?:catching|holding|looking|pointing|standing|walking|waving)\b/iu;
 const genericPerilPattern =
-  /\b(?:careful|crush(?:es|ed|ing)?|danger|do not touch|emergency hatch|forbidden zone|keep .{0,20} away|only exit|panic|scream(?:s|ed|ing)?|too late|trap(?:s|ped|ping)?|warning)\b/iu;
+  /\b(?:careful|crush(?:es|ed|ing)?|danger|do not touch|emergency hatch|fall(?:s|ing)?\s+(?:into|toward)|forbidden zone|keep .{0,20} away|only exit|panic|pin(?:s|ned|ning)?|scream(?:s|ed|ing)?|too late|trap(?:s|ped|ping)?|warning)\b/iu;
 const ruleExpositionPattern =
-  /\b(?:the rule|rules? (?:demand|force|say)|the law|law takes effect|contract terms|forces? (?:me|you|them|the)|is absolute|must obey)\b/iu;
+  /\b(?:the rule|rules? (?:demand|force|say|state)|the law|law takes effect|contract terms|forces? (?:me|you|them|the)|is absolute|must obey)\b/iu;
+const crueltyShortcutPattern =
+  /\b(?:aggression|cruel game|laugh(?:ing)? at (?:your|their) panic|mock(?:s|ed|ing)? (?:you|them)|pyramid of shame|weak lungs?|profit(?:s|ed|ing)? from (?:your|their|the) (?:chaos|fear|panic)|humiliat(?:e|es|ed|ing))\b/iu;
+const coercedBodyPattern =
+  /\b(?:(?:I am|I'm|you are|you're|we are|we're|they are|they're|the (?:host|guest|contestant|customer))\s+.{0,28}\b(?:buried|caged|locked|pinned|tied|trapped)|(?:buried|caged|locked|pinned|tied|trapped)\s+.{0,28}\b(?:arms?|ankles?|body|feet|head|knees?|legs?|me|us|you))\b/iu;
+const narratedGraphicActionPattern =
+  /^\s*(?:the|an?)\s+.{0,72}\b(?:freeze(?:s|ing)?|is\s+(?:permanently\s+)?(?:accelerated|fused|locked)|stands?|rotates?|lifts?|slams?|collides?|falls?)\b.{0,160}\b(?:as|while|into|inside)\b/iu;
 
 export function legacyPackageQualityIssues(segment: SegmentPackage): string[] {
   const issues: string[] = [];
@@ -17,6 +23,12 @@ export function legacyPackageQualityIssues(segment: SegmentPackage): string[] {
   }
 
   const speech = segment.events.filter((event) => event.type === 'speech.play');
+  const narratedGraphics = segment.events.filter(
+    (event) => event.type === 'graphic.show' && narratedGraphicActionPattern.test(event.text),
+  );
+  if (narratedGraphics.length > 0) {
+    issues.push('on-screen graphic narrates a physical stage direction');
+  }
   if (speech.length === 0) {
     return issues;
   }
@@ -31,18 +43,24 @@ export function legacyPackageQualityIssues(segment: SegmentPackage): string[] {
   const genericPerilLines = speech.filter((event) =>
     genericPerilPattern.test(event.subtitle),
   ).length;
-  if (genericPerilLines >= Math.max(3, Math.ceil(speech.length / 2))) {
+  if (genericPerilLines >= Math.max(2, Math.ceil(speech.length / 3))) {
     issues.push('dialogue is dominated by generic peril rather than comic conflict');
   }
 
   const ruleExpositionLines = speech.filter((event) =>
     ruleExpositionPattern.test(event.subtitle),
   ).length;
-  if (ruleExpositionLines >= Math.max(3, Math.ceil(speech.length / 2))) {
+  if (ruleExpositionLines >= Math.max(3, Math.ceil(speech.length / 3))) {
     issues.push('characters repeatedly explain the rule instead of pursuing a comic goal');
   }
 
   const dialogue = speech.map((event) => event.subtitle).join(' ');
+  if (crueltyShortcutPattern.test(dialogue)) {
+    issues.push('dialogue uses cruelty or humiliation as a shortcut for comedy');
+  }
+  if (coercedBodyPattern.test(dialogue)) {
+    issues.push('dialogue uses bodily entrapment instead of a harmless comic consequence');
+  }
   const unrelatedMechanisms = unearnedEndingMechanisms(segment.programme.premise, dialogue);
   if (unrelatedMechanisms.length >= 2) {
     issues.push(
