@@ -260,7 +260,8 @@ Before returning JSON, enforce these proposal gates:
 1. The premise begins with the assigned setting and literally names one established role that needs, wants or must do one concrete thing.
 2. The title's distinctive subject noun appears literally in the premise.
 3. Unless storyMode is visual_physics, neither the premise nor endingBeat physically transforms, swaps, freezes, grows, shrinks, detaches or replaces a body or set.
-4. endingBeat pays off only the premise's single established mechanism and introduces no new participant, object, power or rule.`;
+4. endingBeat pays off only the premise's single established mechanism and introduces no new participant, object, power or rule.
+5. For semantic_contract, name the actual words and their exact harmless obligation. Never substitute "one spoken phrase", "a specific phrase" or "an incompatible obligation".`;
 
 const settings = [
   'a laundrette during its final ten minutes before closing',

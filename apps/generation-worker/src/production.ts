@@ -518,6 +518,22 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
     issues.push('object-agency premise must give the object its own explicit demand or refusal');
   }
   if (
+    proposal.storyMode === 'semantic_contract' &&
+    /\b(?:(?:a|one|some|specific|precise)\s+(?:spoken\s+)?phrase|incompatible obligation)\b/iu.test(
+      `${proposal.premise} ${proposal.endingBeat}`,
+    )
+  ) {
+    issues.push(
+      'semantic-contract premise must name the actual phrase and its concrete harmless obligation',
+    );
+  }
+  if (
+    proposal.visualMedium !== 'ascii_terminal' &&
+    /\b(?:command prompt|terminal cursor|cursor position)\b/iu.test(proposal.endingBeat)
+  ) {
+    issues.push('ending leaks an unrelated renderer instruction into the story payoff');
+  }
+  if (
     /\b(?:in horror|panic(?:s|ked|king)?|scream(?:s|ed|ing)?|stares? in horror|terrified|trembl(?:e|es|ed|ing))\b/iu.test(
       proposal.endingBeat,
     )

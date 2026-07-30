@@ -191,6 +191,26 @@ describe('produceBatch', () => {
     );
   });
 
+  it('rejects a vague semantic contract and renderer leakage in its ending', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      storyMode: 'semantic_contract',
+      visualMedium: 'stained_glass',
+      visualStyle: 'luminous_leaded_stained_glass_panels',
+      premise:
+        'At a village-hall demonstration, a resident needs to leave, but one spoken phrase forces them into an incompatible obligation.',
+      endingBeat:
+        'The resident accepts the incompatible obligation while maintaining the terminal cursor position.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toEqual(
+      expect.arrayContaining([
+        'semantic-contract premise must name the actual phrase and its concrete harmless obligation',
+        'ending leaks an unrelated renderer instruction into the story payoff',
+      ]),
+    );
+  });
+
   it('requires a stageable physical setting at the start of every premise', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),
