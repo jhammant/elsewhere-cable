@@ -22,8 +22,14 @@ fi
 build_id="$(git rev-parse --short HEAD)"
 release_id="$(date -u +%Y%m%dT%H%M%SZ)-$build_id"
 remote_release="$remote_root/state/renderer-releases/$release_id"
+played_ids=data/runtime/played-segment-ids.txt
 
 pnpm --filter @elsewhere-cable/renderer build
+pnpm endor:capture-played
+if [ ! -s "$played_ids" ]; then
+  echo "Refusing renderer handover without a retained played-segment history." >&2
+  exit 66
+fi
 
 if [ "$mode" = "preflight" ]; then
   ssh "$remote_host" sh -s -- "$remote_root" "$container" <<'REMOTE'
@@ -47,6 +53,7 @@ test -w "$remote_root/state"
 docker exec "$container" test -r /app/apps/renderer/dist/index.html
 docker exec "$container" test -x /usr/bin/chromium
 docker exec "$container" test -x /usr/local/bin/node
+docker exec -u broadcast "$container" test -w /state/chromium
 printf '{"preflight":"ready","runtime":"%s"}\n' "$runtime_state"
 REMOTE
   exit 0
@@ -64,6 +71,7 @@ rsync -a --delete apps/renderer/dist/ "$remote_host:$remote_release/dist/"
 rsync -a \
   infra/endor/chromium-handover.mjs \
   infra/endor/entrypoint.sh \
+  "$played_ids" \
   "$remote_host:$remote_release/"
 
 ssh "$remote_host" sh -s -- "$remote_release" "$container" "$build_id" <<'REMOTE'
@@ -77,7 +85,9 @@ staging="/tmp/elsewhere-renderer-$build_id"
 handover_committed=0
 bundle_installed=0
 new_profile=''
-probe_profile=/state/chromium-probe
+probe_profile=/state/chromium/renderer-state/chromium-probe
+telemetry=/state/chromium/playout-observations.ndjson
+played_ids=/tmp/elsewhere-played-segment-ids.txt
 
 cleanup() {
   if [ "$handover_committed" -eq 1 ]; then
@@ -113,16 +123,23 @@ docker exec -u 0 "$container" \
 docker cp "$release/entrypoint.sh" "$container:/tmp/elsewhere-entrypoint.next"
 docker exec -u 0 "$container" \
   sh -c 'chmod 0755 /tmp/elsewhere-entrypoint.next && mv /tmp/elsewhere-entrypoint.next /usr/local/bin/elsewhere-entrypoint'
+docker cp "$release/played-segment-ids.txt" "$container:$played_ids"
+
+# The currently running controller was launched with the old /state path.
+# Point that exact path into the existing writable Chromium mount so telemetry
+# begins persisting immediately, without restarting the controller.
+docker exec -u broadcast "$container" sh -c ": >> '$telemetry'"
+docker exec -u 0 "$container" ln -sfn "$telemetry" /state/playout-observations.ndjson
 
 next_slot=$(docker exec "$container" node "$helper" next-slot)
 old_profile=$(docker exec "$container" node "$helper" active-profile)
 case "$next_slot" in
   a)
-    new_profile=/state/chromium-a
+    new_profile=/state/chromium/renderer-state/chromium-a
     debug_port=9222
     ;;
   b)
-    new_profile=/state/chromium-b
+    new_profile=/state/chromium/renderer-state/chromium-b
     debug_port=9223
     ;;
   *)
@@ -163,12 +180,12 @@ docker exec -d \
   --user-data-dir="$probe_profile" \
   "http://127.0.0.1:4174/?broadcast=1&standby=1&handover=$build_id"
 docker exec "$container" node "$helper" wait-ready 9224 45000
-docker exec "$container" node "$helper" seed-history 9224 /state/playout-observations.ndjson
+docker exec "$container" node "$helper" seed-history 9224 "$played_ids" "$telemetry"
 docker exec "$container" node "$helper" probe-data 9224
 docker exec "$container" node "$helper" terminate-profile "$probe_profile"
 
 docker exec "$container" node "$helper" \
-  wait-handover-window /state/playout-observations.ndjson 120000
+  wait-handover-window "$telemetry" 120000
 
 docker exec -d \
   -u broadcast \
@@ -199,7 +216,7 @@ docker exec -d \
   "http://127.0.0.1:4174/?broadcast=1&standby=1&handover=$build_id"
 
 docker exec "$container" node "$helper" wait-ready "$debug_port" 45000
-docker exec "$container" node "$helper" seed-history "$debug_port" /state/playout-observations.ndjson
+docker exec "$container" node "$helper" seed-history "$debug_port" "$played_ids" "$telemetry"
 
 # Activation loads and validates a real segment while the previous renderer is
 # still running behind the standby slate. Only a successful activation permits

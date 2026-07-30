@@ -6,7 +6,12 @@ import process from 'node:process';
 import { clearTimeout, setTimeout } from 'node:timers';
 
 const [command, ...arguments_] = process.argv.slice(2);
-const stateRoot = path.resolve(process.env.ELSEWHERE_HANDOVER_STATE_DIR ?? '/state');
+const stateRoot = path.resolve(
+  process.env.ELSEWHERE_HANDOVER_STATE_DIR ?? '/state/chromium/renderer-state',
+);
+const legacyProfile = path.resolve(
+  process.env.ELSEWHERE_HANDOVER_LEGACY_PROFILE ?? '/state/chromium',
+);
 const rendererRoot = path.resolve(
   process.env.ELSEWHERE_HANDOVER_RENDERER_ROOT ?? '/app/apps/renderer',
 );
@@ -15,7 +20,7 @@ const activeStatePath = path.join(stateRoot, 'renderer-active.json');
 const playbackHistoryKey = 'elsewhere-cable.played-segments.v1';
 
 function profilePath(slot) {
-  return path.join(stateRoot, slot === null ? 'chromium' : `chromium-${slot}`);
+  return slot === null ? legacyProfile : path.join(stateRoot, `chromium-${slot}`);
 }
 
 function assertPort(value) {
@@ -162,32 +167,38 @@ async function waitReady(port, timeoutMs) {
   throw new Error(`Standby renderer did not become ready: ${latestError}`);
 }
 
-async function playedSegmentIds(telemetryPath) {
-  let telemetry = '';
-  try {
-    telemetry = await readFile(telemetryPath, 'utf8');
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw error;
-    }
-  }
-  const lines = telemetry.split('\n');
+async function playedSegmentIds(sourcePaths) {
   const segmentIds = new Set();
-  for (const line of lines) {
-    if (line.trim().length === 0) {
-      continue;
-    }
+  for (const sourcePath of sourcePaths) {
+    let source = '';
     try {
-      const observation = JSON.parse(line);
-      if (
-        observation.event === 'segment.started' &&
-        typeof observation.segmentId === 'string' &&
-        /^seg_[a-z0-9_]+$/u.test(observation.segmentId)
-      ) {
-        segmentIds.add(observation.segmentId);
+      source = await readFile(sourcePath, 'utf8');
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        throw error;
       }
-    } catch {
-      // One damaged telemetry line must not prevent a renderer handover.
+    }
+    for (const line of source.split('\n')) {
+      const value = line.trim();
+      if (value.length === 0) {
+        continue;
+      }
+      if (/^seg_[a-z0-9_]+$/u.test(value)) {
+        segmentIds.add(value);
+        continue;
+      }
+      try {
+        const observation = JSON.parse(value);
+        if (
+          observation.event === 'segment.started' &&
+          typeof observation.segmentId === 'string' &&
+          /^seg_[a-z0-9_]+$/u.test(observation.segmentId)
+        ) {
+          segmentIds.add(observation.segmentId);
+        }
+      } catch {
+        // One damaged history line must not prevent a renderer handover.
+      }
     }
   }
   return [...segmentIds];
@@ -367,6 +378,7 @@ switch (command) {
   }
   case 'prepare-profile': {
     const profile = assertProfile(arguments_[0]);
+    await mkdir(profile, { recursive: true });
     await Promise.all(
       ['SingletonLock', 'SingletonCookie', 'SingletonSocket'].map((fileName) =>
         rm(`${profile}/${fileName}`, { force: true }),
@@ -392,13 +404,18 @@ switch (command) {
   }
   case 'seed-history': {
     const port = assertPort(arguments_[0]);
-    const telemetryPath = arguments_[1] ?? path.join(stateRoot, 'playout-observations.ndjson');
-    const segmentIds = await playedSegmentIds(telemetryPath);
+    const sourcePaths =
+      arguments_.length > 1
+        ? arguments_.slice(1)
+        : [path.join(legacyProfile, 'playout-observations.ndjson')];
+    const segmentIds = await playedSegmentIds(sourcePaths);
     const expression = `localStorage.setItem(${JSON.stringify(playbackHistoryKey)}, ${JSON.stringify(
       JSON.stringify(segmentIds),
     )}); ${segmentIds.length}`;
     const seededSegmentCount = await evaluate(port, expression);
-    process.stdout.write(`${JSON.stringify({ seededSegmentCount })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ seededSegmentCount, sourceCount: sourcePaths.length })}\n`,
+    );
     break;
   }
   case 'probe-data': {
@@ -442,7 +459,7 @@ switch (command) {
     break;
   }
   case 'wait-handover-window': {
-    const telemetryPath = arguments_[0] ?? path.join(stateRoot, 'playout-observations.ndjson');
+    const telemetryPath = arguments_[0] ?? path.join(legacyProfile, 'playout-observations.ndjson');
     const timeoutMs = Number.parseInt(arguments_[1] ?? '120000', 10);
     if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 300_000) {
       throw new Error(

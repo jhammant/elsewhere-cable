@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { promisify } from 'node:util';
+import { retainedPlayedSegmentIds } from '../../apps/generation-worker/src/playback-history.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,9 +32,20 @@ const segmentIds = [...`${stdout}\n${stderr}`.matchAll(/\bseg_[a-z0-9_]+\b/gu)].
   (match) => match[0],
 );
 const uniqueIds = [...new Set(segmentIds)];
+let existingIds: string[] = [];
+try {
+  existingIds = (await readFile(outputPath, 'utf8'))
+    .split(/\s+/u)
+    .filter((segmentId) => /^seg_[a-z0-9_]+$/u.test(segmentId));
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    throw error;
+  }
+}
+const retainedIds = retainedPlayedSegmentIds(existingIds, uniqueIds);
 await mkdir(path.dirname(outputPath), { recursive: true });
 const nextPath = `${outputPath}.${process.pid}.next`;
-await writeFile(nextPath, `${uniqueIds.join('\n')}\n`, 'utf8');
+await writeFile(nextPath, `${retainedIds.join('\n')}\n`, 'utf8');
 await rename(nextPath, outputPath);
 
 process.stdout.write(
@@ -41,7 +53,8 @@ process.stdout.write(
     endorHost,
     containerName,
     observedOccurrences: segmentIds.length,
-    uniqueSegmentIds: uniqueIds.length,
+    observedUniqueSegmentIds: uniqueIds.length,
+    retainedUniqueSegmentIds: retainedIds.length,
     outputPath,
   })}\n`,
 );

@@ -24,6 +24,7 @@ async function fixture() {
   const environment = {
     ...process.env,
     ELSEWHERE_HANDOVER_STATE_DIR: stateRoot,
+    ELSEWHERE_HANDOVER_LEGACY_PROFILE: path.join(root, 'legacy-chromium'),
     ELSEWHERE_HANDOVER_RENDERER_ROOT: rendererRoot,
     ELSEWHERE_HANDOVER_STAGING_ROOT: stagingRoot,
   };
