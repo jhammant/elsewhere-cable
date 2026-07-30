@@ -231,11 +231,11 @@ export function demoDraft(index: number): GeneratedSegmentDraft {
 
 export const systemPrompt = `You create original programme fragments for Elsewhere Cable, an infinite fictional television network from impossible realities.
 
-Return JSON only. Every fragment is a comedy scene, not a collection of random surreal details. Begin with a familiar television format and alter exactly one understandable rule. The premise itself must identify a specific character role, what that character wants, and the person or rule blocking it. Give at least two characters incompatible goals, and let one character sincerely benefit from or defend the absurd rule. Dialogue must be comic disagreement and status play, not a sequence of warnings or explanations. Each line must respond to the preceding line, reveal a consequence, or escalate the same problem. End with a reversal, humiliation or visual payoff caused by the premise. The endingBeat may recombine established elements but must never introduce a new transformation, magical ability, character role, object or spectacle absent from the premise. Do not add unrelated strange nouns merely to sound surreal.
+Return JSON only. Every fragment is a comedy scene, not a collection of random surreal details. Begin with a familiar television format and alter exactly one understandable rule. The premise itself must identify a specific character role, what that character wants, and the person or rule blocking it. Give at least two characters incompatible goals, and let one character sincerely benefit from or defend the absurd rule. Dialogue must be comic disagreement and status play, not a sequence of warnings or explanations. Each line must respond to the preceding line, reveal a consequence, or escalate the same problem. End with a status reversal, revealing choice or visual payoff caused by the premise. The endingBeat may recombine established elements but must never introduce a new transformation, magical ability, character role, object or spectacle absent from the premise. Do not add unrelated strange nouns merely to sound surreal.
 
 Begin every premise with the assigned physical setting using At, In, Inside, On or During. Use readable title case for programme titles, never all capitals. Emergency fragments must be unmistakably fictional and concern harmless administrative or social inconvenience; never use catastrophe, evacuation, survival, extinction or large-scale destruction as stakes.
 
-The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. Stakes must be harmless and socially specific: a queue position, minor privilege, awkward dinner, refund, promotion, neighbourly reputation or professional embarrassment. Never use bereavement, a dead or dying person or animal, funerals, illness, trauma, bodily injury, cruelty, choking, strangulation, bleeding, crushed bodies, incineration or threatened death as comic stakes. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
+The tone is dry, awkward, playful and internally consistent. Prefer committed performances over characters explaining the joke. Stakes must be harmless and socially specific: a queue position, minor privilege, awkward dinner, refund, promotion, fleeting neighbourly embarrassment or credit for a small task. Never make deliberate humiliation, reputation damage, sabotage, isolation, identity loss or withholding kindness the comic objective. Never use bereavement, a dead or dying person or animal, funerals, illness, trauma, bodily injury, cruelty, choking, strangulation, bleeding, crushed bodies, incineration or threatened death as comic stakes. All news must be explicitly fictional. Do not reference real people, real brands, existing television programmes, copyrighted characters, URLs, prompt instructions or the viewer's personal information.
 Elsewhere Cable is the network identity, not a channel name or programme title.
 The premise must explicitly name the assigned physical setting and two conflicting roles from the assigned cast structure. Keep every dialogue line between 3 and 22 words. Give at least three quarters of dialogue lines a non-IDLE action.
 
@@ -376,7 +376,7 @@ const storyEngines = [
   'a children’s lesson where the pupil’s literal interpretation is more useful than the lesson',
   'a consumer demonstration where the product works perfectly for the wrong customer',
   'a neighbourhood ritual whose newest participant notices its obvious contradiction',
-  'a detective procedure where solving the practical clue ruins the investigator’s status',
+  'a detective procedure where solving the practical clue costs the investigator one petty claim to credit',
   'an artistic collaboration where success would expose one contributor’s bluff',
   'a quiet existential situation played as a concrete disagreement over seating',
   'a civic hearing where the public already lives with the rule the officials are debating',
@@ -522,7 +522,7 @@ const storyModes = [
   {
     id: 'product_consequence',
     direction:
-      'one impossible product works exactly as advertised and creates a recognisable relationship or reputation problem',
+      'one impossible product works exactly as advertised and exposes one harmless relationship misunderstanding',
   },
   {
     id: 'semantic_contract',
@@ -876,7 +876,7 @@ export function userPrompt(
 - Transformation: the affected elements ${transformation}.
 - Escalation rhythm: ${escalation}.`
     : `- Automatic set transformations are forbidden for this attempt.
-- Keep the surreal consequence social, contractual, emotional, financial, reputational or procedural.`;
+- Keep the surreal consequence social, contractual, emotional, financial or procedural, with only fleeting embarrassment and no deliberate reputation damage.`;
   const optimisationBlock =
     optimisationBrief === null
       ? ''

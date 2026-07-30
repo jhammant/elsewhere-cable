@@ -15,7 +15,7 @@ if [ "${ELSEWHERE_ENDOR_EXTENDED_MEDIA:-0}" != "1" ]; then
     --segments "$source_directory"
 fi
 
-release_id="$(date -u +%Y%m%dT%H%M%SZ)-$(git rev-parse --short HEAD)"
+release_id="$(date -u +%Y%m%dT%H%M%SZ)-$(git rev-parse --short HEAD)-$$"
 remote_incoming="$remote_root/content/incoming/$release_id"
 remote_release="$remote_root/content/releases/$release_id"
 

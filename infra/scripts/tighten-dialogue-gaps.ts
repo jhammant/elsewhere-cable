@@ -5,8 +5,8 @@ import {
   playoutManifestSchema,
   segmentPackageSchema,
   type PlayoutManifest,
-  type SegmentEvent,
 } from '../../packages/schemas/src/index.js';
+import { compactSpeechTimeline } from '../../apps/generation-worker/src/timeline-recovery.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -25,55 +25,29 @@ function recentCount(total: number): number {
   return value;
 }
 
-interface Shift {
-  boundaryMs: number;
-  reductionMs: number;
-}
-
-function shiftedTime(atMs: number, shifts: readonly Shift[]): number {
-  return (
-    atMs -
-    shifts.reduce((total, shift) => total + (atMs >= shift.boundaryMs ? shift.reductionMs : 0), 0)
-  );
-}
-
-function dialogueShifts(events: readonly SegmentEvent[], targetGapMs: number): Shift[] {
-  const speech = events
-    .filter(
-      (event): event is Extract<SegmentEvent, { type: 'speech.play' }> =>
-        event.type === 'speech.play',
-    )
-    .sort((left, right) => left.atMs - right.atMs);
-  const shifts: Shift[] = [];
-  for (let index = 1; index < speech.length; index += 1) {
-    const previous = speech[index - 1]!;
-    const current = speech[index]!;
-    const previousEndMs = previous.atMs + previous.durationMs;
-    const gapMs = current.atMs - previousEndMs;
-    if (gapMs <= targetGapMs) {
-      continue;
-    }
-    shifts.push({
-      boundaryMs: Math.max(previousEndMs + 180, current.atMs - 200),
-      reductionMs: gapMs - targetGapMs,
-    });
-  }
-  return shifts;
-}
-
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
 const segmentsRoot = path.resolve(workspaceRoot, argument('segments') ?? 'data/segments-live');
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
-const selectedCount = recentCount(manifest.segments.length);
-const selectedIds = new Set(
-  manifest.segments.slice(manifest.segments.length - selectedCount).map((entry) => entry.segmentId),
-);
+const afterSegmentId = argument('after');
+const afterIndex =
+  afterSegmentId === undefined
+    ? -1
+    : manifest.segments.findIndex((entry) => entry.segmentId === afterSegmentId);
+if (afterSegmentId !== undefined && afterIndex === -1) {
+  throw new Error(`--after segment is absent from the manifest: ${afterSegmentId}`);
+}
+const selectedEntries =
+  afterIndex >= 0
+    ? manifest.segments.slice(afterIndex + 1)
+    : manifest.segments.slice(manifest.segments.length - recentCount(manifest.segments.length));
+const selectedIds = new Set(selectedEntries.map((entry) => entry.segmentId));
 const apply = process.argv.includes('--apply');
 const nextEntries: PlayoutManifest['segments'] = [];
 let changedSegmentCount = 0;
 let removedDurationMs = 0;
 let tightenedGapCount = 0;
+let tightenedLeadCount = 0;
 
 for (const entry of manifest.segments) {
   if (!selectedIds.has(entry.segmentId)) {
@@ -83,28 +57,20 @@ for (const entry of manifest.segments) {
   const segmentPath = path.join(segmentsRoot, entry.packagePath);
   const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
   const pacing = segment.pacing ?? 'conversational';
-  const targetGapMs = pacing === 'conversational' ? 420 : pacing === 'interrupted' ? 360 : null;
-  if (targetGapMs === null) {
+  const compacted = compactSpeechTimeline(segment.events, pacing);
+  if (compacted.removedDurationMs === 0) {
     nextEntries.push(entry);
     continue;
   }
-  const shifts = dialogueShifts(segment.events, targetGapMs);
-  if (shifts.length === 0) {
-    nextEntries.push(entry);
-    continue;
-  }
-  const totalReductionMs = shifts.reduce((total, shift) => total + shift.reductionMs, 0);
-  const nextDurationMs = segment.durationMs - totalReductionMs;
+  const nextDurationMs = segment.durationMs - compacted.removedDurationMs;
   const nextSegment = segmentPackageSchema.parse({
     ...segment,
     durationMs: nextDurationMs,
-    events: segment.events
-      .map((event) => ({ ...event, atMs: shiftedTime(event.atMs, shifts) }))
-      .sort((left, right) => left.atMs - right.atMs),
+    events: compacted.events,
     suggestedExit: {
       ...segment.suggestedExit,
-      earliestMs: Math.max(0, segment.suggestedExit.earliestMs - totalReductionMs),
-      preferredMs: Math.max(0, segment.suggestedExit.preferredMs - totalReductionMs),
+      earliestMs: Math.max(0, segment.suggestedExit.earliestMs - compacted.removedDurationMs),
+      preferredMs: Math.max(0, segment.suggestedExit.preferredMs - compacted.removedDurationMs),
     },
   });
   if (apply) {
@@ -113,8 +79,9 @@ for (const entry of manifest.segments) {
     await rename(nextPath, segmentPath);
   }
   changedSegmentCount += 1;
-  tightenedGapCount += shifts.length;
-  removedDurationMs += totalReductionMs;
+  tightenedGapCount += compacted.tightenedGapCount;
+  tightenedLeadCount += Number(compacted.leadReductionMs > 0);
+  removedDurationMs += compacted.removedDurationMs;
   nextEntries.push({ ...entry, durationMs: nextDurationMs });
 }
 
@@ -133,9 +100,10 @@ if (apply && changedSegmentCount > 0) {
 process.stdout.write(
   `${JSON.stringify({
     applied: apply,
-    selectedSegmentCount: selectedCount,
+    selectedSegmentCount: selectedEntries.length,
     changedSegmentCount,
     tightenedGapCount,
+    tightenedLeadCount,
     removedDurationMs,
     nextDurationMs: nextManifest.totalDurationMs,
   })}\n`,

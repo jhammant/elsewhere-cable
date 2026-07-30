@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {
@@ -8,6 +8,11 @@ import {
   type PlayoutManifest,
   type SegmentPackage,
 } from '../../packages/schemas/src/index.js';
+import {
+  diversifyRunway,
+  runwayDiversityMetrics,
+  type RunwayDescriptor,
+} from '../../apps/generation-worker/src/runway-diversity.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -52,14 +57,26 @@ if (playedIdsPath === undefined) {
   throw new Error('--played-ids must point to a newline-delimited segment ID file');
 }
 const afterSegmentId = argument('after');
+const freshIdsOutput = argument('fresh-ids-output');
 const apply = process.argv.includes('--apply');
 const deduplicate = process.argv.includes('--deduplicate');
-if (apply && (afterSegmentId === undefined || !/^seg_[a-z0-9_]+$/u.test(afterSegmentId))) {
-  throw new Error('--apply requires a valid --after segment ID');
+const diversify = process.argv.includes('--diversify');
+if (afterSegmentId !== undefined && !/^seg_[a-z0-9_]+$/u.test(afterSegmentId)) {
+  throw new Error('--after must be a valid segment ID');
+}
+if (apply && afterSegmentId === undefined) {
+  throw new Error('--apply requires --after');
 }
 
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
+const afterSegmentIndex =
+  afterSegmentId === undefined
+    ? -1
+    : manifest.segments.findIndex((entry) => entry.segmentId === afterSegmentId);
+if (afterSegmentId !== undefined && afterSegmentIndex === -1) {
+  throw new Error(`--after segment is absent from the manifest: ${afterSegmentId}`);
+}
 const manifestEntries = new Map(
   manifest.segments.map((entry) => [entry.segmentId, entry] as const),
 );
@@ -130,37 +147,115 @@ for (const entry of manifest.segments) {
 
 let reordered = false;
 let deduplicated = false;
+let diversified = false;
 let removedDuplicateCount = 0;
 let removedDuplicateDurationMs = 0;
+let diversityBefore: ReturnType<typeof runwayDiversityMetrics> | null = null;
+let diversityAfter: ReturnType<typeof runwayDiversityMetrics> | null = null;
 let nextManifest: PlayoutManifest = manifest;
 if (apply) {
-  const currentIndex = manifest.segments.findIndex((entry) => entry.segmentId === afterSegmentId);
-  if (currentIndex === -1) {
-    throw new Error(`--after segment is absent from the manifest: ${afterSegmentId}`);
-  }
+  const currentIndex = afterSegmentIndex;
   const currentEntry = manifest.segments[currentIndex]!;
   let nextSegments: PlayoutManifest['segments'];
   if (deduplicate) {
     const prefix = manifest.segments.slice(0, currentIndex + 1);
-    const future = manifest.segments.slice(currentIndex + 1);
-    const removed = future.filter((entry) => classifications.get(entry.segmentId) === 'repeat');
-    nextSegments = [
-      ...prefix,
-      ...future.filter((entry) => classifications.get(entry.segmentId) !== 'repeat'),
-    ];
+    const originalFuture = manifest.segments.slice(currentIndex + 1);
+    const removed = deduplicate
+      ? originalFuture.filter((entry) => classifications.get(entry.segmentId) === 'repeat')
+      : [];
+    let future = deduplicate
+      ? originalFuture.filter((entry) => classifications.get(entry.segmentId) !== 'repeat')
+      : originalFuture;
     removedDuplicateCount = removed.length;
     removedDuplicateDurationMs = removed.reduce((total, entry) => total + entry.durationMs, 0);
-    deduplicated = removed.length > 0;
+    deduplicated = deduplicate && removed.length > 0;
+    if (diversify && future.length > 1) {
+      const descriptors = await Promise.all(
+        future.map(async (entry) => {
+          const segment = await readSegment(entry.segmentId);
+          return {
+            entry,
+            segmentId: segment.segmentId,
+            channelId: segment.channel.id,
+            programmeId: segment.programme.id,
+            format: segment.programme.format,
+            visualMedium: segment.visualMedium ?? 'legacy',
+            pacing: segment.pacing ?? 'conversational',
+            storyMode: segment.storyMode ?? 'legacy',
+          };
+        }),
+      );
+      const currentSegment = await readSegment(currentEntry.segmentId);
+      const preceding: RunwayDescriptor = {
+        segmentId: currentSegment.segmentId,
+        channelId: currentSegment.channel.id,
+        programmeId: currentSegment.programme.id,
+        format: currentSegment.programme.format,
+        visualMedium: currentSegment.visualMedium ?? 'legacy',
+        pacing: currentSegment.pacing ?? 'conversational',
+        storyMode: currentSegment.storyMode ?? 'legacy',
+      };
+      diversityBefore = runwayDiversityMetrics(descriptors);
+      const diversifiedDescriptors = diversifyRunway(descriptors, preceding);
+      diversityAfter = runwayDiversityMetrics(diversifiedDescriptors);
+      future = diversifiedDescriptors.map(({ entry }) => entry);
+      diversified = future.some(
+        (entry, index) => entry.segmentId !== originalFuture[index]?.segmentId,
+      );
+    }
+    nextSegments = [...prefix, ...future];
   } else {
     const cyclicEntries = Array.from(
       { length: manifest.segments.length - 1 },
       (_, offset) => manifest.segments[(currentIndex + 1 + offset) % manifest.segments.length]!,
     );
-    const priorityEntries = [
-      ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'fresh'),
-      ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'repeat'),
-      ...cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'played'),
+    const priorityGroups = [
+      cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'fresh'),
+      cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'repeat'),
+      cyclicEntries.filter((entry) => classifications.get(entry.segmentId) === 'played'),
     ];
+    let priorityEntries = priorityGroups.flat();
+    if (diversify && priorityEntries.length > 1) {
+      const currentSegment = await readSegment(currentEntry.segmentId);
+      let preceding: RunwayDescriptor = {
+        segmentId: currentSegment.segmentId,
+        channelId: currentSegment.channel.id,
+        programmeId: currentSegment.programme.id,
+        format: currentSegment.programme.format,
+        visualMedium: currentSegment.visualMedium ?? 'legacy',
+        pacing: currentSegment.pacing ?? 'conversational',
+        storyMode: currentSegment.storyMode ?? 'legacy',
+      };
+      const originalDescriptors = [];
+      const diversifiedDescriptors = [];
+      for (const group of priorityGroups) {
+        const descriptors = await Promise.all(
+          group.map(async (entry) => {
+            const segment = await readSegment(entry.segmentId);
+            return {
+              entry,
+              segmentId: segment.segmentId,
+              channelId: segment.channel.id,
+              programmeId: segment.programme.id,
+              format: segment.programme.format,
+              visualMedium: segment.visualMedium ?? 'legacy',
+              pacing: segment.pacing ?? 'conversational',
+              storyMode: segment.storyMode ?? 'legacy',
+            };
+          }),
+        );
+        originalDescriptors.push(...descriptors);
+        const diversifiedGroup = diversifyRunway(descriptors, preceding);
+        diversifiedDescriptors.push(...diversifiedGroup);
+        preceding = diversifiedGroup.at(-1) ?? preceding;
+      }
+      diversityBefore = runwayDiversityMetrics(originalDescriptors);
+      diversityAfter = runwayDiversityMetrics(diversifiedDescriptors);
+      priorityEntries = diversifiedDescriptors.map(({ entry }) => entry);
+      diversified = priorityEntries.some(
+        (entry, index) => entry.segmentId !== cyclicEntries[index]?.segmentId,
+      );
+    }
     nextSegments = [...manifest.segments];
     nextSegments[currentIndex] = currentEntry;
     for (const [offset, entry] of priorityEntries.entries()) {
@@ -198,6 +293,27 @@ const nextContent = Array.from(
   },
 );
 
+let writtenFreshIds = 0;
+if (freshIdsOutput !== undefined) {
+  const orderedEntries =
+    afterSegmentId === undefined
+      ? nextManifest.segments
+      : Array.from(
+          { length: nextManifest.segments.length - 1 },
+          (_, offset) =>
+            nextManifest.segments[(afterSegmentIndex + 1 + offset) % nextManifest.segments.length]!,
+        );
+  const freshIds = orderedEntries
+    .filter((entry) => classifications.get(entry.segmentId) === 'fresh')
+    .map((entry) => entry.segmentId);
+  const outputPath = path.resolve(workspaceRoot, freshIdsOutput);
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  const nextPath = `${outputPath}.${process.pid}.next`;
+  await writeFile(nextPath, `${freshIds.join('\n')}\n`, 'utf8');
+  await rename(nextPath, outputPath);
+  writtenFreshIds = freshIds.length;
+}
+
 process.stdout.write(
   `${JSON.stringify(
     {
@@ -222,8 +338,12 @@ process.stdout.write(
       },
       reordered,
       deduplicated,
+      diversified,
       removedDuplicateCount,
       removedDuplicateDurationMs,
+      diversityBefore,
+      diversityAfter,
+      writtenFreshIds,
       afterSegmentId: afterSegmentId ?? null,
       nextContent,
     },

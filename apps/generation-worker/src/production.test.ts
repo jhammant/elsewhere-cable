@@ -195,6 +195,28 @@ describe('produceBatch', () => {
     expect(() => assertPreviewSafe(erasureDraft)).toThrow('safety check rejected');
   });
 
+  it('rejects memory or personality deletion presented as a consumer benefit', () => {
+    const draft = demoDraft(0);
+    draft.premise =
+      'At a software advert desk, a salesperson sells an update that deletes your personality and wipes all core memories.';
+
+    expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
+  it('rejects animal attacks as a shortcut for surreal stakes', () => {
+    const draft = demoDraft(0);
+    draft.dialogue[0]!.text = 'The sharks eat whoever stands in their tank.';
+
+    expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
+  it('rejects deliberate reputation damage as a comic objective', () => {
+    const draft = demoDraft(0);
+    draft.dialogue[0]!.text = 'I received an order to ruin your reputation.';
+
+    expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
   it('does not mistake a committee chair for an object with agency', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),

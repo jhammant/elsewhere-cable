@@ -7,6 +7,7 @@ import {
   type PlayoutManifest,
   type SegmentPackage,
 } from '../../packages/schemas/src/index.js';
+import { recoveryTimingTargets } from '../../apps/generation-worker/src/timeline-recovery.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -30,20 +31,42 @@ const segmentsRoot = path.resolve(workspaceRoot, argument('segments') ?? 'data/s
 const apply = process.argv.includes('--apply');
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
-const tailDurationMs: Record<NonNullable<SegmentPackage['pacing']>, number> = {
-  frantic: 1_120,
-  staccato: 1_320,
-  conversational: 1_220,
-  slow_burn: 2_720,
-  interrupted: 1_120,
-  near_silent: 4_020,
-};
+const afterSegmentId = argument('after');
+const recentValue = argument('recent');
+if (afterSegmentId !== undefined && recentValue !== undefined) {
+  throw new Error('--after and --recent are mutually exclusive');
+}
+const recent = recentValue === undefined ? null : Number.parseInt(recentValue, 10);
+if (recent !== null && (!Number.isInteger(recent) || recent < 1)) {
+  throw new Error('--recent must be a positive integer');
+}
+const afterIndex =
+  afterSegmentId === undefined
+    ? -1
+    : manifest.segments.findIndex((entry) => entry.segmentId === afterSegmentId);
+if (afterSegmentId !== undefined && afterIndex === -1) {
+  throw new Error(`--after segment is absent from the manifest: ${afterSegmentId}`);
+}
+const selectedIds =
+  recent !== null
+    ? new Set(
+        manifest.segments
+          .slice(Math.max(0, manifest.segments.length - recent))
+          .map((entry) => entry.segmentId),
+      )
+    : afterIndex < 0
+      ? null
+      : new Set(manifest.segments.slice(afterIndex + 1).map((entry) => entry.segmentId));
 
 let changedSegmentCount = 0;
 let removedDurationMs = 0;
 const nextEntries: PlayoutManifest['segments'] = [];
 
 for (const entry of manifest.segments) {
+  if (selectedIds !== null && !selectedIds.has(entry.segmentId)) {
+    nextEntries.push(entry);
+    continue;
+  }
   const segmentPath = path.join(segmentsRoot, entry.packagePath);
   const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
   const speechEvents = segment.events.filter((event) => event.type === 'speech.play');
@@ -56,7 +79,7 @@ for (const entry of manifest.segments) {
     continue;
   }
   const pacing = segment.pacing ?? 'conversational';
-  const desiredDurationMs = Math.max(8_000, lastSpeechEndMs + tailDurationMs[pacing]);
+  const desiredDurationMs = Math.max(8_000, lastSpeechEndMs + recoveryTimingTargets[pacing].tailMs);
   const nextDurationMs = Math.min(segment.durationMs, desiredDurationMs);
   if (nextDurationMs >= segment.durationMs) {
     nextEntries.push(entry);

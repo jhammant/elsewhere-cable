@@ -127,23 +127,23 @@ describe('OpenAiCompatibleTtsProvider', () => {
   });
 
   it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
-    expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(7_000);
+    expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(5_000);
     expect(
       maximumPlausibleSpeechDurationMs(
         'The municipal staircase has requested a private meeting after lunch.',
       ),
-    ).toBe(10_500);
+    ).toBe(7_500);
     expect(
       maximumPlausibleSpeechDurationMs(
         'This intentionally long continuity announcement contains enough words to reach the hard broadcast ceiling without ever allowing an unbounded speech file onto the channel.',
       ),
-    ).toBe(18_000);
+    ).toBe(15_000);
   });
 
   it('tempo-corrects a near miss but rejects severely rambling speech', () => {
     const text = 'One two three four five six seven eight';
-    expect(maximumPlausibleSpeechDurationMs(text)).toBe(8_900);
-    expect(speechTempoCorrection(text, 9_280)).toBeCloseTo(1.092, 3);
+    expect(maximumPlausibleSpeechDurationMs(text)).toBe(6_300);
+    expect(speechTempoCorrection(text, 6_680)).toBeCloseTo(1.132, 3);
     expect(speechTempoCorrection(text, 20_000)).toBeNull();
   });
 

@@ -27,6 +27,27 @@ if (!Number.isInteger(count) || count < 1 || count > 100) {
 }
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
+const sourceIdsPath = argument('source-ids-file');
+const sourceIdsValue = argument('source-ids');
+if (sourceIdsPath !== undefined && sourceIdsValue !== undefined) {
+  throw new Error('--source-ids and --source-ids-file are mutually exclusive');
+}
+const requestedSourceIds =
+  sourceIdsPath !== undefined
+    ? new Set(
+        (await readFile(path.resolve(workspaceRoot, sourceIdsPath), 'utf8'))
+          .split(/\r?\n/u)
+          .map((value) => value.trim())
+          .filter((value) => /^seg_[a-z0-9_]+$/u.test(value)),
+      )
+    : sourceIdsValue !== undefined
+      ? new Set(
+          sourceIdsValue
+            .split(',')
+            .map((value) => value.trim())
+            .filter((value) => /^seg_[a-z0-9_]+$/u.test(value)),
+        )
+      : null;
 
 const candidates: Array<{
   entry: PlayoutManifest['segments'][number];
@@ -64,7 +85,16 @@ for (const entry of manifest.segments) {
 const demoCandidates = candidates.filter(
   ({ segment }) => segment.production.generator === 'demo-library',
 );
-const candidateSourcePool = demoCandidates.length >= count ? demoCandidates : candidates;
+const requestedCandidates =
+  requestedSourceIds === null
+    ? []
+    : candidates.filter(({ entry }) => requestedSourceIds.has(entry.segmentId));
+const candidateSourcePool =
+  requestedSourceIds !== null
+    ? requestedCandidates
+    : demoCandidates.length >= count
+      ? demoCandidates
+      : candidates;
 if (candidateSourcePool.length === 0) {
   throw new Error('No approved package is available for emergency refill');
 }
@@ -156,7 +186,12 @@ process.stdout.write(
       recoverySegments: recoveryEntries.length,
       recoveryDurationMs: recoveryEntries.reduce((total, entry) => total + entry.durationMs, 0),
       distinctSources: sourcePool.length,
-      source: demoCandidates.length >= count ? 'demo-library' : 'approved-catalogue',
+      source:
+        requestedSourceIds !== null
+          ? 'requested-approved-catalogue'
+          : demoCandidates.length >= count
+            ? 'demo-library'
+            : 'approved-catalogue',
       totalSegments: nextManifest.segments.length,
     },
     null,

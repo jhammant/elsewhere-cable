@@ -26,6 +26,19 @@ const segmentsRoot = path.resolve(
 );
 const apply = process.argv.includes('--apply');
 const recentValue = argument('recent');
+const segmentIdsValue = argument('segment-ids');
+const requestedSegmentIds =
+  segmentIdsValue === undefined
+    ? null
+    : new Set(
+        segmentIdsValue
+          .split(',')
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+      );
+if (requestedSegmentIds !== null && requestedSegmentIds.size === 0) {
+  throw new Error('--segment-ids must contain at least one segment ID');
+}
 const recent =
   recentValue === undefined ? Number.POSITIVE_INFINITY : Number.parseInt(recentValue, 10);
 if (!(recent > 0)) {
@@ -33,9 +46,51 @@ if (!(recent > 0)) {
 }
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const manifest = playoutManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
+const afterSegmentId = argument('after');
+const countValue = argument('count');
+if (
+  requestedSegmentIds !== null &&
+  (afterSegmentId !== undefined || countValue !== undefined || recentValue !== undefined)
+) {
+  throw new Error('--segment-ids is mutually exclusive with --after, --count and --recent');
+}
+const requestedCount =
+  countValue === undefined ? manifest.segments.length - 1 : Number.parseInt(countValue, 10);
+if (!Number.isInteger(requestedCount) || requestedCount < 1) {
+  throw new Error('--count must be a positive integer');
+}
+const afterIndex =
+  afterSegmentId === undefined
+    ? -1
+    : manifest.segments.findIndex((entry) => entry.segmentId === afterSegmentId);
+if (afterSegmentId !== undefined && afterIndex === -1) {
+  throw new Error(`--after segment is absent from the manifest: ${afterSegmentId}`);
+}
+if (requestedSegmentIds !== null) {
+  const manifestIds = new Set(manifest.segments.map((entry) => entry.segmentId));
+  const absentIds = [...requestedSegmentIds].filter((segmentId) => !manifestIds.has(segmentId));
+  if (absentIds.length > 0) {
+    throw new Error(`--segment-ids contains IDs absent from the manifest: ${absentIds.join(', ')}`);
+  }
+}
+const auditedIds =
+  requestedSegmentIds !== null
+    ? requestedSegmentIds
+    : afterIndex < 0
+      ? new Set(
+          manifest.segments
+            .slice(Math.max(0, manifest.segments.length - recent))
+            .map((entry) => entry.segmentId),
+        )
+      : new Set(
+          Array.from(
+            { length: Math.min(requestedCount, manifest.segments.length - 1) },
+            (_, offset) =>
+              manifest.segments[(afterIndex + 1 + offset) % manifest.segments.length]!.segmentId,
+          ),
+        );
 const accepted: PlayoutManifest['segments'] = [];
 const rejected: Array<{ segmentId: string; reasons: string[] }> = [];
-const firstAuditedIndex = Math.max(0, manifest.segments.length - recent);
 const audioQualityCache = new Map<string, Promise<string | null>>();
 
 async function cachedAudioQualityIssue(audioPath: string): Promise<string | null> {
@@ -51,8 +106,8 @@ async function cachedAudioQualityIssue(audioPath: string): Promise<string | null
   return inspection;
 }
 
-for (const [entryIndex, entry] of manifest.segments.entries()) {
-  if (entryIndex < firstAuditedIndex) {
+for (const entry of manifest.segments) {
+  if (!auditedIds.has(entry.segmentId)) {
     accepted.push(entry);
     continue;
   }
@@ -127,7 +182,7 @@ process.stdout.write(
       acceptedSegmentCount: accepted.length,
       rejectedSegmentCount: rejected.length,
       acceptedDurationMs: cleanedManifest.totalDurationMs,
-      auditedSegmentCount: manifest.segments.length - firstAuditedIndex,
+      auditedSegmentCount: auditedIds.size,
       rejected,
       segmentsRoot,
     },

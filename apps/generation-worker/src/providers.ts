@@ -168,7 +168,7 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
     social_protocol:
       'wants a concrete social privilege, but an opposing role refuses because one impossible etiquette rule controls permission',
     service_mismatch:
-      'wants an ordinary emotional result, but a service worker delivers the exact promised service in a socially obstructive way',
+      'wants an ordinary emotional result, but the exact promised service exposes the different harmless outcome they actually wanted',
     status_transfer:
       'wants to keep a minor privilege, but an opposing role gains authority through one specific visible social criterion',
     format_literalism:
@@ -539,7 +539,7 @@ export function speechAudioQualityIssue(quality: SpeechAudioQuality): string | n
 
 export function maximumPlausibleSpeechDurationMs(text: string): number {
   const wordCount = text.trim().split(/\s+/u).filter(Boolean).length;
-  return Math.min(18_000, Math.max(7_000, wordCount * 800 + 2_500));
+  return Math.min(15_000, Math.max(5_000, wordCount * 600 + 1_500));
 }
 
 export function speechTempoCorrection(text: string, durationMs: number): number | null {

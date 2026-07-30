@@ -116,7 +116,11 @@ while :; do
     continue
   fi
 
-  pnpm exec tsx infra/scripts/audit-reservoir.ts \
+  pnpm exec tsx infra/scripts/tighten-dialogue-gaps.ts \
+    --segments "$output_root" \
+    --recent "$batch_count" \
+    --apply
+  pnpm exec tsx infra/scripts/tighten-segment-tails.ts \
     --segments "$output_root" \
     --recent "$batch_count" \
     --apply
@@ -126,7 +130,7 @@ while :; do
       --count "$recovery_refill_count"
   fi
 
-  ELSEWHERE_LOCAL_SEGMENTS_DIR="$output_root" pnpm endor:sync
+  ELSEWHERE_LIVE_SEGMENTS_DIR="$output_root" pnpm endor:publish:once
 
   if [ "$mode" = "once" ]; then
     exit 0

@@ -15,6 +15,7 @@ data/cache/
 data/generated/
 data/logs/
 data/optimisation/
+data/runtime/
 data/script-reservoir/
 data/segments/*
 !data/segments/.gitkeep

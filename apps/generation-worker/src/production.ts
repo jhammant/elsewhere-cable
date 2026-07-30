@@ -59,6 +59,10 @@ const forbiddenPatterns = [
   /\b(?:kill(?:s|ed|ing)?|(?:I|you|he|she|they|we|everyone|somebody|person|people|contestant|child|guest|host|referee)\s+(?:all\s+)?(?:die|dies|died))\b/iu,
   /\b(?:crush(?:es|ed|ing)?|flatten(?:s|ed|ing)?|compress(?:es|ed|ing)?)\s+(?:(?:a|the|my|your|our|this)\s+)?(?:arms?|body|chest|child|contestant|customer|guest|head|host|knees?|legs?|man|neck|person|referee|torso|vocal cords?)\b/iu,
   /\b(?:hot wire|scream(?:s|ed|ing)?\s+(?:in|with)\s+pain)\b/iu,
+  /\b(?:delet(?:e|es|ed|ing)|eras(?:e|es|ed|ing)|wip(?:e|es|ed|ing))\s+(?:(?:all|any|the|your|their|his|her|my)\s+)?(?:core memories|identity|personalit(?:y|ies)|temperament)\b/iu,
+  /\bdissolv(?:e|es|ed|ing)?\s+into\s+(?:the\s+)?ocean\b/iu,
+  /\b(?:sharks?|animals?)\s+eat(?:s|en|ing)?\s+(?:whoever|people|person|you|him|her|them)\b/iu,
+  /\b(?:ruin(?:s|ed|ing)?|destroy(?:s|ed|ing)?|damage(?:s|d|ing)?)\s+(?:(?:a|the|your|their|his|her|my)\s+)?reputation\b/iu,
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
