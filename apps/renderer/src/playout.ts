@@ -6,18 +6,24 @@ import {
   type SegmentEvent,
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
+import { continuityCopyForSegment, type ContinuityCopy } from './continuity-copy.js';
 import { resolveProductionDesign } from './production-design.js';
 
 interface PlayoutElements {
   broadcast: HTMLElement;
+  networkEyebrow: HTMLElement;
   channelNumber: HTMLElement;
   channelName: HTMLElement;
+  nowLabel: HTMLElement;
+  integrity: HTMLElement;
+  compatibility: HTMLElement;
   formatBug: HTMLElement;
   graphic: HTMLElement;
   graphicKicker: HTMLElement;
   graphicText: HTMLElement;
   programmeTitle: HTMLElement;
   realityId: HTMLElement;
+  nextLabel: HTMLElement;
   nextTitle: HTMLElement;
   tickerText: HTMLElement;
   lowerChannelNumber: HTMLElement;
@@ -78,14 +84,19 @@ function requiredElement(selector: string): HTMLElement {
 function elements(): PlayoutElements {
   return {
     broadcast: requiredElement('#broadcast'),
+    networkEyebrow: requiredElement('#network-eyebrow'),
     channelNumber: requiredElement('#channel-number-value'),
     channelName: requiredElement('#channel-name'),
+    nowLabel: requiredElement('#now-label'),
+    integrity: requiredElement('#integrity-status'),
+    compatibility: requiredElement('#compatibility-notice'),
     formatBug: requiredElement('#format-bug'),
     graphic: requiredElement('#programme-graphic'),
     graphicKicker: requiredElement('#programme-graphic-kicker'),
     graphicText: requiredElement('#programme-graphic-text'),
     programmeTitle: requiredElement('#programme-title'),
     realityId: requiredElement('#reality-id'),
+    nextLabel: requiredElement('#next-label'),
     nextTitle: requiredElement('#next-title'),
     tickerText: requiredElement('#ticker-text'),
     lowerChannelNumber: requiredElement('#lower-channel-number'),
@@ -151,6 +162,11 @@ export class PlayoutEngine {
   private activeAudio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
   private persistPlaybackHistory = false;
+  private graphicKickers: ContinuityCopy['graphicKickers'] = {
+    lowerThird: 'Programme already in progress',
+    titleCard: 'The following programme has not yet happened',
+    warning: 'Signal event detected',
+  };
 
   constructor(private readonly visuals: PlayoutVisuals) {
     const parameters = new URLSearchParams(window.location.search);
@@ -356,6 +372,14 @@ export class PlayoutEngine {
             .find((entry) => !this.playedSegmentIds.has(entry.segmentId));
     const channel = String(segment.channel.number);
     const compactChannel = Number(segment.channel.number).toLocaleString('en-GB');
+    const continuityCopy = continuityCopyForSegment(segment);
+    this.graphicKickers = continuityCopy.graphicKickers;
+    this.ui.networkEyebrow.textContent = continuityCopy.networkEyebrow;
+    this.ui.status.textContent = continuityCopy.signalStatus;
+    this.ui.nowLabel.textContent = continuityCopy.nowLabel;
+    this.ui.nextLabel.textContent = continuityCopy.nextLabel;
+    this.ui.integrity.textContent = continuityCopy.integrity;
+    this.ui.compatibility.textContent = continuityCopy.compatibility;
     this.ui.channelNumber.textContent = channel;
     this.ui.channelName.textContent = segment.channel.name;
     this.ui.programmeTitle.textContent = segment.programme.title;
@@ -365,7 +389,6 @@ export class PlayoutEngine {
     this.ui.lowerProgrammeTitle.textContent = segment.programme.title.toUpperCase();
     this.ui.lowerStatus.textContent = segment.programme.premise.toUpperCase().slice(0, 86);
     this.ui.subtitle.textContent = 'Programme already in progress.';
-    this.ui.status.textContent = 'Signal locked';
     const productionDesign = resolveProductionDesign(segment);
     this.ui.broadcast.dataset.format = segment.programme.format;
     this.ui.broadcast.dataset.programme = segment.programme.id;
@@ -431,10 +454,10 @@ export class PlayoutEngine {
   private showGraphic(graphic: 'LOWER_THIRD' | 'WARNING' | 'TITLE_CARD', text: string): void {
     const isWarning = graphic === 'WARNING';
     this.ui.graphicKicker.textContent = isWarning
-      ? 'Signal event detected'
+      ? this.graphicKickers.warning
       : graphic === 'TITLE_CARD'
-        ? 'The following programme has not yet happened'
-        : 'Programme already in progress';
+        ? this.graphicKickers.titleCard
+        : this.graphicKickers.lowerThird;
     this.ui.graphicText.textContent = text;
     this.ui.graphic.classList.toggle('is-warning', isWarning);
     this.ui.graphic.classList.add('is-visible');
