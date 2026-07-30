@@ -727,6 +727,58 @@ describe('produceBatch', () => {
     ).toHaveLength(2);
   });
 
+  it('abandons a repeatedly rejected script after four rewrites so the next batch can vary the premise', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-script-retry-limit-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    const draft = demoDraft(0);
+    let scriptCalls = 0;
+    const llm: LlmProvider = {
+      id: 'critic-rejection-test-llm',
+      model: 'test-model',
+      generateProposal() {
+        return Promise.resolve(universallyAlignedProposal(draft));
+      },
+      generateStructured(request) {
+        scriptCalls += 1;
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        return Promise.resolve({
+          ...draft,
+          dialogue: architectureAlignedDialogue(draft, proposal),
+        });
+      },
+      critiqueDraft() {
+        return Promise.resolve({
+          accepted: false,
+          coherence: 5,
+          comedyEscalation: 5,
+          dialogueNaturalness: 5,
+          endingEarned: 5,
+          issues: ['The approved premise is not producing a coherent playable scene.'],
+        });
+      },
+    };
+
+    await expect(
+      produceBatch({
+        count: 1,
+        concurrency: 1,
+        outputRoot,
+        demo: false,
+        llm,
+        tts: null,
+        embeddingProvider: null,
+        scriptQueueRoot,
+        prepareScriptsOnly: true,
+      }),
+    ).rejects.toThrow('Could not script approved premise after 4 attempts');
+    expect(scriptCalls).toBe(4);
+  });
+
   it('commits completed novel segments when another batch slot is exhausted', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-partial-batch-'));
     temporaryDirectories.push(outputRoot);

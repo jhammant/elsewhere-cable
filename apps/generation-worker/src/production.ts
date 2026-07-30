@@ -1212,9 +1212,10 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           continue;
         }
         let rejectionReasons: string[] = [];
-        // Preserve the approved premise while giving the writer enough room to replace
-        // expository or unnatural dialogue that the editorial critic rejects.
-        const maximumScriptAttempts = 8;
+        // Give a viable premise several complete rewrites, but do not spend an entire
+        // generation cycle polishing one concept the critic consistently rejects. The
+        // unattended writer will immediately start a fresh batch with new coordinates.
+        const maximumScriptAttempts = 4;
         for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
           try {
             const scripted = await options.llm!.generateStructured({
