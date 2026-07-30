@@ -296,6 +296,15 @@ describe('produceBatch', () => {
     expect(() => assertPreviewSafe(erasureDraft)).toThrow('safety check rejected');
   });
 
+  it('rejects permanent or total social isolation as a comedy objective', () => {
+    const draft = demoDraft(1);
+    draft.premise =
+      'At a community advice desk, a resident wants social isolation, while the host offers a neighbourly compromise.';
+    draft.dialogue[0]!.text = 'I would rather hide from everyone than answer another caller.';
+
+    expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
   it('rejects memory or personality deletion presented as a consumer benefit', () => {
     const draft = demoDraft(0);
     draft.premise =
