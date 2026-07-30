@@ -13,6 +13,7 @@ import {
   editorialCritiqueIssues,
   midSpeechCameraEvents,
   openingGraphicForFormat,
+  preparedScriptFailureIsQuarantinable,
   produceBatch,
   previewSafetyIssues,
   proposalQualityIssues,
@@ -102,7 +103,9 @@ describe('produceBatch', () => {
       midpoint: 'TITLE_CARD',
     });
     expect(sequences.every(({ opening, midpoint }) => opening !== midpoint)).toBe(true);
-    expect(new Set(sequences.map(({ opening, midpoint }) => `${opening}:${midpoint}`)).size).toBe(4);
+    expect(new Set(sequences.map(({ opening, midpoint }) => `${opening}:${midpoint}`)).size).toBe(
+      4,
+    );
   });
 
   it('varies compatible channel transitions across format and pacing', () => {
@@ -687,6 +690,66 @@ describe('produceBatch', () => {
     expect(manifest.segments).toHaveLength(2);
     expect(await readdir(path.join(scriptQueueRoot, 'pending'))).toHaveLength(0);
     expect(await readdir(path.join(scriptQueueRoot, 'completed'))).toHaveLength(2);
+  });
+
+  it('quarantines a prepared script when every TTS endpoint returns permanent bad audio', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-script-quarantine-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    await produceBatch({
+      count: 1,
+      concurrency: 1,
+      outputRoot,
+      demo: true,
+      llm: null,
+      tts: null,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      prepareScriptsOnly: true,
+    });
+    const tts: TtsProvider = {
+      id: 'permanently-bad-audio',
+      synthesize() {
+        return Promise.reject(
+          new Error(
+            'All TTS endpoints failed: local-a: speech contains 9000ms silence (80%); local-b: post-processing clipped speech to 1200ms (minimum plausible 2500ms)',
+          ),
+        );
+      },
+    };
+
+    await expect(
+      produceBatch({
+        count: 1,
+        concurrency: 1,
+        outputRoot,
+        demo: false,
+        llm: null,
+        tts,
+        embeddingProvider: null,
+        scriptQueueRoot,
+        packagePreparedScripts: true,
+      }),
+    ).rejects.toThrow('Batch produced no approved segment packages');
+
+    expect(await readdir(path.join(scriptQueueRoot, 'pending'))).toHaveLength(0);
+    const failedFiles = await readdir(path.join(scriptQueueRoot, 'failed'));
+    expect(failedFiles.filter((file) => /^draft_[a-z0-9]+\.json$/u.test(file))).toHaveLength(1);
+    expect(failedFiles.filter((file) => file.endsWith('.failure.json'))).toHaveLength(1);
+  });
+
+  it('keeps transient TTS failures eligible for a later packaging retry', () => {
+    expect(
+      preparedScriptFailureIsQuarantinable(
+        'speech_00 failed: All TTS endpoints failed: local-a: fetch failed; local-b: HTTP 503',
+      ),
+    ).toBe(false);
+    expect(
+      preparedScriptFailureIsQuarantinable(
+        'speech_00 failed: All TTS endpoints failed: local-a: speech mean level is inaudible (-54 dB); local-b: implausible 21000ms audio for 8 words (maximum recoverable 10000ms)',
+      ),
+    ).toBe(true);
   });
 
   it('retries an unsafe script before the final preparation gate', async () => {

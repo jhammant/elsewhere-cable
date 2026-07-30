@@ -726,6 +726,54 @@ async function archivePreparedScript(
   await rename(queued.filePath, path.join(completedRoot, path.basename(queued.filePath)));
 }
 
+export function preparedScriptFailureIsQuarantinable(reason: string): boolean {
+  const marker = 'All TTS endpoints failed: ';
+  const failureList = reason.slice(reason.indexOf(marker) + marker.length);
+  if (!reason.includes(marker) || failureList.length === 0) {
+    return false;
+  }
+  const permanentAudioFailure =
+    /(?:clipped \d+ms audio|implausible \d+ms audio|speech (?:peak|mean level) is inaudible|speech contains \d+ms silence|post-processing (?:clipped speech|speech (?:peak|mean level) is inaudible|speech contains \d+ms silence))/iu;
+  const endpointFailures = failureList.split('; ').filter(Boolean);
+  return (
+    endpointFailures.length > 0 &&
+    endpointFailures.every((failure) => permanentAudioFailure.test(failure))
+  );
+}
+
+async function quarantinePreparedScript(
+  queueRoot: string,
+  queued: QueuedPreparedScript,
+  reason: string,
+): Promise<void> {
+  const failedRoot = path.join(queueRoot, 'failed');
+  await mkdir(failedRoot, { recursive: true });
+  const failedDraftPath = path.join(failedRoot, path.basename(queued.filePath));
+  await rename(queued.filePath, failedDraftPath);
+  const reportPath = path.join(failedRoot, `${queued.script.draftId}.failure.json`);
+  const nextReportPath = `${reportPath}.${process.pid}.next`;
+  try {
+    await writeFile(
+      nextReportPath,
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          draftId: queued.script.draftId,
+          failedAt: new Date().toISOString(),
+          stage: 'tts-packaging',
+          reason: reason.slice(0, 4_000),
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+    await rename(nextReportPath, reportPath);
+  } finally {
+    await rm(nextReportPath, { force: true });
+  }
+}
+
 interface ProduceOptions {
   count: number;
   concurrency: number;
@@ -1425,6 +1473,21 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       productionWorker(),
     ),
   );
+
+  if (options.packagePreparedScripts === true) {
+    for (const [index, segment] of produced.entries()) {
+      const queued = queuedPreparedScripts[index];
+      const failure = failures[index];
+      if (
+        segment === undefined &&
+        queued !== undefined &&
+        failure !== undefined &&
+        preparedScriptFailureIsQuarantinable(failure)
+      ) {
+        await quarantinePreparedScript(options.scriptQueueRoot!, queued, failure);
+      }
+    }
+  }
 
   const completedSegments = produced.filter(
     (segment): segment is SegmentPackage => segment !== undefined,
