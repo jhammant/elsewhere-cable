@@ -45,6 +45,10 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Scope ceiling:');
       expect(prompt).toContain('Comedy mechanism family:');
       expect(prompt).toContain('Mechanism variant:');
+      expect(prompt).toContain('Mechanism ownership:');
+      expect(prompt).toContain('Relationship pressure:');
+      expect(prompt).toContain('Tactic progression:');
+      expect(prompt).toContain('Payoff shape:');
       expect(prompt).toContain('Cast scope:');
       expect(prompt).toContain('Graphic package:');
       expect(prompt).toContain('Visual medium:');
@@ -72,6 +76,8 @@ describe('generation prompts', () => {
       "The title's distinctive subject noun appears literally in the premise",
     );
     expect(proposalSystemPrompt).toContain('endingBeat pays off only');
+    expect(proposalSystemPrompt).toContain('The premise contains only one causal rule');
+    expect(proposalSystemPrompt).toContain('ending preserves mechanism ownership exactly');
   });
 
   it('draws locations and recognisable television situations from broad production pools', () => {
@@ -109,6 +115,29 @@ describe('generation prompts', () => {
     expect(new Set(combinations).size).toBeGreaterThan(1_000);
     expect(prompts[0]).toContain('Preserve the two incompatible wants');
     expect(prompts[0]).toContain('Treat the ordinary visual anchor as the concrete subject');
+  });
+
+  it('crosses relationship, tactic and payoff axes without inventing more mechanisms', () => {
+    const prompts = Array.from({ length: 1_200 }, (_, serial) => userPrompt(serial, []));
+    const relationships = prompts.map(
+      (prompt) => prompt.match(/Relationship pressure: (.+)\. Apply this/u)?.[1] ?? '',
+    );
+    const tactics = prompts.map(
+      (prompt) => prompt.match(/Tactic progression: (.+)\. These are/u)?.[1] ?? '',
+    );
+    const payoffs = prompts.map(
+      (prompt) => prompt.match(/Payoff shape: (.+)\. Earn this/u)?.[1] ?? '',
+    );
+    const combinations = prompts.map(
+      (_prompt, index) => `${relationships[index]}|${tactics[index]}|${payoffs[index]}`,
+    );
+
+    expect(new Set(relationships).size).toBeGreaterThanOrEqual(20);
+    expect(new Set(tactics).size).toBeGreaterThanOrEqual(20);
+    expect(new Set(payoffs).size).toBeGreaterThanOrEqual(20);
+    expect(new Set(combinations).size).toBeGreaterThan(1_000);
+    expect(prompts[0]).toContain('changes of conversational strategy, never extra rules');
+    expect(prompts[0]).toContain('The payoff shape is a social consequence of the same conflict');
   });
 
   it('draws visual-physics scenes from a broad trigger pool', () => {

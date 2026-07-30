@@ -261,7 +261,9 @@ Before returning JSON, enforce these proposal gates:
 2. The title's distinctive subject noun appears literally in the premise.
 3. Unless storyMode is visual_physics, neither the premise nor endingBeat physically transforms, swaps, freezes, grows, shrinks, detaches or replaces a body or set.
 4. endingBeat pays off only the premise's single established mechanism and introduces no new participant, object, power or rule.
-5. For semantic_contract, name the actual words and their exact harmless obligation. Never substitute "one spoken phrase", "a specific phrase" or "an incompatible obligation".`;
+5. For semantic_contract, name the actual words and their exact harmless obligation. Never substitute "one spoken phrase", "a specific phrase" or "an incompatible obligation".
+6. The premise contains only one causal rule. Handling the ordinary anchor may be a character goal, but it cannot independently confer credit, authority, ownership or another automatic consequence.
+7. The ending preserves mechanism ownership exactly. If the premise binds a phrase's speaker, an object's user or a named role, the ending may affect only that same participant unless the assigned mechanism explicitly transfers it.`;
 
 const settings = [
   'a laundrette during its final ten minutes before closing',
@@ -388,6 +390,87 @@ const storyEngines = [
   'a quiet existential situation played as a concrete disagreement over seating',
   'a civic hearing where the public already lives with the rule the officials are debating',
   'a travelogue encounter where visitor and guide compete to appear less impressed',
+] as const;
+
+const relationshipPressures = [
+  'both roles want the same practical result for incompatible private reasons',
+  'the formally senior role depends on the other role’s uncredited practical expertise',
+  'one role needs a small favour later and therefore cannot afford a clean victory now',
+  'each role believes they already performed the less desirable half of an earlier shared task',
+  'one role promised to be helpful, while the other needs that promise interpreted narrowly',
+  'both roles need the scene to end, but disagree about the one concrete act that counts as finished',
+  'one role is protecting an ordinary preference that the other needs stated plainly',
+  'each role treats the central object as evidence of a different small kindness',
+  'one role can succeed only by making the other role look practically competent',
+  'the role with less status is also the only person who remembers why the routine began',
+  'both roles are trying to spare the same absent person one minor inconvenience in opposite ways',
+  'one role wants public credit, while the other wants the useful task completed without ceremony',
+  'each role needs the other to make the first sincere concession',
+  'one role mistakes politeness for agreement, while the other is relying on that misunderstanding',
+  'both roles want to preserve a harmless tradition but disagree about which detail makes it worth preserving',
+  'one role wants the ordinary object gone, while the other needs its final useful job acknowledged first',
+  'the confident role has prepared for the wrong version of the other role’s request',
+  'one role is trying to repay an old favour that the other does not consider a debt',
+  'both roles need to appear flexible while privately depending on one exact outcome',
+  'one role wants a quick decision, while the other needs enough delay to complete a dull responsibility',
+  'the person offering help needs it accepted, while the recipient needs the offer made less generously',
+  'each role is concealing a different mundane reason for preferring the same option',
+  'one role needs to correct the record without taking away the other role’s small achievement',
+  'the least invested role becomes responsible for protecting both participants’ preferences',
+] as const;
+
+const tacticProgressions = [
+  'minimise the problem, produce one concrete example, barter a dull task, then accept a narrower outcome',
+  'claim no preference, reveal one practical dependency, trade custody of the object, then make a choice',
+  'deflect with politeness, ask one exact question, admit a partial motive, then request a concession',
+  'offer ceremonial praise, demonstrate an ordinary use, let the rival use it better, then yield authority',
+  'attempt a quick sign-off, reopen one unfinished detail, exchange responsibilities, then earn the exit',
+  'state a confident solution, discover its social cost, recruit the opponent, then share the inconvenience',
+  'deny ownership, remember one useful detail, accept temporary custody, then negotiate its limit',
+  'insist on procedure, grant one narrow exception, need the exception personally, then revise the procedure',
+  'make a generous offer, attach one modest condition, discover the condition helps the rival, then honour it',
+  'ask for agreement, receive a literal answer, rephrase the request, then accept the answer’s practical meaning',
+  'hide behind the television format, get corrected by visible evidence, ask for help, then credit the helper',
+  'compete for the easier role, demonstrate why it matters, make it harder, then volunteer for it',
+  'protect a small secret, use it as leverage, discover it is already understood, then state the real preference',
+  'treat the object as incidental, need its evidence, address it seriously, then accept its ordinary terms',
+  'promise speed, create one delay, use the delay productively, then defend the slower result',
+  'reject the other role’s label, propose a replacement, inherit its responsibility, then keep the label',
+  'repeat an old routine, encounter one specific mismatch, improvise together, then decide which part survives',
+  'ask the opponent to choose, criticise the choice, become obliged to perform it, then improve it without changing it',
+  'claim professional certainty, request an amateur demonstration, copy it badly, then follow the amateur’s instruction',
+  'offer two equivalent courtesies, expose their different costs, swap them once, then keep the less glamorous one',
+  'seek a private correction, force it on air, soften it with a practical favour, then let the correction stand',
+  'withhold a minor detail, watch the opponent infer it incorrectly, clarify it, then accept the new leverage it creates',
+  'try to leave the object out, need it for one ordinary task, bring it centre stage, then give it the modest role requested',
+  'dispute who began the problem, identify who can end it, help that person once, then let them receive the final word',
+] as const;
+
+const payoffShapes = [
+  'the apparent winner accepts the dull responsibility they had been avoiding',
+  'the role claiming no stake becomes the object’s temporary custodian',
+  'the formal authority must ask the practical expert for permission to continue',
+  'the object leaves the scene while the person who understood it retains the narrow authority',
+  'both roles get the practical result, but the quieter role chooses how it is described on air',
+  'the person rushing to finish voluntarily stays for one established task',
+  'a flattering title is surrendered in exchange for the useful job',
+  'the least impressive option becomes the only outcome both roles are willing to defend',
+  'the correction remains on screen and its reluctant author must present it',
+  'the person seeking credit receives the task, while the helper receives the decision',
+  'the role protecting a preference finally states it and must carry out the resulting choice',
+  'the attempted courtesy is accepted only after its practical cost changes hands',
+  'the person who wanted an exception becomes responsible for explaining it next time',
+  'the overlooked contribution becomes the final necessary step, without becoming prestigious',
+  'the scene ends on a sincere agreement that leaves both roles with different established duties',
+  'the central object receives its modest requested role and immediately makes the confident role useful',
+  'the person who corrected one word must deliver the whole revised sign-off',
+  'the quickest proposed ending is rejected in favour of the smaller promise already made',
+  'the rival is publicly credited, but chooses the first role to perform the ordinary task',
+  'the person who denied needing help gives the helper one precise instruction',
+  'the inherited obligation is accepted, then deliberately made less ceremonial',
+  'the disputed choice is made by the role who now has the most work to do because of it',
+  'the original host keeps the title while the guest quietly acquires the practical control',
+  'one role concedes the argument but preserves the harmless preference that caused it',
 ] as const;
 
 const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
@@ -1772,6 +1855,11 @@ export function userPrompt(
   const mechanismVariants = storyModeMechanismVariants[storyMode];
   const mechanismVariant =
     mechanismVariants[axisIndex(serial, 0x3f5297b, mechanismVariants.length)]!;
+  const relationshipPressure =
+    relationshipPressures[axisIndex(serial, 0x4b31c27, relationshipPressures.length)]!;
+  const tacticProgression =
+    tacticProgressions[axisIndex(serial, 0x62f0a91, tacticProgressions.length)]!;
+  const payoffShape = payoffShapes[axisIndex(serial, 0x6d94e53, payoffShapes.length)]!;
   const usesVisualPhysics = storyMode === 'visual_physics';
   const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
   const ordinaryVisualAnchor =
@@ -1869,6 +1957,10 @@ Mandatory creative coordinates for this attempt:
 - Story mode: ${storyMode}.
 - Comedy mechanism family: ${mechanismFamily.direction}.
 - Mechanism variant: ${mechanismVariant}. Treat this as the exact subtype of the comedy mechanism, not as a second rule.
+- Mechanism ownership: keep the participant named by the mechanism as its subject from premise through endingBeat. Do not make another role inherit its consequence unless this exact variant explicitly transfers it.
+- Relationship pressure: ${relationshipPressure}. Apply this only to the roles already present in the scene frame.
+- Tactic progression: ${tacticProgression}. These are changes of conversational strategy, never extra rules, tests or powers.
+- Payoff shape: ${payoffShape}. Earn this social outcome using only the assigned mechanism, roles and ordinary visual anchor.
 ${physicalMechanismBlock}
 - Cast scope: use only the two or three speaking roles already named or implied by the format-specific scene frame. Do not invent a narrator, producer, expert, helper or caller merely to explain the rule.
 - Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast scope and readable role differences.
@@ -1880,7 +1972,7 @@ ${physicalMechanismBlock}
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
 Use the format-specific scene frame as the whole television setup and the single mechanism variant as the whole surreal rule. Do not copy a second rule from another coordinate. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
-Treat the ordinary visual anchor as the concrete subject inside the one format-specific frame; do not add another character, subplot, rule or surreal mechanism to accommodate it. Preserve the two incompatible wants already named in the scene frame, then let the single mechanism variant complicate those wants. Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
+Treat the ordinary visual anchor as the concrete subject inside the one format-specific frame; do not add another character, subplot, rule or surreal mechanism to accommodate it. Moving, displaying, labelling or discussing the anchor is ordinary character business and cannot create a second automatic consequence. Preserve the two incompatible wants already named in the scene frame, sharpen them with the assigned relationship pressure, then let the single mechanism variant complicate those wants. The tactic progression varies how the roles pursue those wants; it never changes how the mechanism works. The payoff shape is a social consequence of the same conflict, not an additional ending rule. Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
 The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. A conflict need not be another refusal: use concealment, temptation, rivalry, loyalty, embarrassment, a fragile alliance or a change of mind where the assigned frame permits it. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
 Do not default to clerks, permits, waivers, penalties, policies, employee benefits or customer-satisfaction scores unless the assigned coordinates specifically require one. continuityFact will appear as a mid-programme broadcast graphic: make it a unique 5–16 word in-world fact, never an action, direction or generic slogan.

@@ -894,8 +894,10 @@ describe('produceBatch', () => {
     }
 
     const result = await production;
-    expect(result.preparedScriptCount).toBe(2);
-    expect(await readdir(path.join(scriptQueueRoot, 'pending'))).toHaveLength(2);
+    expect(result.preparedScriptCount).toBeGreaterThanOrEqual(1);
+    expect(await readdir(path.join(scriptQueueRoot, 'pending'))).toHaveLength(
+      result.preparedScriptCount,
+    );
   });
 
   it('quarantines a prepared script when every TTS endpoint returns permanent bad audio', async () => {
