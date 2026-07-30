@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ScheduledSoundCue } from './sound-design.js';
 import { storyCueMotion } from './story-cue-motion.js';
 
-function cue(
-  sound: ScheduledSoundCue['cue'],
-  durationMs = 200,
-): ScheduledSoundCue {
+function cue(sound: ScheduledSoundCue['cue'], durationMs = 200): ScheduledSoundCue {
   return {
     atMs: 0,
     cue: sound,
@@ -26,9 +23,7 @@ describe('storyCueMotion', () => {
       scaleY: 1,
       flash: 0,
     });
-    expect(storyCueMotion(cue('bell'), 200)).toEqual(
-      storyCueMotion(null, 100),
-    );
+    expect(storyCueMotion(cue('bell'), 200)).toEqual(storyCueMotion(null, 100));
   });
 
   it('gives different physical vocabularies to rings, knocks and paper', () => {
@@ -52,11 +47,14 @@ describe('storyCueMotion', () => {
       'advisory_chime',
       'applause',
       'bell',
+      'bureaucratic_stamp',
       'buzzer',
       'cash_register',
       'clink',
+      'cloud_hatch',
       'continuity_blip',
       'domestic_sting',
+      'freezer_latch',
       'knock',
       'mechanical_click',
       'paper_rustle',

@@ -22,7 +22,7 @@ function deterministicJitter(seed: number, step: number): number {
   let value = (seed + Math.imul(step + 1, 0x9e3779b1)) >>> 0;
   value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
   value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
-  return ((value ^ (value >>> 16)) >>> 0) / 0xffffffff * 2 - 1;
+  return (((value ^ (value >>> 16)) >>> 0) / 0xffffffff) * 2 - 1;
 }
 
 /**
@@ -68,6 +68,7 @@ export function storyCueMotion(
         flash: envelope * 0.2,
       };
     }
+    case 'bureaucratic_stamp':
     case 'buzzer':
     case 'knock':
     case 'wood_tap':
@@ -80,6 +81,7 @@ export function storyCueMotion(
         flash: Math.abs(pulse) * 0.18,
       };
     case 'cash_register':
+    case 'freezer_latch':
     case 'mechanical_click':
     case 'tick':
     case 'vhs_click':
@@ -100,6 +102,7 @@ export function storyCueMotion(
         scaleY: 1 + envelope * 0.055,
         flash: envelope * 0.38,
       };
+    case 'cloud_hatch':
     case 'paper_rustle':
     case 'teletype':
     case 'tuning': {
