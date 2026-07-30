@@ -757,6 +757,25 @@ describe('generation prompts', () => {
     );
   });
 
+  it('turns an ending-only critic retry into a bounded repair of the prior proposal', () => {
+    const previous = demoDraft(0);
+    const prompt = userPrompt(
+      12,
+      [],
+      [],
+      ['proposal critic: The ending introduces an unrelated prop instead of resolving the payoff.'],
+      null,
+      {},
+      previous,
+    );
+
+    expect(prompt).toContain('Previous critic-rejected proposal record');
+    expect(prompt).toContain(JSON.stringify(previous.premise));
+    expect(prompt).toContain('replace only endingBeat');
+    expect(prompt).toContain('copy channelNumber, channelName, programmeTitle');
+    expect(prompt).not.toContain('unrelated prop');
+  });
+
   it('gives every story mode a literal acceptance contract', () => {
     const contracts = new Map<string, string>();
     for (let serial = 0; serial < 500; serial += 1) {

@@ -1549,6 +1549,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           const rejectedAttemptEmbeddings: number[][] = [];
           let creativeCoordinateAttempt = 0;
           let structuralRetryUsed = false;
+          let structuralRepairProposal: GeneratedSegmentProposal | null = null;
           // A mature catalogue occupies much more of the obvious premise space than a fresh
           // installation. Search longer rather than weakening the semantic novelty gate.
           const maximumProposalAttempts = options.proposalAttempts ?? 16;
@@ -1582,6 +1583,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 visualMediums: recentMediums,
                 castArchetypes: recentCastArchetypes,
               },
+              structuralRepairProposal,
             );
             const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
             const rawGenerated = options.demo
@@ -1721,11 +1723,13 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             if (rejectedForNovelty || structuralRetryUsed) {
               creativeCoordinateAttempt += 1;
               structuralRetryUsed = false;
+              structuralRepairProposal = null;
             } else {
               // Give a mechanical correction one attempt against the same brief. Changing the
               // coordinates here would contradict the retry instructions and make the provider
               // solve a different format, story mode and visual grammar at the same time.
               structuralRetryUsed = true;
+              structuralRepairProposal = generated;
             }
           }
           if (proposals[index] === undefined && drafts[index] === undefined) {
