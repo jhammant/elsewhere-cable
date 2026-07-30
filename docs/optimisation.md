@@ -62,6 +62,11 @@ Safety, schema validity and originality remain pre-broadcast gates rather than s
     registering the rollback commit as a new experiment.
 11. Preserve the result and move to a different hypothesis.
 
+When the latest commit title is not the renderer hypothesis, label the live arm explicitly:
+`ELSEWHERE_RENDERER_EXPERIMENT_HYPOTHESIS='Synchronise story sounds with prop reactions' pnpm
+endor:renderer:refresh`. The override changes only experiment metadata; the guarded handover
+remains identical.
+
 Generation experiments take effect only when tagged candidate material actually airs. Their
 observation clock starts at first broadcast, not at code deployment.
 

@@ -8,6 +8,7 @@ if [ "${1:-}" = "--" ]; then
   shift
 fi
 mode=${1:-live}
+experiment_hypothesis_override=${ELSEWHERE_RENDERER_EXPERIMENT_HYPOTHESIS:-}
 
 if [ "$mode" != "live" ] && [ "$mode" != "preflight" ] && [ "$mode" != "rollback" ]; then
   echo "Usage: $0 [live|preflight|rollback]" >&2
@@ -242,7 +243,7 @@ docker inspect \
 REMOTE
 
 if [ "$mode" = "live" ]; then
-  experiment_hypothesis="$(git log -1 --format=%s)"
+  experiment_hypothesis=${experiment_hypothesis_override:-$(git log -1 --format=%s)}
   if ! pnpm optimise:experiment -- \
     --build "$build_id" \
     --surface renderer \
