@@ -44,6 +44,18 @@ function candidateScore(
   }
 
   const recent = history.slice(-3);
+  if (!history.some((item) => item.format === candidate.format)) {
+    score += 30;
+  }
+  if (!history.some((item) => item.visualMedium === candidate.visualMedium)) {
+    score += 45;
+  }
+  if (!history.some((item) => item.castArchetype === candidate.castArchetype)) {
+    score += 70;
+  }
+  if (!history.some((item) => item.storyMode === candidate.storyMode)) {
+    score += 10;
+  }
   if (!recent.some((item) => item.format === candidate.format)) {
     score += 12;
   }

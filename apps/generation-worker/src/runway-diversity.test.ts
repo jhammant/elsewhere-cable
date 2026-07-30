@@ -66,6 +66,9 @@ describe('runway diversity', () => {
     ];
 
     const diversified = diversifyRunway(original);
+    expect(
+      new Set(diversified.slice(0, 4).map(({ castArchetype }) => castArchetype)).size,
+    ).toBe(4);
     expect(runwayDiversityMetrics(diversified).sameCastAdjacencies).toBeLessThan(
       runwayDiversityMetrics(original).sameCastAdjacencies,
     );

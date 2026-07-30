@@ -17,6 +17,7 @@ import {
 import { legacyPackageQualityIssues } from '../../apps/generation-worker/src/package-quality.js';
 import {
   diversifyRunway,
+  runwayDiversityMetrics,
   type RunwayDescriptor,
 } from '../../apps/generation-worker/src/runway-diversity.js';
 import { mixedRecoveryCatalogue } from '../../apps/generation-worker/src/recovery-catalogue.js';
@@ -136,9 +137,31 @@ const candidateSourcePool =
 if (candidateSourcePool.length === 0) {
   throw new Error('No approved package is available for emergency refill');
 }
+
+type RecoverySource = (typeof candidates)[number] & RunwayDescriptor;
+function recoveryDescriptor(source: (typeof candidates)[number]): RecoverySource {
+  return {
+    ...source,
+    segmentId: source.segment.segmentId,
+    channelId: source.segment.channel.id,
+    programmeId: source.segment.programme.id,
+    format: source.segment.programme.format,
+    visualMedium: source.segment.visualMedium ?? 'legacy',
+    castArchetype: source.segment.castArchetype ?? 'legacy',
+    pacing: source.segment.pacing ?? 'conversational',
+    storyMode: source.segment.storyMode ?? 'legacy',
+  };
+}
+
+const precedingSource = candidates.at(-1);
+const preceding = precedingSource === undefined ? null : recoveryDescriptor(precedingSource);
+const candidateEvaluationPool = diversifyRunway(
+  candidateSourcePool.map((source) => recoveryDescriptor(source)),
+  preceding,
+);
 const desiredSourceCount = Math.min(candidateSourcePool.length, count * 4);
-const sourcePool: typeof candidates = [];
-for (const source of candidateSourcePool) {
+const sourcePool: RecoverySource[] = [];
+for (const source of candidateEvaluationPool) {
   const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
   let eligible = legacyPackageQualityIssues(source.segment).length === 0;
   for (const event of source.segment.events) {
@@ -166,27 +189,10 @@ if (sourcePool.length === 0) {
   throw new Error('No audio-safe package is available for emergency refill');
 }
 
-type RecoverySource = (typeof sourcePool)[number] & RunwayDescriptor;
-function recoveryDescriptor(source: (typeof sourcePool)[number]): RecoverySource {
-  return {
-    ...source,
-    segmentId: source.segment.segmentId,
-    channelId: source.segment.channel.id,
-    programmeId: source.segment.programme.id,
-    format: source.segment.programme.format,
-    visualMedium: source.segment.visualMedium ?? 'legacy',
-    castArchetype: source.segment.castArchetype ?? 'legacy',
-    pacing: source.segment.pacing ?? 'conversational',
-    storyMode: source.segment.storyMode ?? 'legacy',
-  };
-}
-
-const precedingSource = candidates.at(-1);
-const preceding = precedingSource === undefined ? null : recoveryDescriptor(precedingSource);
-const diversifiedSourcePool = diversifyRunway(
-  sourcePool.map((source) => recoveryDescriptor(source)),
-  preceding,
-).slice(0, count);
+const diversifiedSourcePool = diversifyRunway(sourcePool, preceding).slice(0, count);
+const diversityMetrics = runwayDiversityMetrics(diversifiedSourcePool);
+const distinctValues = (selector: (source: RecoverySource) => string): number =>
+  new Set(diversifiedSourcePool.map((source) => selector(source))).size;
 const stamp = Date.now().toString(36);
 const recoveryEntries: PlayoutManifest['segments'] = [];
 let cameraEventsAdded = 0;
@@ -275,6 +281,12 @@ process.stdout.write(
       distinctSources: diversifiedSourcePool.length,
       candidateSourcesEvaluated: sourcePool.length,
       diversified: true,
+      distinctProgrammes: distinctValues(({ programmeId }) => programmeId),
+      distinctFormats: distinctValues(({ format }) => format),
+      distinctVisualMedia: distinctValues(({ visualMedium }) => visualMedium),
+      distinctCastArchetypes: distinctValues(({ castArchetype }) => castArchetype),
+      distinctPacingModes: distinctValues(({ pacing }) => pacing),
+      diversityMetrics,
       cameraEventsAdded,
       graphicEventsAdded,
       audioStaticAdded: 0,
