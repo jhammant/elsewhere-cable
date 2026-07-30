@@ -42,6 +42,8 @@ interface RunwayProbe {
 interface GenerationObservation {
   generatedAt: string;
   status: 'approved' | 'rejected';
+  strategy?: string;
+  revision?: string;
   requestedScripts: number;
   proposalAttempts: number;
   durationSeconds: number;
@@ -115,6 +117,10 @@ function parseGenerationObservation(value: unknown): GenerationObservation {
   if (
     typeof record.generatedAt !== 'string' ||
     !['approved', 'rejected'].includes(record.status ?? '') ||
+    (record.strategy !== undefined &&
+      (typeof record.strategy !== 'string' || !/^[A-Za-z0-9._-]{1,80}$/u.test(record.strategy))) ||
+    (record.revision !== undefined &&
+      (typeof record.revision !== 'string' || !/^[A-Za-z0-9._-]{1,80}$/u.test(record.revision))) ||
     !Number.isInteger(record.requestedScripts) ||
     !Number.isInteger(record.proposalAttempts) ||
     !Number.isInteger(record.durationSeconds) ||
@@ -339,6 +345,8 @@ const report = {
         : Number((generatedScriptCount / (generationWallSeconds / 3_600)).toFixed(2)),
     latestStatus: recentGeneration.at(-1)?.status ?? null,
     latestAt: recentGeneration.at(-1)?.generatedAt ?? null,
+    latestStrategy: recentGeneration.at(-1)?.strategy ?? null,
+    latestRevision: recentGeneration.at(-1)?.revision ?? null,
   },
   recommendedArms,
   history: scores,
@@ -392,6 +400,8 @@ reported separately so a tiny early audience cannot distort the quality evaluato
 - New approved scripts: ${report.generation.approvedScripts}
 - Generation throughput: ${report.generation.scriptsPerGenerationHour?.toFixed(2) ?? 'unknown'} scripts per compute-hour
 - Latest batch: ${report.generation.latestStatus ?? 'unknown'}
+- Latest strategy: ${report.generation.latestStrategy ?? 'unknown'}
+- Latest revision: ${report.generation.latestRevision ?? 'unknown'}
 
 ## Active experiment
 

@@ -18,6 +18,7 @@ embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
 embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
 generation_history=${ELSEWHERE_GENERATION_HISTORY:-data/optimisation/generation-history.ndjson}
+generation_strategy=${ELSEWHERE_GENERATION_STRATEGY:-dynamic-mechanism-seeds-v1}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
@@ -47,6 +48,14 @@ if [ "$script_target_count" -lt 1 ]; then
   echo "ELSEWHERE_SCRIPT_TARGET_COUNT must be a positive integer." >&2
   exit 64
 fi
+case "$generation_strategy" in
+  '' | *[!A-Za-z0-9._-]*)
+    echo "ELSEWHERE_GENERATION_STRATEGY may contain only letters, numbers, dots, underscores and hyphens." >&2
+    exit 64
+    ;;
+esac
+
+generation_revision=$(git rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')
 
 mkdir -p "$script_queue/pending" "$script_queue/completed" "$(dirname "$generation_history")"
 
@@ -90,9 +99,11 @@ while :; do
   batch_finished_epoch=$(date '+%s')
   pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
   completed_count=$(find "$script_queue/completed" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
-  printf '{"generatedAt":"%s","status":"%s","requestedScripts":%s,"proposalAttempts":%s,"durationSeconds":%s,"pendingDelta":%s,"completedDelta":%s,"pendingScripts":%s,"completedScripts":%s}\n' \
+  printf '{"generatedAt":"%s","status":"%s","strategy":"%s","revision":"%s","requestedScripts":%s,"proposalAttempts":%s,"durationSeconds":%s,"pendingDelta":%s,"completedDelta":%s,"pendingScripts":%s,"completedScripts":%s}\n' \
     "$batch_started_at" \
     "$batch_status" \
+    "$generation_strategy" \
+    "$generation_revision" \
     "$batch_count" \
     "$proposal_attempts" \
     "$((batch_finished_epoch - batch_started_epoch))" \
