@@ -180,6 +180,7 @@ if (apply) {
             programmeId: segment.programme.id,
             format: segment.programme.format,
             visualMedium: segment.visualMedium ?? 'legacy',
+            castArchetype: segment.castArchetype ?? 'legacy',
             pacing: segment.pacing ?? 'conversational',
             storyMode: segment.storyMode ?? 'legacy',
           };
@@ -192,6 +193,7 @@ if (apply) {
         programmeId: currentSegment.programme.id,
         format: currentSegment.programme.format,
         visualMedium: currentSegment.visualMedium ?? 'legacy',
+        castArchetype: currentSegment.castArchetype ?? 'legacy',
         pacing: currentSegment.pacing ?? 'conversational',
         storyMode: currentSegment.storyMode ?? 'legacy',
       };
@@ -223,6 +225,7 @@ if (apply) {
         programmeId: currentSegment.programme.id,
         format: currentSegment.programme.format,
         visualMedium: currentSegment.visualMedium ?? 'legacy',
+        castArchetype: currentSegment.castArchetype ?? 'legacy',
         pacing: currentSegment.pacing ?? 'conversational',
         storyMode: currentSegment.storyMode ?? 'legacy',
       };
@@ -239,6 +242,7 @@ if (apply) {
               programmeId: segment.programme.id,
               format: segment.programme.format,
               visualMedium: segment.visualMedium ?? 'legacy',
+              castArchetype: segment.castArchetype ?? 'legacy',
               pacing: segment.pacing ?? 'conversational',
               storyMode: segment.storyMode ?? 'legacy',
             };

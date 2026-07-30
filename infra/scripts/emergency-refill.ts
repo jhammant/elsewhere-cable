@@ -11,6 +11,7 @@ import { containsSpokenStageDirection } from '../../apps/generation-worker/src/d
 import {
   inspectSpeechAudio,
   maximumPlausibleSpeechDurationMs,
+  minimumPlausibleSpeechDurationMs,
   speechAudioQualityIssue,
 } from '../../apps/generation-worker/src/providers.js';
 import { legacyPackageQualityIssues } from '../../apps/generation-worker/src/package-quality.js';
@@ -67,6 +68,7 @@ const candidates: Array<{
   segment: SegmentPackage;
 }> = [];
 let existingRecoverySegments = 0;
+const manifestProgrammeIds: string[] = [];
 const audioQualityCache = new Map<string, Promise<string | null>>();
 
 async function audioQualityIssue(audioPath: string): Promise<string | null> {
@@ -86,6 +88,7 @@ for (const entry of manifest.segments) {
   try {
     const segmentPath = path.join(segmentsRoot, entry.packagePath);
     const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
+    manifestProgrammeIds.push(segment.programme.id);
     if (segment.production.generator !== 'emergency-recovery-alias') {
       candidates.push({ entry, segment });
     } else {
@@ -111,14 +114,29 @@ const requestedCandidates =
   requestedSourceIds === null
     ? []
     : compatibleCandidates.filter(({ entry }) => requestedSourceIds.has(entry.segmentId));
+const mixedCandidateSourcePool = mixedRecoveryCatalogue(
+  approvedOriginalCandidates,
+  demoCandidates,
+  existingRecoverySegments,
+);
+const recentlyUsedProgrammeIds = new Set(
+  manifestProgrammeIds.slice(-compatibleCandidates.length),
+);
+const unseenCandidateSourcePool = mixedCandidateSourcePool.filter(
+  ({ segment }) => !recentlyUsedProgrammeIds.has(segment.programme.id),
+);
+const recentlyUsedSourcesExcluded =
+  requestedSourceIds === null && unseenCandidateSourcePool.length >= count;
 const candidateSourcePool =
   requestedSourceIds !== null
     ? requestedCandidates
-    : mixedRecoveryCatalogue(approvedOriginalCandidates, demoCandidates, existingRecoverySegments);
+    : recentlyUsedSourcesExcluded
+      ? unseenCandidateSourcePool
+      : mixedCandidateSourcePool;
 if (candidateSourcePool.length === 0) {
   throw new Error('No approved package is available for emergency refill');
 }
-const desiredSourceCount = Math.min(candidateSourcePool.length, count);
+const desiredSourceCount = Math.min(candidateSourcePool.length, count * 4);
 const sourcePool: typeof candidates = [];
 for (const source of candidateSourcePool) {
   const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
@@ -129,6 +147,7 @@ for (const source of candidateSourcePool) {
     }
     if (
       containsSpokenStageDirection(event.subtitle) ||
+      event.durationMs < minimumPlausibleSpeechDurationMs(event.subtitle, 1.5) ||
       event.durationMs > maximumPlausibleSpeechDurationMs(event.subtitle) ||
       (await audioQualityIssue(path.join(path.dirname(segmentPath), event.audioFile))) !== null
     ) {
@@ -156,6 +175,7 @@ function recoveryDescriptor(source: (typeof sourcePool)[number]): RecoverySource
     programmeId: source.segment.programme.id,
     format: source.segment.programme.format,
     visualMedium: source.segment.visualMedium ?? 'legacy',
+    castArchetype: source.segment.castArchetype ?? 'legacy',
     pacing: source.segment.pacing ?? 'conversational',
     storyMode: source.segment.storyMode ?? 'legacy',
   };
@@ -166,7 +186,7 @@ const preceding = precedingSource === undefined ? null : recoveryDescriptor(prec
 const diversifiedSourcePool = diversifyRunway(
   sourcePool.map((source) => recoveryDescriptor(source)),
   preceding,
-);
+).slice(0, count);
 const stamp = Date.now().toString(36);
 const recoveryEntries: PlayoutManifest['segments'] = [];
 let cameraEventsAdded = 0;
@@ -252,7 +272,8 @@ process.stdout.write(
     {
       recoverySegments: recoveryEntries.length,
       recoveryDurationMs: recoveryEntries.reduce((total, entry) => total + entry.durationMs, 0),
-      distinctSources: sourcePool.length,
+      distinctSources: diversifiedSourcePool.length,
+      candidateSourcesEvaluated: sourcePool.length,
       diversified: true,
       cameraEventsAdded,
       graphicEventsAdded,
@@ -263,6 +284,7 @@ process.stdout.write(
       tailDurationRemovedMs,
       source:
         requestedSourceIds !== null ? 'requested-approved-catalogue' : 'mixed-approved-catalogue',
+      recentlyUsedSourcesExcluded,
       compatibilityTarget: compatibilityTarget ?? null,
       totalSegments: nextManifest.segments.length,
     },

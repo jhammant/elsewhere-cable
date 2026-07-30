@@ -4,6 +4,7 @@ export interface RunwayDescriptor {
   programmeId: string;
   format: string;
   visualMedium: string;
+  castArchetype: string;
   pacing: string;
   storyMode: string;
 }
@@ -33,6 +34,7 @@ function candidateScore(
   score += candidate.channelId === previous.channelId ? -50 : 16;
   score += candidate.format === previous.format ? -34 : 28;
   score += candidate.visualMedium === previous.visualMedium ? -30 : 24;
+  score += candidate.castArchetype === previous.castArchetype ? -50 : 28;
   score += candidate.pacing === previous.pacing ? -16 : 12;
   const candidateEnergy = energy(candidate.pacing);
   const previousEnergy = energy(previous.pacing);
@@ -47,6 +49,9 @@ function candidateScore(
   }
   if (!recent.some((item) => item.visualMedium === candidate.visualMedium)) {
     score += 10;
+  }
+  if (!recent.some((item) => item.castArchetype === candidate.castArchetype)) {
+    score += 14;
   }
   if (!recent.some((item) => item.storyMode === candidate.storyMode)) {
     score += 5;
@@ -87,11 +92,13 @@ export function diversifyRunway<T extends RunwayDescriptor>(
 export function runwayDiversityMetrics(runway: readonly RunwayDescriptor[]): {
   sameFormatAdjacencies: number;
   sameMediumAdjacencies: number;
+  sameCastAdjacencies: number;
   samePacingAdjacencies: number;
   lowEnergyAdjacencies: number;
 } {
   let sameFormatAdjacencies = 0;
   let sameMediumAdjacencies = 0;
+  let sameCastAdjacencies = 0;
   let samePacingAdjacencies = 0;
   let lowEnergyAdjacencies = 0;
   for (let index = 1; index < runway.length; index += 1) {
@@ -99,6 +106,7 @@ export function runwayDiversityMetrics(runway: readonly RunwayDescriptor[]): {
     const current = runway[index]!;
     sameFormatAdjacencies += Number(current.format === previous.format);
     sameMediumAdjacencies += Number(current.visualMedium === previous.visualMedium);
+    sameCastAdjacencies += Number(current.castArchetype === previous.castArchetype);
     samePacingAdjacencies += Number(current.pacing === previous.pacing);
     lowEnergyAdjacencies += Number(
       energy(current.pacing) === 'low' && energy(previous.pacing) === 'low',
@@ -107,6 +115,7 @@ export function runwayDiversityMetrics(runway: readonly RunwayDescriptor[]): {
   return {
     sameFormatAdjacencies,
     sameMediumAdjacencies,
+    sameCastAdjacencies,
     samePacingAdjacencies,
     lowEnergyAdjacencies,
   };

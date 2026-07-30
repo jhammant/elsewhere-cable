@@ -17,6 +17,7 @@ function descriptor(
     programmeId: `programme_${segmentId}`,
     format,
     visualMedium,
+    castArchetype: `cast_${segmentId}`,
     pacing,
     storyMode: `story_${segmentId}`,
   };
@@ -42,6 +43,31 @@ describe('runway diversity', () => {
     );
     expect(metrics.sameMediumAdjacencies).toBeLessThan(
       runwayDiversityMetrics(original).sameMediumAdjacencies,
+    );
+  });
+
+  it('separates cast families when a broader candidate window provides alternatives', () => {
+    const original = [
+      { ...descriptor('a', 'news', 'archive_film', 'frantic'), castArchetype: 'mixed' },
+      { ...descriptor('b', 'news', 'archive_film', 'frantic'), castArchetype: 'mixed' },
+      { ...descriptor('c', 'news', 'archive_film', 'frantic'), castArchetype: 'mixed' },
+      {
+        ...descriptor('d', 'sitcom', 'paper_cutout', 'staccato'),
+        castArchetype: 'paper_puppets',
+      },
+      {
+        ...descriptor('e', 'advert', 'claymation', 'conversational'),
+        castArchetype: 'talking_objects',
+      },
+      {
+        ...descriptor('f', 'ident', 'neon_wireframe', 'interrupted'),
+        castArchetype: 'celestial',
+      },
+    ];
+
+    const diversified = diversifyRunway(original);
+    expect(runwayDiversityMetrics(diversified).sameCastAdjacencies).toBeLessThan(
+      runwayDiversityMetrics(original).sameCastAdjacencies,
     );
   });
 
