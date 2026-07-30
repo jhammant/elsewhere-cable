@@ -954,6 +954,65 @@ describe('produceBatch', () => {
     expect(result.segmentCount).toBe(1);
   });
 
+  it('does not let a retry paraphrase or repeat an earlier rejected attempt', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-rejected-attempt-history-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    const repeated = universallyAlignedProposal(demoDraft(0));
+    const replacement = generatedSegmentProposalSchema.parse({
+      ...repeated,
+      programmeTitle: 'The Courteous Kettle Committee',
+      premise:
+        'In a community shopping newsroom, a workplace anchor wants a talking kettle product to approve a public emergency procedure, advertising offer, sitcom household bulletin and continuity channel signal, but the kettle requests permission to grant the worker authority whenever a spoken contract cue moves the demonstration camera.',
+      endingBeat:
+        'The kettle grants the worker authority and the anchor completes the customer service bulletin.',
+    });
+    let proposalCalls = 0;
+    let scriptCalls = 0;
+    const llm: LlmProvider = {
+      id: 'rejected-attempt-history-test-llm',
+      model: 'test-model',
+      generateProposal() {
+        proposalCalls += 1;
+        if (proposalCalls === 1) {
+          return Promise.resolve({
+            ...repeated,
+            programmeTitle: repeated.programmeTitle.toUpperCase(),
+          });
+        }
+        return Promise.resolve(proposalCalls === 2 ? repeated : replacement);
+      },
+      generateStructured(request) {
+        scriptCalls += 1;
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        return Promise.resolve({
+          ...proposal,
+          dialogue: architectureAlignedDialogue(demoDraft(1), proposal),
+        });
+      },
+    };
+
+    const result = await produceBatch({
+      count: 1,
+      concurrency: 1,
+      outputRoot,
+      demo: false,
+      llm,
+      tts: null,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      prepareScriptsOnly: true,
+    });
+
+    expect(result.preparedScriptCount).toBe(1);
+    expect(proposalCalls).toBeGreaterThanOrEqual(3);
+    expect(scriptCalls).toBe(1);
+  });
+
   it('prepares dialogue with bounded TTS endpoint parallelism', async () => {
     const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-parallel-tts-'));
     temporaryDirectories.push(outputRoot);

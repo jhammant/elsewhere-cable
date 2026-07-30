@@ -7,7 +7,10 @@ import {
   type PlayoutManifest,
   type SegmentPackage,
 } from '../../packages/schemas/src/index.js';
-import { recoveryTimingTargets } from '../../apps/generation-worker/src/timeline-recovery.js';
+import {
+  eventsWithinDuration,
+  recoveryTimingTargets,
+} from '../../apps/generation-worker/src/timeline-recovery.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -94,19 +97,20 @@ for (const entry of manifest.segments) {
   const endingTransitionIndex = lastEventIndex(
     segment.events,
     (event) =>
-      event.type === 'transition.play' &&
-      event.transition === 'STATIC_BURST' &&
-      event.atMs >= lastSpeechEndMs,
+      event.type === 'transition.play' && event.atMs >= lastSpeechEndMs,
   );
-  const nextEvents = segment.events.map((event, index) => {
-    if (index === endingGraphicIndex) {
-      return { ...event, atMs: Math.min(event.atMs, lastSpeechEndMs + 120) };
-    }
-    if (index === endingTransitionIndex) {
-      return { ...event, atMs: nextDurationMs - 520 };
-    }
-    return event;
-  });
+  const nextEvents = eventsWithinDuration(
+    segment.events.map((event, index) => {
+      if (index === endingGraphicIndex) {
+        return { ...event, atMs: Math.min(event.atMs, lastSpeechEndMs + 120) };
+      }
+      if (index === endingTransitionIndex) {
+        return { ...event, atMs: nextDurationMs - 520 };
+      }
+      return event;
+    }),
+    nextDurationMs,
+  );
   const nextSegment = segmentPackageSchema.parse({
     ...segment,
     durationMs: nextDurationMs,

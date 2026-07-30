@@ -95,6 +95,16 @@ function lastEventIndex(
   return -1;
 }
 
+export function eventsWithinDuration(
+  events: readonly SegmentEvent[],
+  durationMs: number,
+): SegmentEvent[] {
+  const latestEventMs = Math.max(0, durationMs - 20);
+  return events
+    .filter((event) => event.atMs <= latestEventMs)
+    .sort((left, right) => left.atMs - right.atMs);
+}
+
 export function compactRecoverySegment(
   segment: SegmentPackage,
   pacing: Pacing,
@@ -134,9 +144,8 @@ export function compactRecoverySegment(
     compacted.events,
     (event) => event.type === 'transition.play' && event.atMs >= lastSpeechEndMs,
   );
-  const latestEventMs = nextDurationMs - 20;
-  const nextEvents = compacted.events
-    .map((event, index): SegmentEvent => {
+  const nextEvents = eventsWithinDuration(
+    compacted.events.map((event, index): SegmentEvent => {
       let atMs = event.atMs;
       if (index === endingGraphicIndex) {
         atMs = Math.min(atMs, lastSpeechEndMs + 120);
@@ -144,9 +153,10 @@ export function compactRecoverySegment(
       if (index === endingTransitionIndex) {
         atMs = Math.min(atMs, nextDurationMs - 520);
       }
-      return { ...event, atMs: Math.max(0, Math.min(atMs, latestEventMs)) };
-    })
-    .sort((left, right) => left.atMs - right.atMs);
+      return { ...event, atMs: Math.max(0, atMs) };
+    }),
+    nextDurationMs,
+  );
 
   return {
     segment: {

@@ -3,6 +3,7 @@ import type { SegmentEvent, SegmentPackage } from '@elsewhere-cable/schemas';
 import {
   compactRecoverySegment,
   compactSpeechTimeline,
+  eventsWithinDuration,
   recoveryTimingTargets,
 } from './timeline-recovery.js';
 
@@ -57,6 +58,16 @@ describe('delivery timeline recovery', () => {
     expect(recoveryTimingTargets.near_silent.tailMs).toBeGreaterThan(
       recoveryTimingTargets.slow_burn.tailMs,
     );
+  });
+
+  it('drops late incidental visuals instead of stacking them on a shortened final frame', () => {
+    const events: SegmentEvent[] = [
+      speech(1_000, 2_000, 0),
+      { atMs: 4_500, type: 'transition.play', transition: 'STATIC_BURST' },
+      { atMs: 8_500, type: 'camera.cut', camera: 'CAMERA_GUEST' },
+    ];
+
+    expect(eventsWithinDuration(events, 5_000)).toEqual(events.slice(0, 2));
   });
 
   it('turns an approved replay into a continuous energetic presentation without changing speech', () => {

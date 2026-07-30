@@ -36,6 +36,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
 - Story mode: object_agency.`,
     };
     const proposal = JSON.parse(proposalStructuralExample(request)) as {
+      programmeTitle: string;
       format: string;
       visualMedium: string;
       pacing: string;
@@ -56,6 +57,8 @@ describe('OpenAiCompatibleTtsProvider', () => {
       /^At a miniature newsroom inside a closed florist, a placeholder news anchor/u,
     );
     expect(proposal.premise).toContain('object explicitly demands');
+    expect(proposal.programmeTitle).toContain('SUBJECT');
+    expect(proposal.premise).toContain('original subject');
     expect(draft.dialogue).toHaveLength(10);
   });
 
@@ -89,6 +92,20 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(
       sparse.dialogue.filter((line) => ['PAUSE', 'FREEZE'].includes(line.action)),
     ).toHaveLength(2);
+  });
+
+  it('models proactive social conflict instead of a refusal template', () => {
+    const proposal = JSON.parse(
+      proposalStructuralExample({
+        systemPrompt: 'Return JSON.',
+        userPrompt: `Create batch segment 72 using the sitcom format.
+- Physical setting: a shared kitchen after lunch.
+- Story mode: social_protocol.`,
+      }),
+    ) as { premise: string };
+
+    expect(proposal.premise).toContain('both claims valid');
+    expect(proposal.premise).not.toContain('refuses because');
   });
 
   it('can route editorial criticism to a smaller independent model', async () => {

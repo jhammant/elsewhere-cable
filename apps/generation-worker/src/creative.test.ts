@@ -9,6 +9,7 @@ import {
   demoDraft,
   dialogueArchitectureIssues,
   dialogueSpeakerPattern,
+  proposalSystemPrompt,
   repairDialogueArchitecture,
   scriptPrompt,
   systemPrompt,
@@ -45,6 +46,9 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Visual production grammar:');
       expect(prompt).toContain('Pacing:');
       expect(prompt).toContain('which role wants what');
+      expect(prompt).toContain('Programme-title contract:');
+      expect(prompt).toContain('Literally use needs, wants or must');
+      expect(prompt).toContain('use refuses only when the assigned frame strictly requires');
       expect(prompt).not.toContain('Previous Programme');
       expect(prompt).not.toContain('A previous premise');
       expect(prompt).not.toContain('premise semantically repeats');
@@ -58,6 +62,11 @@ describe('generation prompts', () => {
   it('asks for longer fragments that build useful broadcast duration', () => {
     expect(systemPrompt).toContain('6–12 short dialogue lines');
     expect(systemPrompt).toContain('30–120 second segment');
+    expect(proposalSystemPrompt).toContain('Before returning JSON, enforce these proposal gates');
+    expect(proposalSystemPrompt).toContain(
+      "The title's distinctive subject noun appears literally in the premise",
+    );
+    expect(proposalSystemPrompt).toContain('endingBeat pays off only');
   });
 
   it('draws locations and casts from broad production pools', () => {
@@ -69,6 +78,37 @@ describe('generation prompts', () => {
 
     expect(new Set(locations).size).toBeGreaterThan(28);
     expect(new Set(casts).size).toBeGreaterThan(30);
+  });
+
+  it('crosses relationship, objective and consequence seeds to escape catalogue saturation', () => {
+    const prompts = Array.from({ length: 1_200 }, (_, serial) =>
+      userPrompt(
+        serial,
+        ['Existing title'],
+        ['Existing premise'],
+        ['premise semantically repeats'],
+      ),
+    );
+    const relationships = prompts.map(
+      (prompt) => prompt.match(/Underlying relationship: (.+)\.\n/u)?.[1] ?? '',
+    );
+    const objectives = prompts.map(
+      (prompt) =>
+        prompt.match(/Concrete private objective: one established role must (.+)\.\n/u)?.[1] ?? '',
+    );
+    const costs = prompts.map(
+      (prompt) =>
+        prompt.match(/Ordinary cost of failure: that same role must (.+)\.\n/u)?.[1] ?? '',
+    );
+    const combinations = prompts.map(
+      (_prompt, index) => `${relationships[index]}|${objectives[index]}|${costs[index]}`,
+    );
+
+    expect(new Set(relationships).size).toBeGreaterThanOrEqual(25);
+    expect(new Set(objectives).size).toBeGreaterThanOrEqual(25);
+    expect(new Set(costs).size).toBeGreaterThanOrEqual(25);
+    expect(new Set(combinations).size).toBeGreaterThan(800);
+    expect(prompts[0]).toContain('Translate them onto roles already present in the assigned cast');
   });
 
   it('uses every Endor-compatible visual renderer and alternates 2D against 3D history', () => {
@@ -449,6 +489,7 @@ describe('generation prompts', () => {
       [
         'premise must begin with the physical setting so the renderer can stage it',
         'non-visual story mode introduces an automatic body or set transformation',
+        'programme title promises a distinctive subject absent from the premise',
         'premise semantically repeats "untrusted previous output" (0.999)',
       ],
     );
@@ -456,6 +497,9 @@ describe('generation prompts', () => {
     expect(prompt).toContain('Correct these mechanical defects');
     expect(prompt).toContain('name the assigned physical setting immediately');
     expect(prompt).toContain('permits only a social or procedural consequence');
+    expect(prompt).toContain(
+      'repeat the programme title’s distinctive subject noun literally inside the premise',
+    );
     expect(prompt).toContain('catalogue-novel objective, mechanism and consequence');
     expect(prompt).not.toContain('untrusted previous output');
   });

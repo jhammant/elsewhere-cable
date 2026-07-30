@@ -166,7 +166,7 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
   }[format];
   const mechanismShape = {
     social_protocol:
-      'wants a concrete social privilege, but an opposing role refuses because one impossible etiquette rule controls permission',
+      'needs a concrete social privilege while an opposing role needs an incompatible use, and one impossible etiquette rule makes both claims valid',
     service_mismatch:
       'wants an ordinary emotional result, but the exact promised service exposes the different harmless outcome they actually wanted',
     status_transfer:
@@ -185,7 +185,7 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
   return JSON.stringify({
     channelNumber: 700_000_001,
     channelName: 'REPLACE WITH ORIGINAL CHANNEL',
-    programmeTitle: 'REPLACE WITH ORIGINAL PROGRAMME',
+    programmeTitle: 'REPLACE WITH ORIGINAL SUBJECT',
     format,
     realityId: 'ORIGINAL-REALITY-ID',
     visualStyle: 'original_style_name',
@@ -220,7 +220,7 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
       'conversational',
     ),
     storyMode,
-    premise: `At ${physicalSetting}, a placeholder ${formatRole} ${mechanismShape}, causing one harmless social consequence.`,
+    premise: `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved and ${mechanismShape}, causing one harmless social consequence.`,
     tone: ['original-tone', 'original-tone'],
     continuityFact: 'Replace with one original fictional fact established by the scene.',
     endingBeat:

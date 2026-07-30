@@ -540,6 +540,24 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   return issues;
 }
 
+function proposalRejectionCategory(reason: string): string {
+  if (reason.includes('semantically repeats')) return 'semantic-novelty';
+  if (/(?:repeats|resembles|reuses|mechanism repeats)/u.test(reason)) {
+    return 'concept-novelty';
+  }
+  if (reason.includes('specific character goal or refusal')) return 'character-goal';
+  if (reason.includes('programme title promises')) return 'title-premise-alignment';
+  if (reason.includes('physical setting')) return 'physical-setting';
+  if (reason.includes('assigned') && reason.includes('story mode')) return 'story-mode';
+  if (reason.includes('assigned') && reason.includes('television format')) {
+    return 'format-alignment';
+  }
+  if (reason.includes('non-visual story mode')) return 'nonvisual-transformation';
+  if (reason.includes('ending introduces')) return 'unearned-ending';
+  if (reason.includes('harmless fictional administrative stakes')) return 'emergency-safety';
+  return 'other-editorial';
+}
+
 function proposalPreservationIssues(
   proposal: GeneratedSegmentProposal,
   draft: GeneratedSegmentDraft,
@@ -1108,6 +1126,10 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         nextIndex += 1;
         try {
           let rejectionReasons: string[] = [];
+          const proposalRejectionCounts = new Map<string, number>();
+          const rejectedAttemptHistory: CreativeRecord[] = [];
+          const semanticRejectedAttemptHistory: CreativeRecord[] = [];
+          const rejectedAttemptEmbeddings: number[][] = [];
           // A mature catalogue occupies much more of the obvious premise space than a fresh
           // installation. Search longer rather than weakening the semantic novelty gate.
           const maximumProposalAttempts = 16;
@@ -1161,17 +1183,23 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 ? null
                 : (await options.embeddingProvider.embed([generated.premise]))[0];
             const accepted = await withNoveltyGate(() => {
+              const conceptHistory = [...creativeHistory, ...rejectedAttemptHistory];
+              const semanticConceptHistory = [
+                ...creativeHistory,
+                ...semanticRejectedAttemptHistory,
+              ];
+              const semanticConceptEmbeddings = [...semanticHistory, ...rejectedAttemptEmbeddings];
               const semanticIssue =
                 candidateEmbedding === null || candidateEmbedding === undefined
                   ? null
                   : semanticNoveltyIssue(
                       generated.premise,
                       candidateEmbedding,
-                      creativeHistory,
-                      semanticHistory,
+                      semanticConceptHistory,
+                      semanticConceptEmbeddings,
                     );
               rejectionReasons = [
-                ...conceptNoveltyIssues(generated, creativeHistory),
+                ...conceptNoveltyIssues(generated, conceptHistory),
                 ...(semanticIssue === null ? [] : [semanticIssue]),
                 ...(useProposalStage
                   ? proposalQualityIssues(generated)
@@ -1184,6 +1212,23 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                     ]),
               ];
               if (rejectionReasons.length !== 0) {
+                for (const reason of rejectionReasons) {
+                  const category = proposalRejectionCategory(reason);
+                  proposalRejectionCounts.set(
+                    category,
+                    (proposalRejectionCounts.get(category) ?? 0) + 1,
+                  );
+                }
+                const rejectedRecord: CreativeRecord = {
+                  title: generated.programmeTitle,
+                  premise: generated.premise,
+                  dialogue: [],
+                };
+                rejectedAttemptHistory.push(rejectedRecord);
+                if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
+                  semanticRejectedAttemptHistory.push(rejectedRecord);
+                  rejectedAttemptEmbeddings.push(candidateEmbedding);
+                }
                 return false;
               }
               const record: CreativeRecord = {
@@ -1210,8 +1255,12 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             }
           }
           if (proposals[index] === undefined && drafts[index] === undefined) {
+            const rejectionSummary = [...proposalRejectionCounts.entries()]
+              .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+              .map(([category, count]) => `${category}=${count}`)
+              .join(', ');
             throw new Error(
-              `Could not produce a novel premise after ${maximumProposalAttempts} attempts: ${rejectionReasons.join('; ')}`,
+              `Could not produce a novel premise after ${maximumProposalAttempts} attempts (${rejectionSummary || 'no categorised rejection'}): ${rejectionReasons.join('; ')}`,
             );
           }
         } catch (error) {

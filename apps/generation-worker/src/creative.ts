@@ -254,7 +254,13 @@ Create 6–12 short dialogue lines suitable for a 30–120 second segment. Prefe
 
 export const proposalSystemPrompt = `${systemPrompt}
 
-You are performing the premise-only proposal stage. Return the requested proposal metadata without dialogue. Do not spend tokens drafting or explaining lines.`;
+You are performing the premise-only proposal stage. Return the requested proposal metadata without dialogue. Do not spend tokens drafting or explaining lines.
+
+Before returning JSON, enforce these proposal gates:
+1. The premise begins with the assigned setting and literally names one established role that needs, wants or must do one concrete thing.
+2. The title's distinctive subject noun appears literally in the premise.
+3. Unless storyMode is visual_physics, neither the premise nor endingBeat physically transforms, swaps, freezes, grows, shrinks, detaches or replaces a body or set.
+4. endingBeat pays off only the premise's single established mechanism and introduces no new participant, object, power or rule.`;
 
 const settings = [
   'a laundrette during its final ten minutes before closing',
@@ -495,6 +501,105 @@ const performanceDynamics = [
   'a group sustains one polite fiction until a newcomer asks the most ordinary possible question',
   'the least expressive participant makes the only consequential choice and leaves everyone else performing around it',
   'two rivals discover a shared preference, then compete to prove who disliked it first',
+] as const;
+
+const relationshipTextures = [
+  'siblings who agree on the facts but not on who should admit them',
+  'former colleagues competing to appear least nostalgic',
+  'a long-term neighbour and a newcomer who have promised each other the same favour',
+  'a mentor whose status depends on a protégé’s embarrassingly plain method',
+  'adult cousins concealing the same unfashionable preference from each other',
+  'two familiar voices that recognise each other but refuse to mention it',
+  'former bandmates who remember one tiny success for incompatible reasons',
+  'an owner and repairer who both need one useful flaw left untouched',
+  'long-time teammates each trying to give the other credit for an accidental victory',
+  'a parent and adult child protecting opposite versions of the same family anecdote',
+  'two friends, one of whom secretly wants an irritating ritual to continue',
+  'a supervisor and worker who each want the other to accept an unwanted promotion',
+  'two volunteers who have independently promised the same good chair to somebody else',
+  'a guide and visitor competing to appear less impressed',
+  'former housemates disputing who inherited one ordinary mug',
+  'distant relatives trying to perform a familiarity neither currently feels',
+  'two public rivals who privately share one extremely dull hobby',
+  'the person who performed and the person who made it possible disagreeing about which invisible task mattered',
+  'two people who remember the same routine encounter as separate triumphs',
+  'a tutor protecting a lesson after the pupil finds a kinder practical method',
+  'two committee veterans who each insist the other invented the tradition',
+  'two participants who both dislike the subject’s glamorous reputation',
+  'two participants who each need the other to make the final goodbye',
+  'two neighbours maintaining a shared excuse after both have forgotten who it was for',
+  'an expert and amateur who want the same result but need opposite explanations to be true',
+  'two relatives each pretending the other chose the family custom',
+  'a confident speaker and quiet helper who disagree about whether the helper is already in charge',
+  'two observers protecting different harmless details from the same tiny event',
+  'two acquaintances who realise they have been recommending the same unwanted item',
+  'two friends negotiating which one is allowed to be more relieved',
+] as const;
+
+const ordinaryObjectiveSeeds = [
+  'retrieve a borrowed object before its owner recognises it',
+  'leave five minutes early without appearing eager to leave',
+  'keep one unfashionable preference out of the official version',
+  'persuade the other role to stay for one final practical task',
+  'accept credit without having to give a speech',
+  'avoid being selected for a ceremonial role',
+  'correct a mispronounced name without interrupting the programme',
+  'swap one chair for a mundane but private reason',
+  'return a gift while preserving the giver’s pride',
+  'prove a routine has been learned without performing it',
+  'keep one useful flaw from being repaired',
+  'move an appointment away from an awkward acquaintance',
+  'obtain the plainest available version of the thing being discussed',
+  'finish an apology without reopening the original disagreement',
+  'let the novice lead without admitting help is needed',
+  'admit a misunderstanding before it becomes an on-screen caption',
+  'keep an old nickname out of the lower third',
+  'borrow an ordinary item for one additional day',
+  'convince the other role to claim an idea neither actually likes',
+  'finish the meeting before the unwanted refreshments arrive',
+  'keep a background responsibility from becoming a public job title',
+  'change one accurate word before a relative sees it',
+  'decline a promotion while still looking sincerely grateful',
+  'persuade the other role to stop improving the situation',
+  'postpone explaining one harmless family habit',
+  'prove attendance without appearing on camera',
+  'choose the deliberately dull option without insulting its maker',
+  'avoid delivering a flattering statement that is true for the wrong reason',
+  'preserve one useful delay until an awkward encounter has passed',
+  'end the interaction before both roles admit they want it to continue',
+] as const;
+
+const ordinaryFailureCosts = [
+  'sit through a second farewell',
+  'perform a thank-you live on camera',
+  'share the journey home with the opposing role',
+  'explain the preference to a relative already waiting nearby',
+  'become the next demonstration subject',
+  'surrender the good chair',
+  'host the next meeting',
+  'put their full name on a handmade sign',
+  'accept an unwanted commemorative item',
+  'make the promised phone call immediately',
+  'spend lunch beside their rival',
+  'keep the disputed item prominently visible at home',
+  'wear a lanyard containing the original spelling mistake',
+  'introduce the opposing role as the expert',
+  'admit they kept an ordinary reminder for sentimental reasons',
+  'stay for the group photograph',
+  'take home the leftovers nobody requested',
+  'rename an ordinary object in front of a guest',
+  'join the follow-up committee',
+  'reveal that they know the entire jingle',
+  'return the neighbour’s spare key',
+  'perform the closing announcement',
+  'accept applause for a task they wanted kept private',
+  'share the only umbrella',
+  'repeat the family portrait',
+  'display the certificate in the kitchen',
+  'use the unwanted formal title for the rest of the day',
+  'explain why there is no receipt',
+  'attend one more rehearsal',
+  'write the other role a perfectly sincere recommendation',
 ] as const;
 
 const formatPresentationGrammars: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
@@ -1264,6 +1369,12 @@ export function userPrompt(
     castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
   const performanceDynamic =
     performanceDynamics[axisIndex(serial, 0x6f922b3, performanceDynamics.length)]!;
+  const relationshipTexture =
+    relationshipTextures[axisIndex(serial, 0x70c951d, relationshipTextures.length)]!;
+  const ordinaryObjective =
+    ordinaryObjectiveSeeds[axisIndex(serial, 0x71d06e3, ordinaryObjectiveSeeds.length)]!;
+  const ordinaryFailureCost =
+    ordinaryFailureCosts[axisIndex(serial, 0x72eb49f, ordinaryFailureCosts.length)]!;
   const presentationPool = formatPresentationGrammars[format];
   const presentationGrammar =
     presentationPool[axisIndex(serial, 0x75a34c1, presentationPool.length)]!;
@@ -1320,7 +1431,12 @@ export function userPrompt(
       ? 'replace danger or catastrophe with a harmless administrative or social inconvenience'
       : null,
     rejectionReasons.some((reason) => reason.includes('specific character goal or refusal'))
-      ? 'state one role’s concrete goal and the opposing role or rule that blocks it'
+      ? 'literally name one role followed by needs, wants or must, then name the opposing role or rule that prevents or complicates it'
+      : null,
+    rejectionReasons.some((reason) =>
+      reason.includes('programme title promises a distinctive subject'),
+    )
+      ? 'repeat the programme title’s distinctive subject noun literally inside the premise'
       : null,
     rejectionReasons.some((reason) => reason.includes('object-agency premise'))
       ? 'give the ordinary object one explicit demand or refusal and a concrete institutional benefit'
@@ -1352,16 +1468,21 @@ ${physicalMechanismBlock}
 - Cast structure: ${cast}.
 - Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast structure and readable role differences.
 - Performance dynamic: ${performanceDynamic}. This shapes the acting and relationship beats, not the surreal mechanism.
+- Underlying relationship: ${relationshipTexture}.
+- Concrete private objective: one established role must ${ordinaryObjective}.
+- Ordinary cost of failure: that same role must ${ordinaryFailureCost}.
+- Programme-title contract: every distinctive subject noun in the title must be named literally in the premise.
 - Broadcast presentation: ${presentationGrammar}. Treat this as camera and graphic grammar only; it cannot add a second story mechanism, an unseen narrator or extra cast.
 - Dialogue architecture: ${dialogueShape}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
 Use the format-specific frame as the whole story. Apply the story mode inside that frame; it is not permission to add a second mechanism. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
+Treat the assigned relationship, private objective and cost of failure as the human specifics inside the one format-specific frame. Translate them onto roles already present in the assigned cast; do not add another character, subplot, rule or surreal mechanism to accommodate them. State the concrete objective and blocking role or rule directly in the premise. Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
 The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. A conflict need not be another refusal: use concealment, temptation, rivalry, loyalty, embarrassment, a fragile alliance or a change of mind where the assigned frame permits it. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
 Do not default to clerks, permits, waivers, penalties, policies, employee benefits or customer-satisfaction scores unless the assigned coordinates specifically require one. continuityFact will appear as a mid-programme broadcast graphic: make it a unique 5–16 word in-world fact, never an action, direction or generic slogan.
-Write the premise as one complete sentence of 8–48 words.
+Write the premise as one complete sentence of 8–48 words. Repeat the title’s distinctive subject noun in that sentence.
 Select a very high, memorable channel number. Make the scene unlike the immediately preceding material.`;
 }
 
