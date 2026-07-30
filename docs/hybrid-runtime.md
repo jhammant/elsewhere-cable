@@ -140,6 +140,14 @@ FFmpeg, the container or the YouTube upload. `endor:sync` checks packages agains
 set supported by Endor's currently running image before transferring them. Extended media remain
 off-air until a zero-drop renderer upgrade is available.
 
+During public playout, Ghost can set `ELSEWHERE_RECOVERY_REFILL_COUNT=12` to add an
+audio-audited reserve after every accepted original. Set
+`ELSEWHERE_PRIORITISE_LIVE_ORIGINALS=1` and `ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD=3` to observe the
+actual Endor play position and move new originals ahead of older reserve material without touching
+the current clip. If Endor's position cannot be verified, the packager preserves the safe
+append-only order. Recovery packages are explicitly labelled approved replays; they protect
+availability but are not counted as original writing.
+
 ## Current boundary
 
 Ghost-to-Endor batch production, atomic package playout, browser capture, VA-API encoding, audio

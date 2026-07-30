@@ -103,6 +103,21 @@ To keep Ghost producing and publishing batches until stopped with `Ctrl-C`:
 pnpm generate:live:loop
 ```
 
+For a public stream whose original-script lane is slower than realtime, keep a rotating approved
+reserve while placing each newly authored programme a few clips ahead of the live position:
+
+```bash
+ELSEWHERE_PACKAGE_PREPARED_SCRIPTS=1 \
+ELSEWHERE_RECOVERY_REFILL_COUNT=12 \
+ELSEWHERE_PRIORITISE_LIVE_ORIGINALS=1 \
+ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD=3 \
+pnpm generate:live:loop
+```
+
+Recovery entries reuse audio-audited catalogue programmes under new playout IDs. They are an
+availability reserve, not new material. New originals are inserted after a three-clip safety
+lookahead so an atomic Endor sync cannot disturb the segment currently playing.
+
 The sync uses hard links to the previous Endor release for unchanged packages, so publishing a
 larger manifest does not duplicate every existing audio file.
 

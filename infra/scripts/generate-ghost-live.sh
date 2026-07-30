@@ -15,6 +15,8 @@ embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 reservoir_target_hours=${ELSEWHERE_RESERVOIR_TARGET_HOURS:-72}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
 recovery_refill_count=${ELSEWHERE_RECOVERY_REFILL_COUNT:-0}
+prioritise_live_originals=${ELSEWHERE_PRIORITISE_LIVE_ORIGINALS:-0}
+live_priority_lookahead=${ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD:-3}
 package_prepared_scripts=${ELSEWHERE_PACKAGE_PREPARED_SCRIPTS:-0}
 script_queue=${ELSEWHERE_SCRIPT_QUEUE_DIR:-data/script-reservoir}
 
@@ -52,6 +54,20 @@ if [ "$recovery_refill_count" -lt 0 ] || [ "$recovery_refill_count" -gt 100 ]; t
   echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
   exit 64
 fi
+if [ "$prioritise_live_originals" != "0" ] && [ "$prioritise_live_originals" != "1" ]; then
+  echo "ELSEWHERE_PRIORITISE_LIVE_ORIGINALS must be 0 or 1." >&2
+  exit 64
+fi
+case "$live_priority_lookahead" in
+  '' | *[!0-9]*)
+    echo "ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD must be an integer from 1 to 12." >&2
+    exit 64
+    ;;
+esac
+if [ "$live_priority_lookahead" -lt 1 ] || [ "$live_priority_lookahead" -gt 12 ]; then
+  echo "ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD must be an integer from 1 to 12." >&2
+  exit 64
+fi
 if [ "$package_prepared_scripts" != "0" ] && [ "$package_prepared_scripts" != "1" ]; then
   echo "ELSEWHERE_PACKAGE_PREPARED_SCRIPTS must be 0 or 1." >&2
   exit 64
@@ -84,6 +100,7 @@ while :; do
     continue
   fi
 
+  batch_started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
   set -- \
     --count "$batch_count" \
     --concurrency "$generation_concurrency" \
@@ -128,6 +145,14 @@ while :; do
     pnpm exec tsx infra/scripts/emergency-refill.ts \
       --segments "$output_root" \
       --count "$recovery_refill_count"
+  fi
+  if [ "$prioritise_live_originals" = "1" ]; then
+    if ! pnpm exec tsx infra/scripts/prioritise-live-originals.ts \
+      --segments "$output_root" \
+      --newer-than "$batch_started_at" \
+      --lookahead "$live_priority_lookahead"; then
+      echo "Fresh-content prioritisation failed; publishing the safe append-only queue."
+    fi
   fi
 
   ELSEWHERE_LIVE_SEGMENTS_DIR="$output_root" pnpm endor:publish:once

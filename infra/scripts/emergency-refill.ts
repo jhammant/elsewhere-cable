@@ -13,6 +13,10 @@ import {
   maximumPlausibleSpeechDurationMs,
   speechAudioQualityIssue,
 } from '../../apps/generation-worker/src/providers.js';
+import {
+  diversifyRunway,
+  type RunwayDescriptor,
+} from '../../apps/generation-worker/src/runway-diversity.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -132,11 +136,33 @@ if (sourcePool.length === 0) {
   throw new Error('No audio-safe package is available for emergency refill');
 }
 
+type RecoverySource = (typeof sourcePool)[number] & RunwayDescriptor;
+function recoveryDescriptor(source: (typeof sourcePool)[number]): RecoverySource {
+  return {
+    ...source,
+    segmentId: source.segment.segmentId,
+    channelId: source.segment.channel.id,
+    programmeId: source.segment.programme.id,
+    format: source.segment.programme.format,
+    visualMedium: source.segment.visualMedium ?? 'legacy',
+    pacing: source.segment.pacing ?? 'conversational',
+    storyMode: source.segment.storyMode ?? 'legacy',
+  };
+}
+
+const precedingSource = candidates.at(-1);
+const preceding = precedingSource === undefined ? null : recoveryDescriptor(precedingSource);
+const diversifiedSourcePool = diversifyRunway(
+  sourcePool.map((source) => recoveryDescriptor(source)),
+  preceding,
+);
 const stamp = Date.now().toString(36);
 const recoveryEntries: PlayoutManifest['segments'] = [];
 for (let index = 0; index < count; index += 1) {
-  const sourceIndex = Math.floor((index * sourcePool.length) / count);
-  const source = sourcePool[sourceIndex] ?? sourcePool[index % sourcePool.length]!;
+  const sourceIndex = Math.floor((index * diversifiedSourcePool.length) / count);
+  const source =
+    diversifiedSourcePool[sourceIndex] ??
+    diversifiedSourcePool[index % diversifiedSourcePool.length]!;
   const aliasId = `seg_recovery_${stamp}_${String(index).padStart(3, '0')}`;
   const sourceDirectory = path.join(segmentsRoot, source.entry.packagePath.split('/')[0]!);
   const aliasDirectory = path.join(segmentsRoot, aliasId);
@@ -186,6 +212,7 @@ process.stdout.write(
       recoverySegments: recoveryEntries.length,
       recoveryDurationMs: recoveryEntries.reduce((total, entry) => total + entry.durationMs, 0),
       distinctSources: sourcePool.length,
+      diversified: true,
       source:
         requestedSourceIds !== null
           ? 'requested-approved-catalogue'

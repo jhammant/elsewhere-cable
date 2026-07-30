@@ -900,6 +900,22 @@ const architecturesThatRequireBrokenAlternation = [
   'Status interview:',
 ] as const;
 
+export function dialogueSpeakerPattern(architecture: string): string {
+  if (architecture.startsWith('Broken relay:')) {
+    return 'A, B, C, A, A, B, C';
+  }
+  if (architecture.startsWith('Sparse reaction scene:')) {
+    return 'A, A, B, B';
+  }
+  if (architecture.startsWith('Status interview:')) {
+    return 'A, B, B, A, B, A';
+  }
+  if (architecturesThatRequireBrokenAlternation.some((prefix) => architecture.startsWith(prefix))) {
+    return 'A, A, B, A, B, B';
+  }
+  return 'responsive order chosen by the scene; do not pad it into automatic alternation';
+}
+
 export function dialogueArchitectureIssues(draft: GeneratedSegmentDraft): string[] {
   const architecture = assignedDialogueShapeForCoordinates(draft);
   const issues: string[] = [];
@@ -1121,11 +1137,13 @@ export function scriptPrompt(
       .slice(0, 180),
   );
   const dialogueShape = assignedDialogueShapeForCoordinates(proposal);
+  const speakerPattern = dialogueSpeakerPattern(dialogueShape);
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
 Dialogue architecture: ${dialogueShape}
+Required speaker rhythm: ${speakerPattern}. Map A, B and C only to roles already established in the premise. Preserve consecutive turns exactly where shown; a second turn by one role must advance or revise their goal rather than repeat their previous line.
 Follow that architecture exactly using only roles already present in the premise. Do not invent a narrator, unseen speaker or new participant merely to satisfy the architecture.
 Characters must never say "the rule forces", "the law takes effect" or narrate a visible transformation merely to explain it. Let them bargain, conceal, accuse, boast, misunderstand and change decisions while the renderer shows physical action. Visual medium is a rendering style, not permission to invent new story physics. Do not introduce tragedy, trauma, dead relatives or an unrelated spectacle. Never include word counts, drafting notes or model commentary in programme fields. The ending may only use characters, objects and mechanisms already established by the approved premise. Never end with somebody screaming, trembling or staring in horror; end on a comic decision, loss of status, reluctant agreement or earned visual consequence.
 ${

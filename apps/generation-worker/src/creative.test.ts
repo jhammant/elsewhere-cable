@@ -6,6 +6,7 @@ import {
   assignedStoryMode,
   demoDraft,
   dialogueArchitectureIssues,
+  dialogueSpeakerPattern,
   scriptPrompt,
   systemPrompt,
   userPrompt,
@@ -87,6 +88,8 @@ describe('generation prompts', () => {
     expect(scriptPrompt(draft)).toContain(`Dialogue architecture: ${coordinateShape}`);
     expect(shapes.some((shape) => shape.includes('never use rigid ABAB'))).toBe(true);
     expect(shapes.some((shape) => shape.includes('four to six lines'))).toBe(true);
+    expect(dialogueSpeakerPattern('Unequal exchange: test')).toBe('A, A, B, A, B, B');
+    expect(scriptPrompt(draft)).toContain('Required speaker rhythm:');
   });
 
   it('covers every dialogue architecture across proposal coordinates', () => {

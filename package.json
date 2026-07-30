@@ -27,6 +27,7 @@
     "reservoir:revoice": "tsx infra/scripts/revoice-reservoir.ts",
     "reservoir:emergency-refill": "tsx infra/scripts/emergency-refill.ts",
     "reservoir:prioritise-recent": "tsx infra/scripts/prioritise-recent-segments.ts",
+    "reservoir:prioritise-live": "tsx infra/scripts/prioritise-live-originals.ts",
     "reservoir:remove": "tsx infra/scripts/remove-manifest-segments.ts",
     "reservoir:repair-medium": "tsx infra/scripts/repair-segment-medium.ts",
     "reservoir:tighten-tails": "tsx infra/scripts/tighten-segment-tails.ts",
