@@ -7,7 +7,7 @@ import {
   playoutManifestSchema,
   segmentPackageSchema,
 } from '@elsewhere-cable/schemas';
-import { demoDraft } from './creative.js';
+import { demoDraft, scriptPrompt } from './creative.js';
 import {
   assertPreviewSafe,
   editorialCritiqueIssues,
@@ -32,6 +32,40 @@ function universallyAlignedProposal(draft: ReturnType<typeof demoDraft>) {
     premise,
     endingBeat: 'The customer signs the contract as the camera holds on the product.',
   });
+}
+
+function architectureAlignedDialogue(
+  draft: ReturnType<typeof demoDraft>,
+  proposal: ReturnType<typeof universallyAlignedProposal>,
+) {
+  let dialogueCount = {
+    frantic: 10,
+    staccato: 8,
+    conversational: 6,
+    slow_burn: 6,
+    interrupted: 4,
+    near_silent: 4,
+  }[proposal.pacing ?? 'conversational'];
+  const prompt = scriptPrompt(proposal);
+  if (prompt.includes('Dialogue architecture: Rapid corrections:')) {
+    dialogueCount = Math.max(8, dialogueCount);
+  }
+  if (prompt.includes('Dialogue architecture: Sparse reaction scene:')) {
+    dialogueCount = Math.min(6, dialogueCount);
+  }
+  const programmeToken =
+    proposal.programmeTitle.match(/[A-Za-z]{4,}/u)?.[0] ?? `Channel${proposal.channelNumber}`;
+  return Array.from({ length: dialogueCount }, (_, index) => ({
+    ...draft.dialogue[index % draft.dialogue.length]!,
+    speaker: index % 4 < 2 ? 'Host' : 'Guest',
+    text: `${programmeToken} marks short response number ${index + 1} clearly.`,
+    action:
+      index < 2
+        ? ('PAUSE' as const)
+        : draft.dialogue[index % draft.dialogue.length]!.action === 'IDLE'
+          ? ('REACTION_NEUTRAL' as const)
+          : draft.dialogue[index % draft.dialogue.length]!.action,
+  }));
 }
 
 afterEach(async () => {
@@ -552,22 +586,7 @@ describe('produceBatch', () => {
           /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
         )?.[1];
         const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
-        const dialogueCount = {
-          frantic: 10,
-          staccato: 8,
-          conversational: 6,
-          slow_burn: 6,
-          interrupted: 4,
-          near_silent: 4,
-        }[proposal.pacing ?? 'conversational'];
-        draft.dialogue = Array.from({ length: dialogueCount }, (_, index) => ({
-          ...draft.dialogue[index % draft.dialogue.length]!,
-          text: `${draft.dialogue[index % draft.dialogue.length]!.text} Beat ${index + 1}.`,
-          action:
-            draft.dialogue[index % draft.dialogue.length]!.action === 'IDLE'
-              ? 'REACTION_NEUTRAL'
-              : draft.dialogue[index % draft.dialogue.length]!.action,
-        }));
+        draft.dialogue = architectureAlignedDialogue(draft, proposal);
         if (scriptIndex === 0) {
           draft.dialogue[0]!.text = 'The red label bleeds through the paperwork overnight.';
         }
@@ -696,24 +715,9 @@ describe('produceBatch', () => {
           /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
         )?.[1];
         const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
-        const dialogueCount = {
-          frantic: 10,
-          staccato: 8,
-          conversational: 6,
-          slow_burn: 6,
-          interrupted: 4,
-          near_silent: 4,
-        }[proposal.pacing ?? 'conversational'];
         return Promise.resolve({
           ...draft,
-          dialogue: Array.from({ length: dialogueCount }, (_, index) => ({
-            ...draft.dialogue[index % draft.dialogue.length]!,
-            text: `${draft.dialogue[index % draft.dialogue.length]!.text} Beat ${index + 1}.`,
-            action:
-              draft.dialogue[index % draft.dialogue.length]!.action === 'IDLE'
-                ? 'REACTION_NEUTRAL'
-                : draft.dialogue[index % draft.dialogue.length]!.action,
-          })),
+          dialogue: architectureAlignedDialogue(draft, proposal),
         });
       },
     };

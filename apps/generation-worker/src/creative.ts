@@ -478,6 +478,17 @@ const dialogueShapes = [
   'Detail handoff: each reply must pick up one concrete noun or claim from the previous line and redirect it toward a new social objective, ending with the opening detail reinterpreted.',
 ] as const;
 
+type DialoguePacing = NonNullable<GeneratedSegmentDraft['pacing']>;
+
+const dialogueShapesByPacing: Record<DialoguePacing, readonly string[]> = {
+  frantic: dialogueShapes.filter((shape) => !shape.startsWith('Sparse reaction scene:')),
+  staccato: dialogueShapes.filter((shape) => !shape.startsWith('Sparse reaction scene:')),
+  conversational: dialogueShapes,
+  slow_burn: dialogueShapes,
+  interrupted: dialogueShapes,
+  near_silent: dialogueShapes.filter((shape) => !shape.startsWith('Rapid corrections:')),
+};
+
 const formatStoryModes: Record<
   GeneratedSegmentProposal['format'],
   readonly NonNullable<GeneratedSegmentProposal['storyMode']>[]
@@ -824,16 +835,79 @@ export function assignedDialogueShape(serial: number): string {
   return dialogueShapes[axisIndex(serial, 0x5da7c91, dialogueShapes.length)]!;
 }
 
-type DialogueCoordinates = Pick<GeneratedSegmentProposal, 'format' | 'visualMedium' | 'storyMode'>;
+type DialogueCoordinates = Pick<
+  GeneratedSegmentProposal,
+  'format' | 'visualMedium' | 'storyMode' | 'pacing'
+>;
 
 export function assignedDialogueShapeForCoordinates(coordinates: DialogueCoordinates): string {
-  const key = `${coordinates.format}:${coordinates.visualMedium}:${coordinates.storyMode ?? 'none'}`;
+  const pacing = coordinates.pacing ?? 'conversational';
+  const candidates = dialogueShapesByPacing[pacing];
+  const key = `${coordinates.format}:${coordinates.visualMedium}:${coordinates.storyMode ?? 'none'}:${pacing}`;
   let hash = 2_166_136_261;
   for (const character of key) {
     hash ^= character.codePointAt(0) ?? 0;
     hash = Math.imul(hash, 16_777_619) >>> 0;
   }
-  return assignedDialogueShape(hash);
+  return candidates[axisIndex(hash, 0x5da7c91, candidates.length)]!;
+}
+
+const architecturesThatRequireBrokenAlternation = [
+  'Cold open:',
+  'Unequal exchange:',
+  'False ending:',
+  'Confession pivot:',
+  'Broken relay:',
+  'Sparse reaction scene:',
+  'Status interview:',
+] as const;
+
+export function dialogueArchitectureIssues(draft: GeneratedSegmentDraft): string[] {
+  const architecture = assignedDialogueShapeForCoordinates(draft);
+  const issues: string[] = [];
+  const speakers = draft.dialogue.map((line) => line.speaker.trim().toLowerCase());
+  const uniqueSpeakers = new Set(speakers);
+  const strictlyAlternating =
+    draft.dialogue.length >= 8 &&
+    uniqueSpeakers.size === 2 &&
+    speakers.slice(1).every((speaker, index) => speaker !== speakers[index]);
+  if (
+    strictlyAlternating &&
+    architecturesThatRequireBrokenAlternation.some((prefix) => architecture.startsWith(prefix))
+  ) {
+    issues.push(
+      'dialogue ignores its assigned architecture by reverting to rigid ABAB alternation',
+    );
+  }
+  if (architecture.startsWith('Unequal exchange:')) {
+    const consecutiveRuns = speakers
+      .slice(1)
+      .filter((speaker, index) => speaker === speakers[index]).length;
+    if (consecutiveRuns < 2) {
+      issues.push('unequal exchange needs two moments where the same character speaks twice');
+    }
+  }
+  if (architecture.startsWith('Sparse reaction scene:')) {
+    const heldReactions = draft.dialogue.filter((line) =>
+      ['PAUSE', 'FREEZE'].includes(line.action),
+    ).length;
+    if (draft.dialogue.length < 4 || draft.dialogue.length > 6 || heldReactions < 2) {
+      issues.push('sparse reaction scene needs 4–6 lines and at least two held reactions');
+    }
+  }
+  if (architecture.startsWith('Rapid corrections:')) {
+    const shortLines = draft.dialogue.filter(
+      (line) => line.text.trim().split(/\s+/u).filter(Boolean).length <= 9,
+    ).length;
+    if (
+      draft.dialogue.length < 8 ||
+      draft.dialogue.length > 12 ||
+      shortLines < Math.ceil(draft.dialogue.length * 0.75)
+    ) {
+      issues.push('rapid corrections need 8–12 lines with at least three quarters under ten words');
+    }
+  }
+  return issues;
 }
 
 export function assignedStoryMode(
@@ -894,12 +968,13 @@ export function userPrompt(
   const performanceDynamic =
     performanceDynamics[axisIndex(serial, 0x6f922b3, performanceDynamics.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
+  const pacing = assignedPacing(serial, optimisationBrief);
   const dialogueShape = assignedDialogueShapeForCoordinates({
     format,
     visualMedium,
     storyMode,
+    pacing,
   });
-  const pacing = assignedPacing(serial, optimisationBrief);
   const affectedSetElement =
     affectedSetElements[axisIndex(serial, 0xa12f683, affectedSetElements.length)]!;
   const transformation =

@@ -5,6 +5,7 @@ import {
   assignedPacing,
   assignedStoryMode,
   demoDraft,
+  dialogueArchitectureIssues,
   scriptPrompt,
   systemPrompt,
   userPrompt,
@@ -111,16 +112,102 @@ describe('generation prompts', () => {
       'isometric_manual',
     ] as const;
     const shapes = formats.flatMap((format) =>
+      media.flatMap((visualMedium) =>
+        (
+          [
+            'frantic',
+            'staccato',
+            'conversational',
+            'slow_burn',
+            'interrupted',
+            'near_silent',
+          ] as const
+        ).map((pacing) =>
+          assignedDialogueShapeForCoordinates({
+            format,
+            visualMedium,
+            storyMode: 'status_transfer',
+            pacing,
+          }),
+        ),
+      ),
+    );
+
+    expect(new Set(shapes).size).toBe(12);
+    const franticShapes = formats.flatMap((format) =>
       media.map((visualMedium) =>
         assignedDialogueShapeForCoordinates({
           format,
           visualMedium,
           storyMode: 'status_transfer',
+          pacing: 'frantic',
         }),
       ),
     );
+    const nearSilentShapes = formats.flatMap((format) =>
+      media.map((visualMedium) =>
+        assignedDialogueShapeForCoordinates({
+          format,
+          visualMedium,
+          storyMode: 'status_transfer',
+          pacing: 'near_silent',
+        }),
+      ),
+    );
+    expect(franticShapes.some((shape) => shape.startsWith('Sparse reaction scene:'))).toBe(false);
+    expect(nearSilentShapes.some((shape) => shape.startsWith('Rapid corrections:'))).toBe(false);
+  });
 
-    expect(new Set(shapes).size).toBe(12);
+  it('turns selected dialogue architectures into enforceable cadence gates', () => {
+    const base = demoDraft(4);
+    const coordinateOptions = (
+      [
+        'cel_shaded',
+        'paper_cutout',
+        'pixel_broadcast',
+        'archive_film',
+        'neon_wireframe',
+        'signal_corruption',
+        'stop_motion',
+        'claymation',
+        'thermal_camera',
+      ] as const
+    ).map((visualMedium) => ['advert', visualMedium, 'object_agency', 'conversational'] as const);
+    const unequalCoordinates = coordinateOptions.find(([format, visualMedium, storyMode, pacing]) =>
+      assignedDialogueShapeForCoordinates({
+        format,
+        visualMedium,
+        storyMode,
+        pacing,
+      }).startsWith('Unequal exchange:'),
+    );
+    expect(unequalCoordinates).toBeDefined();
+    const [format, visualMedium, storyMode, pacing] = unequalCoordinates!;
+    const rigid = {
+      ...base,
+      format,
+      visualMedium,
+      storyMode,
+      pacing,
+      dialogue: Array.from({ length: 8 }, (_, index) => ({
+        speaker: index % 2 === 0 ? 'Host' : 'Guest',
+        text: 'This is a short responsive spoken line.',
+        action: 'REACTION_NEUTRAL' as const,
+      })),
+    };
+    expect(dialogueArchitectureIssues(rigid)).toEqual([
+      'dialogue ignores its assigned architecture by reverting to rigid ABAB alternation',
+      'unequal exchange needs two moments where the same character speaks twice',
+    ]);
+
+    const varied = {
+      ...rigid,
+      dialogue: rigid.dialogue.map((line, index) => ({
+        ...line,
+        speaker: index === 2 || index === 5 ? rigid.dialogue[index - 1]!.speaker : line.speaker,
+      })),
+    };
+    expect(dialogueArchitectureIssues(varied)).toEqual([]);
   });
 
   it('fully applies corrective pacing while the delivered feed is too silent', () => {

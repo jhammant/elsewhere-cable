@@ -9,6 +9,7 @@ import {
 import {
   inspectSpeechAudio,
   maximumPlausibleSpeechDurationMs,
+  minimumPlausibleSpeechDurationMs,
   speechAudioQualityIssue,
 } from '../../apps/generation-worker/src/providers.js';
 import { containsSpokenStageDirection } from '../../apps/generation-worker/src/dialogue-quality.js';
@@ -154,6 +155,15 @@ for (const entry of manifest.segments) {
         reasons.push(`${event.speechId} contains a spoken stage direction`);
       }
       const ceiling = maximumPlausibleSpeechDurationMs(event.subtitle);
+      // Packages do not retain the requested speaking-rate scalar. Audit with the fastest
+      // supported rate so borderline energetic delivery is preserved while obvious clipping
+      // still fails. Live synthesis uses the exact requested rate and is stricter.
+      const floor = minimumPlausibleSpeechDurationMs(event.subtitle, 1.5);
+      if (event.durationMs < floor) {
+        reasons.push(
+          `${event.speechId} is ${event.durationMs}ms; minimum plausible duration is ${floor}ms`,
+        );
+      }
       if (event.durationMs > ceiling) {
         reasons.push(
           `${event.speechId} is ${event.durationMs}ms; maximum plausible duration is ${ceiling}ms`,

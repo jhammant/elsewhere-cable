@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   draftStructuralExample,
+  minimumPlausibleSpeechDurationMs,
   maximumPlausibleSpeechDurationMs,
   OpenAiCompatibleProvider,
   OpenAiCompatibleTtsProvider,
@@ -56,6 +57,38 @@ describe('OpenAiCompatibleTtsProvider', () => {
     );
     expect(proposal.premise).toContain('object explicitly demands');
     expect(draft.dialogue).toHaveLength(10);
+  });
+
+  it('demonstrates the assigned dialogue cadence instead of teaching ABAB by default', () => {
+    const unequal = JSON.parse(
+      draftStructuralExample({
+        systemPrompt: 'Return JSON.',
+        userPrompt: `Create a shopping segment.
+- Pacing: conversational.
+- Dialogue architecture: Unequal exchange: one speaker takes consecutive turns.`,
+      }),
+    ) as {
+      dialogue: Array<{ speaker: string; action: string }>;
+    };
+    const consecutiveTurns = unequal.dialogue
+      .slice(1)
+      .filter((line, index) => line.speaker === unequal.dialogue[index]?.speaker);
+    expect(consecutiveTurns.length).toBeGreaterThanOrEqual(2);
+
+    const sparse = JSON.parse(
+      draftStructuralExample({
+        systemPrompt: 'Return JSON.',
+        userPrompt: `Create a public_access segment.
+- Pacing: near_silent.
+- Dialogue architecture: Sparse reaction scene: use held reactions.`,
+      }),
+    ) as {
+      dialogue: Array<{ speaker: string; action: string }>;
+    };
+    expect(sparse.dialogue).toHaveLength(4);
+    expect(
+      sparse.dialogue.filter((line) => ['PAUSE', 'FREEZE'].includes(line.action)),
+    ).toHaveLength(2);
   });
 
   it('can route editorial criticism to a smaller independent model', async () => {
@@ -138,6 +171,13 @@ describe('OpenAiCompatibleTtsProvider', () => {
         'This intentionally long continuity announcement contains enough words to reach the hard broadcast ceiling without ever allowing an unbounded speech file onto the channel.',
       ),
     ).toBe(15_000);
+  });
+
+  it('rejects clipped speech using word count and requested delivery speed', () => {
+    const text = 'I need this box because my fridge is empty';
+    expect(minimumPlausibleSpeechDurationMs(text)).toBe(1_500);
+    expect(minimumPlausibleSpeechDurationMs(text, 1.35)).toBe(1_150);
+    expect(minimumPlausibleSpeechDurationMs('Three brief words')).toBe(600);
   });
 
   it('tempo-corrects a near miss but rejects severely rambling speech', () => {

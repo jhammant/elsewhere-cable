@@ -25,6 +25,7 @@ import {
   assignedPacing,
   assignedStoryMode,
   demoDraft,
+  dialogueArchitectureIssues,
   proposalSystemPrompt,
   scriptPrompt,
   systemPrompt,
@@ -1080,6 +1081,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             rejectionReasons = [
               ...proposalPreservationIssues(proposal, candidate),
               ...proposalQualityIssues(candidate),
+              ...dialogueArchitectureIssues(candidate),
               ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
               ...critiquePremise(candidate).reasons,
             ];

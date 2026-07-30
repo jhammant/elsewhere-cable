@@ -231,7 +231,9 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
 export function draftStructuralExample(request: StructuredGenerationRequest): string {
   const proposal = JSON.parse(proposalStructuralExample(request)) as Record<string, unknown>;
   const pacing = String(proposal.pacing);
-  const dialogueCount =
+  const architecture =
+    request.userPrompt.match(/Dialogue architecture:\s*([^\n]+)/u)?.[1] ?? 'responsive exchange';
+  let dialogueCount =
     {
       frantic: 10,
       staccato: 8,
@@ -240,16 +242,61 @@ export function draftStructuralExample(request: StructuredGenerationRequest): st
       interrupted: 4,
       near_silent: 4,
     }[pacing] ?? 6;
+  if (architecture.startsWith('Rapid corrections:')) {
+    dialogueCount = Math.max(8, dialogueCount);
+  }
+  if (architecture.startsWith('Sparse reaction scene:')) {
+    dialogueCount = Math.min(6, dialogueCount);
+  }
+  const speakerFor = (index: number): string => {
+    if (architecture.startsWith('Broken relay:')) {
+      const relay = [
+        'Original Speaker A',
+        'Original Speaker B',
+        'Original Speaker C',
+        'Original Speaker A',
+        'Original Speaker A',
+        'Original Speaker B',
+      ];
+      return relay[index % relay.length]!;
+    }
+    if (
+      /^(?:Cold open|Unequal exchange|False ending|Confession pivot|Sparse reaction scene|Status interview):/u.test(
+        architecture,
+      )
+    ) {
+      const unequal = [
+        'Original Speaker A',
+        'Original Speaker A',
+        'Original Speaker B',
+        'Original Speaker A',
+        'Original Speaker B',
+        'Original Speaker B',
+      ];
+      return unequal[index % unequal.length]!;
+    }
+    return index % 2 === 0 ? 'Original Speaker A' : 'Original Speaker B';
+  };
   return JSON.stringify({
     ...proposal,
     premise: 'Replace this with the approved original premise exactly.',
     dialogue: Array.from({ length: dialogueCount }, (_, index) => ({
-      speaker: index % 2 === 0 ? 'Original Speaker A' : 'Original Speaker B',
+      speaker: speakerFor(index),
       text:
         index === dialogueCount - 1
           ? 'Replace with the earned comic payoff spoken aloud.'
           : 'Replace with a direct response pursuing one established goal.',
-      action: index % 3 === 0 ? 'POINT_AT' : index % 3 === 1 ? 'REACTION_NEUTRAL' : 'PAUSE',
+      action: architecture.startsWith('Sparse reaction scene:')
+        ? index === 1
+          ? 'PAUSE'
+          : index === 3
+            ? 'FREEZE'
+            : 'REACTION_NEUTRAL'
+        : index % 3 === 0
+          ? 'POINT_AT'
+          : index % 3 === 1
+            ? 'REACTION_NEUTRAL'
+            : 'PAUSE',
     })),
     continuityFact: 'Replace with the approved original fictional fact exactly.',
     endingBeat: 'Replace with the approved original ending exactly.',
@@ -542,6 +589,12 @@ export function maximumPlausibleSpeechDurationMs(text: string): number {
   return Math.min(15_000, Math.max(5_000, wordCount * 600 + 1_500));
 }
 
+export function minimumPlausibleSpeechDurationMs(text: string, speakingRate = 1): number {
+  const wordCount = text.trim().split(/\s+/u).filter(Boolean).length;
+  const boundedRate = Math.max(0.5, Math.min(1.5, speakingRate));
+  return Math.max(500, Math.round((wordCount * 150) / boundedRate + 150));
+}
+
 export function speechTempoCorrection(text: string, durationMs: number): number | null {
   const maximumDurationMs = maximumPlausibleSpeechDurationMs(text);
   if (durationMs > maximumDurationMs * 1.6) {
@@ -737,6 +790,17 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
         }
         await writeFile(sourceFile, Buffer.from(await candidate.arrayBuffer()));
         const durationMs = await probeDurationMs(sourceFile);
+        const minimumPlausibleDurationMs = minimumPlausibleSpeechDurationMs(
+          request.text,
+          request.speakingRate,
+        );
+        if (durationMs < minimumPlausibleDurationMs) {
+          failures.push(
+            `${baseUrl}: clipped ${durationMs}ms audio for ${request.text.trim().split(/\s+/u).length} words (minimum plausible ${minimumPlausibleDurationMs}ms)`,
+          );
+          await unlink(sourceFile);
+          continue;
+        }
         const maximumPlausibleDurationMs = maximumPlausibleSpeechDurationMs(request.text);
         const candidateTempoCorrection = speechTempoCorrection(request.text, durationMs);
         if (candidateTempoCorrection === null) {
