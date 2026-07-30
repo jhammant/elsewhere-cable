@@ -1365,15 +1365,103 @@ function splitDialogueTurnIntoThree(
   ];
 }
 
+function splitDialogueTurnIntoParts(
+  line: GeneratedSegmentDraft['dialogue'][number],
+  parts: number,
+): GeneratedSegmentDraft['dialogue'] | null {
+  const words = line.text.trim().split(/\s+/u).filter(Boolean);
+  if (parts < 2 || parts > 4 || words.length < parts * 3) {
+    return null;
+  }
+  return Array.from({ length: parts }, (_, index) => {
+    const from = Math.floor((words.length * index) / parts);
+    const to = Math.floor((words.length * (index + 1)) / parts);
+    const value = words.slice(from, to).join(' ');
+    return {
+      ...line,
+      text: index < parts - 1 && !/[.!?…,:;—–-]$/u.test(value) ? `${value}…` : value,
+    };
+  });
+}
+
+function repairFastPacingDelivery(draft: GeneratedSegmentDraft): GeneratedSegmentDraft {
+  const pacing = draft.pacing ?? 'conversational';
+  const pacingRanges = {
+    frantic: [8, 12],
+    staccato: [6, 12],
+    conversational: [6, 10],
+    slow_burn: [6, 8],
+    interrupted: [4, 8],
+    near_silent: [4, 6],
+  } as const;
+  const architecture = assignedDialogueShapeForCoordinates(draft);
+  const rapidCorrections = architecture.startsWith('Rapid corrections:');
+  const [pacingMinimum, pacingMaximum] = pacingRanges[pacing];
+  const minimum = Math.max(pacingMinimum, rapidCorrections ? 8 : 0);
+  const maximum = Math.min(pacingMaximum, rapidCorrections ? 12 : pacingMaximum);
+  const deficit = (dialogue: GeneratedSegmentDraft['dialogue']): number => {
+    const beatDeficit = Math.max(0, minimum - dialogue.length);
+    const shortLineDeficit = rapidCorrections
+      ? Math.max(
+          0,
+          Math.ceil(dialogue.length * 0.75) -
+            dialogue.filter((line) => line.text.trim().split(/\s+/u).filter(Boolean).length <= 9)
+              .length,
+        )
+      : 0;
+    return beatDeficit * 100 + shortLineDeficit;
+  };
+
+  let dialogue = draft.dialogue;
+  while (deficit(dialogue) > 0 && dialogue.length < maximum) {
+    const candidates = dialogue.flatMap((line, index) =>
+      Array.from(
+        { length: Math.min(4, maximum - dialogue.length + 1) - 1 },
+        (_, partIndex) => partIndex + 2,
+      ).flatMap((parts) => {
+        const split = splitDialogueTurnIntoParts(line, parts);
+        if (split === null) {
+          return [];
+        }
+        const candidate = dialogue.flatMap((existing, existingIndex) =>
+          existingIndex === index ? split : [existing],
+        );
+        return deficit(candidate) < deficit(dialogue)
+          ? [
+              {
+                dialogue: candidate,
+                deficit: deficit(candidate),
+                addedBeats: parts - 1,
+                index,
+              },
+            ]
+          : [];
+      }),
+    );
+    const best = candidates.sort(
+      (left, right) =>
+        left.deficit - right.deficit ||
+        left.addedBeats - right.addedBeats ||
+        left.index - right.index,
+    )[0];
+    if (best === undefined) {
+      break;
+    }
+    dialogue = best.dialogue;
+  }
+  return dialogue === draft.dialogue ? draft : { ...draft, dialogue };
+}
+
 /**
- * Production conversion for a common local-model failure: a good script arrives
- * as a rigid two-person relay even though its assigned architecture needs held or
- * interrupted turns. Splitting an existing long turn changes only delivery and
+ * Production conversion for common local-model delivery failures: too few fast
+ * beats, or a rigid two-person relay where the assigned architecture needs held
+ * or interrupted turns. Splitting an existing turn changes only delivery and
  * timing; it never invents dialogue, characters, rules or actions.
  */
 export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): GeneratedSegmentDraft {
-  const architecture = assignedDialogueShapeForCoordinates(draft);
-  const speakers = draft.dialogue.map((line) => line.speaker.trim().toLowerCase());
+  const pacingRepaired = repairFastPacingDelivery(draft);
+  const architecture = assignedDialogueShapeForCoordinates(pacingRepaired);
+  const speakers = pacingRepaired.dialogue.map((line) => line.speaker.trim().toLowerCase());
   const consecutiveRuns = speakers
     .slice(1)
     .filter((speaker, index) => speaker === speakers[index]).length;
@@ -1388,15 +1476,15 @@ export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): Genera
     ? Math.max(0, 2 - consecutiveRuns)
     : 0;
   if (!requiresBrokenAlternation || (!strictlyAlternating && unequalExchangeDeficit === 0)) {
-    return draft;
+    return pacingRepaired;
   }
 
   const requiredSplits = unequalExchangeDeficit > 0 ? unequalExchangeDeficit : 1;
-  if (draft.dialogue.length + requiredSplits > 12) {
-    return draft;
+  if (pacingRepaired.dialogue.length + requiredSplits > 12) {
+    return pacingRepaired;
   }
   if (requiredSplits === 2) {
-    const tripleSplit = draft.dialogue
+    const tripleSplit = pacingRepaired.dialogue
       .map((line, index) => ({ index, split: splitDialogueTurnIntoThree(line) }))
       .filter(
         (
@@ -1411,20 +1499,20 @@ export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): Genera
         } => candidate.split !== null,
       )
       .sort((left, right) => {
-        const leftWords = draft.dialogue[left.index]!.text.trim().split(/\s+/u).length;
-        const rightWords = draft.dialogue[right.index]!.text.trim().split(/\s+/u).length;
+        const leftWords = pacingRepaired.dialogue[left.index]!.text.trim().split(/\s+/u).length;
+        const rightWords = pacingRepaired.dialogue[right.index]!.text.trim().split(/\s+/u).length;
         return rightWords - leftWords || left.index - right.index;
       })[0];
     if (tripleSplit !== undefined) {
       return {
-        ...draft,
-        dialogue: draft.dialogue.flatMap((line, index) =>
+        ...pacingRepaired,
+        dialogue: pacingRepaired.dialogue.flatMap((line, index) =>
           index === tripleSplit.index ? tripleSplit.split : [line],
         ),
       };
     }
   }
-  const splittable = draft.dialogue
+  const splittable = pacingRepaired.dialogue
     .map((line, index) => ({ index, split: splitDialogueTurn(line) }))
     .filter(
       (
@@ -1438,19 +1526,19 @@ export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): Genera
       } => candidate.split !== null,
     )
     .sort((left, right) => {
-      const leftWords = draft.dialogue[left.index]!.text.trim().split(/\s+/u).length;
-      const rightWords = draft.dialogue[right.index]!.text.trim().split(/\s+/u).length;
+      const leftWords = pacingRepaired.dialogue[left.index]!.text.trim().split(/\s+/u).length;
+      const rightWords = pacingRepaired.dialogue[right.index]!.text.trim().split(/\s+/u).length;
       return rightWords - leftWords || left.index - right.index;
     })
     .slice(0, requiredSplits);
   if (splittable.length < requiredSplits) {
-    return draft;
+    return pacingRepaired;
   }
 
   const replacements = new Map(splittable.map(({ index, split }) => [index, split]));
   return {
-    ...draft,
-    dialogue: draft.dialogue.flatMap((line, index) => replacements.get(index) ?? [line]),
+    ...pacingRepaired,
+    dialogue: pacingRepaired.dialogue.flatMap((line, index) => replacements.get(index) ?? [line]),
   };
 }
 

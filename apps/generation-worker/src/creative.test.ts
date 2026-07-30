@@ -441,6 +441,75 @@ describe('generation prompts', () => {
     ).toEqual(spokenWords);
   });
 
+  it('repairs frantic delivery into enough short beats without inventing spoken words', () => {
+    const base = demoDraft(4);
+    const coordinates = (
+      ['advert', 'public_access', 'news', 'shopping', 'sitcom', 'emergency', 'ident'] as const
+    )
+      .flatMap((format) =>
+        (
+          [
+            'cel_shaded',
+            'paper_cutout',
+            'public_access_vhs',
+            'pixel_broadcast',
+            'archive_film',
+            'neon_wireframe',
+            'signal_corruption',
+            'stop_motion',
+            'collage_zine',
+            'ink_monochrome',
+            'miniature_diorama',
+            'corporate_vector',
+            'claymation',
+            'shadow_theatre',
+            'hand_drawn',
+            'thermal_camera',
+            'ascii_terminal',
+            'blueprint_schematic',
+            'stained_glass',
+            'xerox_punk',
+            'storybook_wash',
+            'isometric_manual',
+          ] as const
+        ).map((visualMedium) => [format, visualMedium, 'object_agency', 'frantic'] as const),
+      )
+      .find(([format, visualMedium, storyMode, pacing]) =>
+        assignedDialogueShapeForCoordinates({
+          format,
+          visualMedium,
+          storyMode,
+          pacing,
+        }).startsWith('Rapid corrections:'),
+      );
+    expect(coordinates).toBeDefined();
+    const [format, visualMedium, storyMode, pacing] = coordinates!;
+    const rushed = {
+      ...base,
+      format,
+      visualMedium,
+      storyMode,
+      pacing,
+      dialogue: Array.from({ length: 6 }, (_, index) => ({
+        speaker: index % 2 === 0 ? 'Host' : 'Guest',
+        text: `This detailed correction number ${index} changes our careful bargain before lunch today.`,
+        action: 'REACTION_NEUTRAL' as const,
+      })),
+    };
+    const spokenWords = rushed.dialogue.flatMap((line) =>
+      line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu),
+    );
+
+    const repaired = repairDialogueArchitecture(rushed);
+
+    expect(repaired.dialogue.length).toBeGreaterThanOrEqual(8);
+    expect(repaired.dialogue.length).toBeLessThanOrEqual(12);
+    expect(dialogueArchitectureIssues(repaired)).toEqual([]);
+    expect(
+      repaired.dialogue.flatMap((line) => line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)),
+    ).toEqual(spokenWords);
+  });
+
   it('leaves an architecture alone when a safe delivery-only repair cannot fit', () => {
     const base = demoDraft(4);
     const rigid = {
