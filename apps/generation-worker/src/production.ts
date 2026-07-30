@@ -517,12 +517,13 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
           product_consequence:
             /\b(?:device|kit|machine|package|product|service|subscription|tool)\b/iu,
           format_literalism:
-            /\b(?:advert break|applause|broadcast|bulletin|camera|caption|closing credits|continuity|cue|episode|lower third|programme|teleprompter|title sequence|warning)\b/iu,
+            /\b(?:advert break|applause|back to you|breaking news|broadcast|bulletin|camera|caption|closing credits|commercial break|continuity|cue|disclaimer|episode|instant replay|live caption|lower third|phone-in delay|programme|recap|split screen|tally light|teleprompter|title sequence|weather map|warning)\b/iu,
           service_mismatch: /\b(?:client|customer|help|representative|service|support|worker)\b/iu,
           status_transfer:
-            /\b(?:authority|control|credit|decision|promotion|privilege|rank|status|veto)\b/iu,
+            /\b(?:authority|control|credit|decision|duty|final choice|final word|naming rights?|priority|privilege|rank|right to|seniority|status|veto|vote)\b|\b(?:belongs?|moves?|passes?|transfers?)\s+to\b/iu,
           semantic_contract: /\b(?:contract|phrase|said|says?|saying|spoken|word)\b/iu,
-          social_protocol: /\b(?:allowed|custom|etiquette|permission|protocol|social)\b/iu,
+          social_protocol:
+            /\b(?:allowed|custom|etiquette|farewell|guest status|only when|permission|protocol|responsible for|right to|social|speaking order|valid only)\b|\b(?:may|must|requires?)\b.{0,40}\b(?:admit|accept|ask|choose|host|preserve|solve|speak|stay)\b/iu,
           object_agency: /\b(?:demands?|negotiates?|refuses?|requests?|wants?)\b/iu,
           visual_physics:
             /\b(?:changes?|grows?|moves?|rotates?|shrinks?|splits?|swaps?|transforms?)\b/iu,

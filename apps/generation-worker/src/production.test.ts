@@ -309,6 +309,43 @@ describe('produceBatch', () => {
     );
   });
 
+  it('recognises curated story-mode wording without requiring validator shibboleths', () => {
+    const statusTransfer = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      programmeTitle: 'The Final Choice',
+      storyMode: 'status_transfer',
+      premise:
+        'In a workplace bulletin, an anchor wants the Final Choice settled, but it belongs to the colleague whose preferred result creates extra work for them.',
+      endingBeat: 'The colleague accepts the final choice and the anchor records the extra work.',
+    });
+    const formatLiteralism = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(1)),
+      programmeTitle: 'The Commercial Break',
+      storyMode: 'format_literalism',
+      premise:
+        'During a news report, an anchor wants the Commercial Break delayed, but it pauses only the duties of the colleague currently selling the shared mug.',
+      endingBeat: 'The colleague stops selling the mug and resumes the paused duty.',
+    });
+    const socialProtocol = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(2)),
+      programmeTitle: 'The Farewell',
+      storyMode: 'social_protocol',
+      premise:
+        'At a household Farewell, one neighbour wants to leave, but it remains incomplete until the quiet roommate accepts one practical favour.',
+      endingBeat: 'The roommate accepts the favour and completes the farewell.',
+    });
+
+    expect(proposalQualityIssues(statusTransfer)).not.toContain(
+      'premise does not realise its assigned status_transfer story mode',
+    );
+    expect(proposalQualityIssues(formatLiteralism)).not.toContain(
+      'premise does not realise its assigned format_literalism story mode',
+    );
+    expect(proposalQualityIssues(socialProtocol)).not.toContain(
+      'premise does not realise its assigned social_protocol story mode',
+    );
+  });
+
   it('requires a stageable physical setting at the start of every premise', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),
