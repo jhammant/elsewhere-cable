@@ -487,6 +487,29 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   ) {
     issues.push('non-visual story mode introduces an automatic body or set transformation');
   }
+  const optionalDialogue = (proposal as GeneratedSegmentProposal & { dialogue?: unknown }).dialogue;
+  const spokenDialogue = Array.isArray(optionalDialogue)
+    ? optionalDialogue
+        .map((line: unknown) => {
+          if (typeof line !== 'object' || line === null) {
+            return '';
+          }
+          const text = (line as Record<string, unknown>).text;
+          return typeof text === 'string' ? text : '';
+        })
+        .join(' ')
+    : '';
+  if (
+    proposal.storyMode !== undefined &&
+    proposal.storyMode !== 'visual_physics' &&
+    /\b(?:(?:folds?|unfolds?|moves?|rotates?|shrinks?|grows?|splits?|swaps?|transforms?|vanishes?|freezes?)\s+(?:itself|themselves|instantly|automatically|on its own)|there (?:it|they) (?:goes?|moves?|folds?))\b/iu.test(
+      spokenDialogue,
+    )
+  ) {
+    issues.push(
+      'spoken dialogue narrates an unapproved automatic transformation the renderer cannot perform',
+    );
+  }
   const storyModeAlignment =
     proposal.storyMode === undefined
       ? null

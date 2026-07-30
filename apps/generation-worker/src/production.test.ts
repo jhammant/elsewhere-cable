@@ -401,6 +401,21 @@ describe('produceBatch', () => {
     );
   });
 
+  it('rejects dialogue that narrates an unapproved automatic prop transformation', () => {
+    const draft = {
+      ...universallyAlignedProposal(demoDraft(0)),
+      storyMode: 'status_transfer' as const,
+      dialogue: demoDraft(0).dialogue.map((line, index) => ({
+        ...line,
+        text: index === 0 ? 'There it goes. The tablecloth folds itself instantly.' : line.text,
+      })),
+    };
+
+    expect(proposalQualityIssues(draft)).toContain(
+      'spoken dialogue narrates an unapproved automatic transformation the renderer cannot perform',
+    );
+  });
+
   it('rejects cruel or graphic harm before preparing speech', () => {
     const draft = demoDraft(0);
     draft.dialogue[0]!.text = 'The harness is choking the contestant until they drop dead.';
