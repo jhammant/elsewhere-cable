@@ -4,6 +4,7 @@ set -eu
 mode=${1:-once}
 batch_count=${ELSEWHERE_LIVE_BATCH_COUNT:-24}
 generation_concurrency=${ELSEWHERE_GENERATION_CONCURRENCY:-2}
+proposal_attempts=${ELSEWHERE_PROPOSAL_ATTEMPTS:-32}
 output_root=${ELSEWHERE_LIVE_SEGMENTS_DIR:-data/segments-live}
 history_root=${ELSEWHERE_CREATIVE_HISTORY_DIR:-data/segments}
 llm_base_url=${ELSEWHERE_LLM_BASE_URL:-http://127.0.0.1:1235/v1}
@@ -45,7 +46,7 @@ if [ "$generation_concurrency" -lt 1 ] || [ "$generation_concurrency" -gt 4 ]; t
   echo "ELSEWHERE_GENERATION_CONCURRENCY must be an integer from 1 to 4." >&2
   exit 64
 fi
-for value in "$recovery_refill_count" "$recovery_min_ahead_minutes"; do
+for value in "$recovery_refill_count" "$recovery_min_ahead_minutes" "$proposal_attempts"; do
   case "$value" in
     '' | *[!0-9]*)
       echo "Recovery count and minimum-ahead minutes must be integers." >&2
@@ -53,6 +54,10 @@ for value in "$recovery_refill_count" "$recovery_min_ahead_minutes"; do
       ;;
   esac
 done
+if [ "$proposal_attempts" -lt 1 ] || [ "$proposal_attempts" -gt 64 ]; then
+  echo "ELSEWHERE_PROPOSAL_ATTEMPTS must be an integer from 1 to 64." >&2
+  exit 64
+fi
 if [ "$recovery_refill_count" -lt 0 ] || [ "$recovery_refill_count" -gt 100 ]; then
   echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
   exit 64
@@ -131,6 +136,7 @@ while :; do
   set -- \
     --count "$batch_count" \
     --concurrency "$generation_concurrency" \
+    --proposal-attempts "$proposal_attempts" \
     --output "$output_root" \
     --base-url "$llm_base_url" \
     --model "$llm_model" \

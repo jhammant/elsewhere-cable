@@ -1017,6 +1017,7 @@ interface ProduceOptions {
   scriptQueueRoot?: string;
   prepareScriptsOnly?: boolean;
   packagePreparedScripts?: boolean;
+  proposalAttempts?: number;
 }
 
 // Premises deliberately reuse television formats and physical sets. Lower thresholds mostly
@@ -1550,7 +1551,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           let structuralRetryUsed = false;
           // A mature catalogue occupies much more of the obvious premise space than a fresh
           // installation. Search longer rather than weakening the semantic novelty gate.
-          const maximumProposalAttempts = 16;
+          const maximumProposalAttempts = options.proposalAttempts ?? 16;
           for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
             const creativeSerial =
               creativeSerialBase + index + creativeCoordinateAttempt * options.count;

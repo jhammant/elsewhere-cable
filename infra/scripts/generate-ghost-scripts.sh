@@ -1,13 +1,14 @@
 #!/bin/sh
 set -eu
 
-script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_directory=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 workspace_root=$(dirname "$(dirname "$script_directory")")
 cd "$workspace_root"
 
 mode=${1:-once}
 batch_count=${ELSEWHERE_SCRIPT_BATCH_COUNT:-16}
 generation_concurrency=${ELSEWHERE_GENERATION_CONCURRENCY:-4}
+proposal_attempts=${ELSEWHERE_PROPOSAL_ATTEMPTS:-32}
 output_root=${ELSEWHERE_LIVE_SEGMENTS_DIR:-data/segments-live}
 script_queue=${ELSEWHERE_SCRIPT_QUEUE_DIR:-data/script-reservoir}
 script_target_count=${ELSEWHERE_SCRIPT_TARGET_COUNT:-5400}
@@ -21,7 +22,7 @@ if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
   exit 64
 fi
-for value in "$batch_count" "$generation_concurrency" "$script_target_count"; do
+for value in "$batch_count" "$generation_concurrency" "$proposal_attempts" "$script_target_count"; do
   case "$value" in
     '' | *[!0-9]*)
       echo "Script batch, concurrency and target values must be integers." >&2
@@ -29,6 +30,10 @@ for value in "$batch_count" "$generation_concurrency" "$script_target_count"; do
       ;;
   esac
 done
+if [ "$proposal_attempts" -lt 1 ] || [ "$proposal_attempts" -gt 64 ]; then
+  echo "ELSEWHERE_PROPOSAL_ATTEMPTS must be an integer from 1 to 64." >&2
+  exit 64
+fi
 if [ "$batch_count" -lt 1 ] || [ "$batch_count" -gt 100 ]; then
   echo "ELSEWHERE_SCRIPT_BATCH_COUNT must be an integer from 1 to 100." >&2
   exit 64
@@ -62,6 +67,7 @@ while :; do
     --script-queue "$script_queue" \
     --count "$batch_count" \
     --concurrency "$generation_concurrency" \
+    --proposal-attempts "$proposal_attempts" \
     --output "$output_root" \
     --base-url "$llm_base_url" \
     --model "$llm_model" \

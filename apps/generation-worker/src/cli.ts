@@ -36,6 +36,16 @@ function concurrencyArgument(): number {
   return concurrency;
 }
 
+function proposalAttemptsArgument(): number {
+  const attempts = Number(
+    argument('proposal-attempts') ?? process.env.ELSEWHERE_PROPOSAL_ATTEMPTS ?? 16,
+  );
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 64) {
+    throw new Error('--proposal-attempts must be an integer from 1 to 64');
+  }
+  return attempts;
+}
+
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(sourceDirectory, '../../..');
 
@@ -168,6 +178,7 @@ async function main(): Promise<void> {
     scriptQueueRoot,
     prepareScriptsOnly,
     packagePreparedScripts,
+    proposalAttempts: proposalAttemptsArgument(),
     fresh: process.argv.includes('--fresh'),
     ...(historyRoot === undefined
       ? {}
