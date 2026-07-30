@@ -88,6 +88,12 @@ const llmBaseUrl =
   argument('llm-base-url') ?? process.env.ELSEWHERE_LLM_BASE_URL ?? 'http://127.0.0.1:1235/v1';
 const llmModel = argument('llm-model') ?? process.env.ELSEWHERE_LLM_MODEL ?? 'qwen3.5-35b-a3b';
 const youtubeUrl = argument('youtube-url') ?? process.env.ELSEWHERE_YOUTUBE_WATCH_URL;
+const deliverySampleSeconds = Number(
+  argument('sample-seconds') ?? process.env.ELSEWHERE_DELIVERY_SAMPLE_SECONDS ?? 60,
+);
+if (!Number.isInteger(deliverySampleSeconds) || deliverySampleSeconds < 5) {
+  throw new Error('--sample-seconds must be an integer of at least 5');
+}
 
 const allFormats = [
   'advert',
@@ -99,6 +105,46 @@ const allFormats = [
   'ident',
 ] as const;
 const allPacing = pacingModes;
+const criticResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    scores: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        premiseClarity: { type: 'number', minimum: 0, maximum: 10 },
+        comedyEscalation: { type: 'number', minimum: 0, maximum: 10 },
+        dialogueCoherence: { type: 'number', minimum: 0, maximum: 10 },
+        visualMatch: { type: 'number', minimum: 0, maximum: 10 },
+        paceVariety: { type: 'number', minimum: 0, maximum: 10 },
+        originality: { type: 'number', minimum: 0, maximum: 10 },
+        shareability: { type: 'number', minimum: 0, maximum: 10 },
+      },
+      required: [
+        'premiseClarity',
+        'comedyEscalation',
+        'dialogueCoherence',
+        'visualMatch',
+        'paceVariety',
+        'originality',
+        'shareability',
+      ],
+    },
+    avoidMotifs: {
+      type: 'array',
+      items: { type: 'string' },
+      maxItems: 8,
+    },
+    preserveStrengths: {
+      type: 'array',
+      items: { type: 'string' },
+      maxItems: 5,
+    },
+    editorialDirection: { type: 'string' },
+  },
+  required: ['scores', 'avoidMotifs', 'preserveStrengths', 'editorialDirection'],
+} as const;
 const stopWords = new Set([
   'across',
   'about',
@@ -226,38 +272,21 @@ interface DeliveryProbe {
   freezeRatio: number | null;
 }
 
-const deliverySampleSeconds = 60;
-
 function clampRatio(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryProbe> {
-  if (url === undefined) {
-    return {
-      isLive: null,
-      concurrentViewers: null,
-      silenceRatio: null,
-      freezeRatio: null,
-    };
-  }
-  let isLive: boolean | null = null;
-  let concurrentViewers: number | null = null;
-  try {
-    const metadata = await execFileAsync('yt-dlp', ['--no-warnings', '--dump-single-json', url], {
-      timeout: 45_000,
-      maxBuffer: 4 * 1024 * 1024,
-    });
-    const parsed = JSON.parse(metadata.stdout) as {
-      is_live?: boolean;
-      concurrent_view_count?: number | null;
-    };
-    isLive = parsed.is_live ?? null;
-    concurrentViewers = parsed.concurrent_view_count ?? null;
-  } catch {
-    // The editorial loop must keep producing a brief when public analytics are unavailable.
-  }
+function reportObserverError(scope: string, error: unknown): void {
+  process.stderr.write(
+    `Optimisation observer ${scope} failed without affecting playout: ${
+      error instanceof Error ? error.message : String(error)
+    }\n`,
+  );
+}
 
+async function publicDeliveryRatios(
+  url: string,
+): Promise<Pick<DeliveryProbe, 'silenceRatio' | 'freezeRatio'>> {
   const sampleDirectory = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-live-rating-'));
   const samplePath = path.join(sampleDirectory, 'sample.mkv');
   try {
@@ -285,7 +314,10 @@ async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryPro
         'copy',
         samplePath,
       ],
-      { timeout: 120_000, maxBuffer: 2 * 1024 * 1024 },
+      {
+        timeout: Math.max(120_000, (deliverySampleSeconds + 45) * 1_000),
+        maxBuffer: 2 * 1024 * 1024,
+      },
     );
     const audio = await execFileAsync(
       'ffmpeg',
@@ -300,7 +332,7 @@ async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryPro
         'null',
         '-',
       ],
-      { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 },
+      { timeout: 45_000, maxBuffer: 4 * 1024 * 1024 },
     );
     const video = await execFileAsync(
       'ffmpeg',
@@ -315,7 +347,7 @@ async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryPro
         'null',
         '-',
       ],
-      { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 },
+      { timeout: 45_000, maxBuffer: 4 * 1024 * 1024 },
     );
     const silenceSeconds = [...audio.stderr.matchAll(/silence_duration:\s*([\d.]+)/giu)].reduce(
       (total, match) => total + Number(match[1] ?? 0),
@@ -326,16 +358,53 @@ async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryPro
       0,
     );
     return {
-      isLive,
-      concurrentViewers,
       silenceRatio: clampRatio(silenceSeconds / deliverySampleSeconds),
       freezeRatio: clampRatio(freezeSeconds / deliverySampleSeconds),
     };
-  } catch {
-    return { isLive, concurrentViewers, silenceRatio: null, freezeRatio: null };
   } finally {
     await rm(sampleDirectory, { recursive: true, force: true });
   }
+}
+
+async function publicDeliveryProbe(url: string | undefined): Promise<DeliveryProbe> {
+  if (url === undefined) {
+    return {
+      isLive: null,
+      concurrentViewers: null,
+      silenceRatio: null,
+      freezeRatio: null,
+    };
+  }
+  let isLive: boolean | null = null;
+  let concurrentViewers: number | null = null;
+  try {
+    const metadata = await execFileAsync('yt-dlp', ['--no-warnings', '--dump-single-json', url], {
+      timeout: 45_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    const parsed = JSON.parse(metadata.stdout) as {
+      is_live?: boolean;
+      concurrent_view_count?: number | null;
+    };
+    isLive = parsed.is_live ?? null;
+    concurrentViewers = parsed.concurrent_view_count ?? null;
+  } catch (error) {
+    // The editorial loop must keep producing a brief when public analytics are unavailable.
+    reportObserverError('YouTube metadata', error);
+  }
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return {
+        isLive,
+        concurrentViewers,
+        ...(await publicDeliveryRatios(url)),
+      };
+    } catch (error) {
+      reportObserverError(`public delivery sample ${attempt}/2`, error);
+    }
+  }
+  return { isLive, concurrentViewers, silenceRatio: null, freezeRatio: null };
 }
 
 async function endorLogs(): Promise<string> {
@@ -513,7 +582,14 @@ async function criticBrief(
         temperature: 0.25,
         max_tokens: 1_400,
         reasoning_effort: 'none',
-        response_format: { type: 'json_object' },
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'elsewhere_cable_optimisation_critique',
+            strict: true,
+            schema: criticResponseSchema,
+          },
+        },
         messages: [
           {
             role: 'system',
@@ -531,10 +607,12 @@ async function criticBrief(
       }),
       signal: AbortSignal.timeout(180_000),
     });
-  } catch {
+  } catch (error) {
+    reportObserverError('critic request', error);
     return baseline;
   }
   if (!response.ok) {
+    reportObserverError('critic request', new Error(`HTTP ${response.status}`));
     return baseline;
   }
   try {
@@ -613,7 +691,7 @@ async function criticBrief(
       pacingDirection === null
         ? boundedCriticDirection
         : `${safeText(boundedCriticDirection, 320) ?? baseline.editorialDirection} ${pacingDirection}`;
-    return optimisationBriefSchema.parse({
+    const nextBrief = optimisationBriefSchema.parse({
       ...baseline,
       scores: {
         premiseClarity: score('premiseClarity'),
@@ -631,7 +709,10 @@ async function criticBrief(
       ).slice(0, 8),
       editorialDirection,
     });
-  } catch {
+    process.stdout.write('Optimisation critic accepted structured scores.\n');
+    return nextBrief;
+  } catch (error) {
+    reportObserverError('critic response', error);
     return baseline;
   }
 }

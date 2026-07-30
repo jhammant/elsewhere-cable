@@ -303,15 +303,24 @@ function speakingRateFor(
 }
 
 export function assertPreviewSafe(draft: GeneratedSegmentDraft): void {
+  const issue = previewSafetyIssues(draft)[0];
+  if (issue !== undefined) {
+    throw new Error(issue);
+  }
+}
+
+export function previewSafetyIssues(draft: GeneratedSegmentDraft): string[] {
+  const issues: string[] = [];
   const safetyIssue = contentSafetyIssue(draft);
   if (safetyIssue !== null) {
-    throw new Error(`Local-preview safety check rejected ${safetyIssue}`);
+    issues.push(`Local-preview safety check rejected ${safetyIssue}`);
   }
   if (draft.dialogue.some((line) => containsSpokenStageDirection(line.text))) {
-    throw new Error(
+    issues.push(
       'Local-preview quality check rejected a spoken stage direction; physical performance belongs in action',
     );
   }
+  return issues;
 }
 
 export function contentSafetyIssue(content: unknown): string | null {
@@ -1165,6 +1174,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             rejectionReasons = [
               ...proposalPreservationIssues(proposal, candidate),
               ...proposalQualityIssues(candidate),
+              ...previewSafetyIssues(candidate),
               ...dialogueArchitectureIssues(candidate),
               ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
               ...critiquePremise(candidate).reasons,

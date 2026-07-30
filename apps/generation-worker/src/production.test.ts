@@ -13,6 +13,7 @@ import {
   editorialCritiqueIssues,
   midSpeechCameraEvents,
   produceBatch,
+  previewSafetyIssues,
   proposalQualityIssues,
   repairNetworkIdentityCollision,
   semanticNoveltyIssue,
@@ -246,6 +247,15 @@ describe('produceBatch', () => {
     draft.dialogue[0]!.text = 'The harness is choking the contestant until they drop dead.';
 
     expect(() => assertPreviewSafe(draft)).toThrow('safety check rejected');
+  });
+
+  it('returns preview safety defects early enough for a script retry', () => {
+    const draft = demoDraft(0);
+    draft.dialogue[0]!.text = 'The dead appliance has submitted another camera direction.';
+
+    expect(previewSafetyIssues(draft)).toEqual([
+      expect.stringContaining('Local-preview safety check rejected content matching'),
+    ]);
   });
 
   it('rejects bereavement and bodily harm as shortcuts for comedy stakes', () => {
@@ -617,7 +627,7 @@ describe('produceBatch', () => {
     expect(await readdir(path.join(scriptQueueRoot, 'completed'))).toHaveLength(2);
   });
 
-  it('keeps safe prepared scripts when another draft fails the final safety gate', async () => {
+  it('retries an unsafe script before the final preparation gate', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-safe-partial-queue-'));
     temporaryDirectories.push(root);
     const outputRoot = path.join(root, 'segments');
@@ -659,16 +669,15 @@ describe('produceBatch', () => {
       prepareScriptsOnly: true,
     });
 
-    expect(result.preparedScriptCount).toBe(1);
-    expect(result.rejectedSegmentCount).toBe(1);
-    expect(result.rejectionReasons).toEqual([
-      expect.stringContaining('safety check rejected content'),
-    ]);
+    expect(result.preparedScriptCount).toBe(2);
+    expect(result.rejectedSegmentCount).toBe(0);
+    expect(result.rejectionReasons).toEqual([]);
+    expect(scriptIndex).toBeGreaterThanOrEqual(3);
     expect(
       (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>
         file.endsWith('.json'),
       ),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
   it('commits completed novel segments when another batch slot is exhausted', async () => {
