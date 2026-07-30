@@ -18,22 +18,24 @@ export function mixedRecoveryCatalogue<T>(
     return rotateCatalogue(approvedOriginals, offset);
   }
 
-  const originals = rotateCatalogue(approvedOriginals, offset * 3);
-  const demos = rotateCatalogue(stableDemos, offset);
   const mixed: T[] = [];
   let originalIndex = 0;
   let demoIndex = 0;
 
-  while (originalIndex < originals.length || demoIndex < demos.length) {
-    for (let index = 0; index < 3 && originalIndex < originals.length; index += 1) {
-      mixed.push(originals[originalIndex]!);
+  while (originalIndex < approvedOriginals.length || demoIndex < stableDemos.length) {
+    for (
+      let index = 0;
+      index < 3 && originalIndex < approvedOriginals.length;
+      index += 1
+    ) {
+      mixed.push(approvedOriginals[originalIndex]!);
       originalIndex += 1;
     }
-    if (demoIndex < demos.length) {
-      mixed.push(demos[demoIndex]!);
+    if (demoIndex < stableDemos.length) {
+      mixed.push(stableDemos[demoIndex]!);
       demoIndex += 1;
     }
   }
 
-  return mixed;
+  return rotateCatalogue(mixed, offset);
 }
