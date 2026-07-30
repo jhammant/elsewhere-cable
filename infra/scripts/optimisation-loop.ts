@@ -77,6 +77,7 @@ function positiveInteger(name: string, fallback: number): number {
 
 const intervalMinutes = positiveInteger('interval-minutes', 30);
 const lookbackMinutes = positiveInteger('lookback-minutes', 30);
+const researchIntervalHours = positiveInteger('research-interval-hours', 12);
 const segmentsRoot = path.resolve(
   workspaceRoot,
   argument('segments') ?? process.env.ELSEWHERE_LIVE_SEGMENTS_DIR ?? 'data/segments-live',
@@ -100,6 +101,7 @@ const deliverySampleSeconds = Number(
 if (!Number.isInteger(deliverySampleSeconds) || deliverySampleSeconds < 5) {
   throw new Error('--sample-seconds must be an integer of at least 5');
 }
+let nextAudienceResearchAt = 0;
 
 const allFormats = [
   'advert',
@@ -666,6 +668,28 @@ ${brief.editorialDirection}
   );
 }
 
+async function refreshAudienceResearchIfDue(): Promise<void> {
+  const now = Date.now();
+  if (now < nextAudienceResearchAt) {
+    return;
+  }
+  nextAudienceResearchAt = now + researchIntervalHours * 60 * 60 * 1_000;
+  try {
+    await execFileAsync(
+      path.join(workspaceRoot, 'node_modules/.bin/tsx'),
+      [
+        path.join(workspaceRoot, 'infra/scripts/audience-research.ts'),
+        '--once',
+        '--interval-hours',
+        String(researchIntervalHours),
+      ],
+      { timeout: 60_000, maxBuffer: 2 * 1024 * 1024 },
+    );
+  } catch (error) {
+    reportObserverError('audience research', error);
+  }
+}
+
 async function runWindow(): Promise<void> {
   const logs = await endorLogs();
   const ids = airedSegmentIds(logs);
@@ -677,6 +701,23 @@ async function runWindow(): Promise<void> {
   const fallbackOccurrences = Math.max(segments.length === 0 ? 1 : 0, failedSegmentRequests);
   const brief = await criticBrief(segments, delivery, fallbackOccurrences);
   await writeBrief(brief);
+  try {
+    await execFileAsync(
+      path.join(workspaceRoot, 'node_modules/.bin/tsx'),
+      [
+        path.join(workspaceRoot, 'infra/scripts/optimisation-scorecard.ts'),
+        '--history',
+        historyPath,
+        '--segments',
+        segmentsRoot,
+        '--quiet',
+      ],
+      { timeout: 120_000, maxBuffer: 2 * 1024 * 1024 },
+    );
+  } catch (error) {
+    reportObserverError('scorecard refresh', error);
+  }
+  await refreshAudienceResearchIfDue();
   process.stdout.write(
     `${JSON.stringify(
       {

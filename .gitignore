@@ -16,6 +16,7 @@ data/generated/
 data/logs/
 data/observations/
 data/optimisation/
+data/research/
 data/runtime/
 data/script-reservoir/
 data/segments/*

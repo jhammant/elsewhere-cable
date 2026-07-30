@@ -240,3 +240,14 @@ docker inspect \
   --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}} restarts={{.RestartCount}}' \
   "$container"
 REMOTE
+
+experiment_hypothesis="$(git log -1 --format=%s)"
+if ! pnpm optimise:experiment -- \
+  --build "$build_id" \
+  --surface renderer \
+  --hypothesis "$experiment_hypothesis"; then
+  echo "Renderer is live, but experiment registration failed." >&2
+fi
+if ! pnpm optimise:scorecard -- --quiet; then
+  echo "Renderer is live, but scorecard refresh failed." >&2
+fi
