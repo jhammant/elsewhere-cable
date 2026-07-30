@@ -1292,6 +1292,53 @@ const requestedPacing = [
   'conversational',
 ] as const;
 
+export type StorylineLane = 'surreal' | 'comic' | 'mundane';
+
+const storylineBlueprintsByLane: Record<StorylineLane, readonly string[]> = {
+  surreal: [
+    'open after the established impossible condition has already become routine; map the existing protagonist goal onto one practical exception, let the opposing role defend the condition as ordinary, then make the approved consequence increasingly visible',
+    'begin on the approved consequence rather than an explanation; let each existing role confidently misunderstand what it means for their own goal until one mundane choice reveals who has actually gained leverage',
+    'treat the programme format as completely sincere while the established mechanism makes its normal procedure impossible; every attempted correction must intensify only that same mechanism',
+    'let the least surprised established role understand the impossible condition first; the more authoritative role tries three increasingly impractical tactics before accepting the approved payoff',
+    'stage the exact mechanism as a familiar workplace nuisance in an otherwise uncanny setting; characters remain practical while the visual composition grows stranger around their unchanged goals',
+    'make the first image unmistakably impossible but the conversation narrowly practical; each response should solve one small part of the existing goal while worsening its single approved consequence',
+    'start with both established roles cooperating under the impossible rule; reveal that their incompatible goals make cooperation socially expensive, then let the approved payoff reward the role who adapts first',
+    'present the established mechanism as a live demonstration already going wrong; one role protects professional confidence while the other quietly tests what the same consequence means for their goal',
+    'let one role believe the impossible condition is temporary and the other know it is normal; each tactic should make that difference less important than the immediate mundane decision',
+    'build a chain of three visible states caused by the exact same trigger; the first is useful, the second embarrassing and the third forces the approved status reversal',
+    'make the approved mechanism affect the television ritual before it affects the argument; the roles use the altered ritual to pursue their existing goals without inventing another rule',
+    'open with a calm factual statement about the impossible situation; let the opposing role ask only practical questions until the final answer turns the approved consequence into a choice',
+  ],
+  comic: [
+    'begin with both established roles pretending the practical decision is easy; each answer exposes a different petty reason it matters, and the exact mechanism converts those motives into a clean status reversal',
+    'let one role hide an ordinary motive behind professional language while the other takes every claim literally; the established mechanism should make evasion progressively harder',
+    'start with an overconfident solution to the existing goal; let the opposing role improve it twice in ways that cost the first role credit, then earn the approved payoff',
+    'make both roles want the scene finished quickly for incompatible reasons; each attempted shortcut activates or applies the exact same consequence and creates one sharper bargain',
+    'give the lower-status role the useful practical knowledge but not the confidence to state it; the higher-status role must gradually ask more precise questions until authority changes hands',
+    'let one established role offer a generous concession that is secretly convenient; the other accepts it in a more literal form, forcing the first role to choose between pride and the original goal',
+    'begin with a tiny accusation about who completed the established task; each reply supplies better evidence for the rival until the person seeking credit inherits the dull responsibility',
+    'make one role repeatedly rename the existing problem to avoid responsibility; the other role accepts every new label while preserving the same consequence, narrowing the escape each time',
+    'let a sincere compliment accidentally give the opposing role leverage under the approved mechanism; both characters then try to remain polite while negotiating that leverage',
+    'start with one role claiming no preference; the exact mechanism makes that claim consequential, and the rest of the scene forces increasingly specific admissions without adding another condition',
+    'play the established task as a demonstration in which the quieter role succeeds accidentally; the confident role copies the success badly, then must publicly request the original method',
+    'let both roles agree on the facts but disagree about the flattering interpretation; the approved consequence should make the less glamorous interpretation practically useful',
+  ],
+  mundane: [
+    'allow the established routine to proceed correctly for two patient beats before either role disagrees; make the conflict a tiny preference about how to finish, and let the assigned mechanism feel like an old local convention rather than a twist',
+    'begin with quiet checking, sorting or waiting already implied by the setting; one role proposes a minor efficiency, the other reveals why the slower routine matters, and the payoff remains understated',
+    'let both established roles spend the opening discussing one boring practical detail in good faith; only gradually show that the exact mechanism changes who must deal with that detail',
+    'stage a mildly awkward pause around the existing central object; neither role wants a confrontation, so each offers smaller and more specific compromises until one accepts the duller task',
+    'show an ordinary handover almost succeeding; one overlooked detail exposes the incompatible goals, but the response stays patient, plausible and socially small',
+    'let a competent routine take longer than expected because both roles are being excessively considerate; the established mechanism should emerge through their politeness rather than a dramatic reveal',
+    'open with one role quietly completing the least interesting part of the shared task; the other notices, misreads the motive and creates a low-stakes disagreement that ends in a practical concession',
+    'make the scene about waiting for an ordinary process already present in the premise; use the silence to reveal who is avoiding which small responsibility, then land the approved payoff without spectacle',
+    'begin with a factual status update and one unimportant correction; allow the correction to become personally meaningful only because of the exact established mechanism',
+    'let both roles agree to preserve a familiar but inefficient routine; their only dispute is which tiny part still counts as useful, and the final choice should remain modest',
+    'show the established task being done adequately rather than badly; comedy comes from the roles assigning too much social meaning to one ordinary choice, not from chaos',
+    'hold on a normal room and a normal job long enough for the audience to understand them; introduce the approved oddity late, accept it without alarm and finish on a small practical decision',
+  ],
+};
+
 const requestedFormats = [
   'advert',
   'public_access',
@@ -1525,12 +1572,34 @@ export function storyTemperatureForPacing(
     conversational:
       'stage a recognisable everyday disagreement whose single odd rule produces steady comic escalation',
     slow_burn:
-      'begin plausibly normal, mildly tedious and patient; reveal the one odd rule gradually through social discomfort, then land a quiet payoff',
+      'stay plausibly normal, mildly tedious and patient; let the assigned mechanism feel like an ordinary local convention, then land a quiet social payoff without forcing a twist',
     interrupted:
       'build one clear comic action toward its payoff, then let the approved consequence interrupt it at the most useful moment',
     near_silent:
-      'show a mostly normal routine and tiny awkward social discomfort with sparse speech; one subtle surreal detail should earn a visual ending',
+      'show a mostly normal routine and tiny awkward social discomfort with sparse speech; keep any oddness no larger than the approved mechanism and end on a modest practical choice',
   }[pacing];
+}
+
+export function storylineLaneForPacing(
+  pacing: NonNullable<GeneratedSegmentDraft['pacing']>,
+): StorylineLane {
+  return {
+    frantic: 'surreal',
+    interrupted: 'surreal',
+    staccato: 'comic',
+    conversational: 'comic',
+    slow_burn: 'mundane',
+    near_silent: 'mundane',
+  }[pacing] as StorylineLane;
+}
+
+export function storylineBlueprintForPacing(
+  serial: number,
+  pacing: NonNullable<GeneratedSegmentDraft['pacing']>,
+): string {
+  const lane = storylineLaneForPacing(pacing);
+  const blueprints = storylineBlueprintsByLane[lane];
+  return blueprints[axisIndex(Math.abs(serial), 0x6a09e67, blueprints.length)]!;
 }
 
 export function assignedVisualMedium(
@@ -2002,6 +2071,8 @@ export function userPrompt(
   );
   const pacing = assignedPacing(serial, optimisationBrief);
   const storyTemperature = storyTemperatureForPacing(pacing);
+  const storylineLane = storylineLaneForPacing(pacing);
+  const storylineBlueprint = storylineBlueprintForPacing(serial, pacing);
   const dialogueShape = assignedDialogueShapeForCoordinates({
     format,
     visualMedium,
@@ -2247,6 +2318,8 @@ ${physicalMechanismBlock}
 - Visual medium: ${visualMedium}. It changes presentation only, never story physics.
 - Cast archetype: ${castArchetype}.
 - Pacing: ${pacing}.
+- Storyline lane: ${storylineLane}.
+- Storyline blueprint: ${storylineBlueprint}. This controls reveal order, tactics and performance temperature only; map it onto the kernel's existing roles and goals and add no role, prop, causal rule or ending.
 - Story temperature: ${storyTemperature}.
 - Graphic package: ${graphicPackage}. It is presentation metadata only.
 ${assetCapabilityBlock ?? ''}
@@ -2292,6 +2365,8 @@ ${ordinaryVisualAnchorBlock}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
+- Storyline lane: ${storylineLane}.
+- Storyline blueprint: ${storylineBlueprint}. This controls reveal order, tactics and performance temperature only; map it onto the assigned frame and mechanism and add no role, prop, causal rule or ending.
 - Story temperature: ${storyTemperature}.
 ${assetCapabilityBlock ?? ''}
 ${storyAssemblyBlock}
@@ -2318,6 +2393,7 @@ export function scriptPrompt(
     near_silent: '4–6 sparse lines separated by visible reactions and pauses',
   }[proposal.pacing ?? 'conversational'];
   const storyTemperature = storyTemperatureForPacing(proposal.pacing ?? 'conversational');
+  const storylineLane = storylineLaneForPacing(proposal.pacing ?? 'conversational');
   const boundedEditorialDefects = rejectionReasons.slice(0, 4).map((reason) =>
     [...reason]
       .map((character) => {
@@ -2401,7 +2477,7 @@ ${retryCorrections.map((correction) => `- ${correction}`).join('\n')}
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
-Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Story temperature: ${storyTemperature}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
+Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Storyline lane: ${storylineLane}. Story temperature: ${storyTemperature}. A mundane lane must be allowed to remain quiet and ordinary; do not inflate it into spectacle. A surreal lane must remain understandable through the established character goal. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
 Immutable story contract:
 - The approved premise is the whole fiction for this fragment, not a starting point for another invention.
 - Lines one and two make the established roles' incompatible immediate wants clear through natural disagreement.

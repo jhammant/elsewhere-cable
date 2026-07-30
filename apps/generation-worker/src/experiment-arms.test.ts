@@ -10,6 +10,7 @@ function scorecard(overrides: Partial<QualityScorecard> = {}): QualityScorecard 
     reliability: 100,
     novelty: 96,
     diversity: 88,
+    visualQuality: 85,
     experienceIndex: 89,
     freshRunwayHours: 24,
     runwayReadiness: 100,

@@ -5,6 +5,8 @@ import {
   assignedDialogueShapeForCoordinates,
   assignedPacing,
   assignedStoryMode,
+  storylineBlueprintForPacing,
+  storylineLaneForPacing,
   storyTemperatureForPacing,
   assignedVisualMedium,
   demoDraft,
@@ -27,6 +29,54 @@ describe('generation prompts', () => {
     expect(storyTemperatureForPacing('conversational')).toContain('comic escalation');
     expect(storyTemperatureForPacing('slow_burn')).toContain('plausibly normal');
     expect(storyTemperatureForPacing('near_silent')).toContain('mostly normal routine');
+    expect(storyTemperatureForPacing('slow_burn')).toContain('without forcing a twist');
+    expect(storylineLaneForPacing('frantic')).toBe('surreal');
+    expect(storylineLaneForPacing('interrupted')).toBe('surreal');
+    expect(storylineLaneForPacing('staccato')).toBe('comic');
+    expect(storylineLaneForPacing('conversational')).toBe('comic');
+    expect(storylineLaneForPacing('slow_burn')).toBe('mundane');
+    expect(storylineLaneForPacing('near_silent')).toBe('mundane');
+    const mundaneScript = scriptPrompt({
+      channelNumber: 7_000_000_012,
+      channelName: 'Ordinary Service',
+      programmeTitle: 'The Final Inventory Check',
+      format: 'public_access',
+      realityId: 'QUIET-12',
+      visualStyle: 'analogue_public_access_vhs_studio',
+      visualMedium: 'public_access_vhs',
+      castArchetype: 'humanoid',
+      pacing: 'slow_burn',
+      storyMode: 'social_protocol',
+      premise:
+        'In a community hall, a caretaker wants to finish an inventory while a volunteer must preserve the familiar checking order.',
+      tone: ['dry', 'patient'],
+      continuityFact: 'The hall checks folding chairs in arrival order.',
+      endingBeat: 'The caretaker accepts the last unglamorous row.',
+    });
+    expect(mundaneScript).toContain('Storyline lane: mundane.');
+    expect(mundaneScript).toContain('allowed to remain quiet and ordinary');
+  });
+
+  it('draws many distinct story blueprints within every temperature lane', () => {
+    const pacings = ['frantic', 'conversational', 'slow_burn'] as const;
+    for (const pacing of pacings) {
+      const blueprints = Array.from({ length: 600 }, (_, serial) =>
+        storylineBlueprintForPacing(serial, pacing),
+      );
+      expect(new Set(blueprints).size).toBeGreaterThanOrEqual(12);
+    }
+  });
+
+  it('puts a non-mechanical storyline blueprint into every proposal brief', () => {
+    for (let serial = 0; serial < 120; serial += 1) {
+      const prompt = userPrompt(serial, []);
+      const pacing = assignedPacing(serial);
+      expect(prompt).toContain(`Storyline lane: ${storylineLaneForPacing(pacing)}.`);
+      expect(prompt).toContain(
+        'This controls reveal order, tactics and performance temperature only',
+      );
+      expect(prompt).toContain('add no role, prop, causal rule or ending');
+    }
   });
 
   it('moves retries through different mandatory creative coordinates', () => {

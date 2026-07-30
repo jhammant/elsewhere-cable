@@ -1606,15 +1606,15 @@ describe('produceBatch', () => {
       title: 'The Teaspoon Decision',
       premise: 'At a breakfast table, two neighbours contest the final clean teaspoon.',
       dialogue: ['It was clean when I objected.'],
-      visualMedium: 'cutout_2d' as const,
-      castArchetype: 'human_duo' as const,
+      visualMedium: 'paper_cutout' as const,
+      castArchetype: 'humanoid' as const,
     };
     const second = {
       title: 'Unrelated Forecast',
       premise: 'In a weather studio, a presenter forecasts the return of borrowed umbrellas.',
       dialogue: ['Rain retains no legal counsel.'],
-      visualMedium: 'cel_shaded_3d' as const,
-      castArchetype: 'object_pair' as const,
+      visualMedium: 'cel_shaded' as const,
+      castArchetype: 'talking_objects' as const,
     };
 
     expect(
