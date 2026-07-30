@@ -37,6 +37,8 @@ const motifStopWords = new Set([
   'host',
   'into',
   'its',
+  'made',
+  'not',
   'original',
   'own',
   'presenter',
@@ -63,7 +65,9 @@ const motifStopWords = new Set([
   'while',
   'whose',
   'with',
+  'yet',
   'your',
+  'conduct',
 ]);
 
 function motifWords(value: string): string[] {
@@ -78,7 +82,8 @@ export function concreteMotifPhrases(values: readonly string[]): string[] {
     if (
       words.length < 2 ||
       words.length > 5 ||
-      words.filter((word) => !motifStopWords.has(word)).length < 2
+      words.some((word) => motifStopWords.has(word)) ||
+      new Set(words).size !== words.length
     ) {
       continue;
     }
@@ -100,9 +105,8 @@ export function repeatedStoryPhrases(texts: readonly string[], maximum = 8): str
       for (let index = 0; index <= words.length - size; index += 1) {
         const window = words.slice(index, index + size);
         if (
-          window.filter((word) => !motifStopWords.has(word)).length < 2 ||
-          motifStopWords.has(window[0]!) ||
-          motifStopWords.has(window.at(-1)!)
+          window.some((word) => motifStopWords.has(word)) ||
+          new Set(window).size !== window.length
         ) {
           continue;
         }

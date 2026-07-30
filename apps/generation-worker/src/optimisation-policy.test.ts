@@ -77,6 +77,11 @@ describe('delivery-aware pacing policy', () => {
         'grandfather clock',
         'insurance policy',
         '  RUBBISH BIN  ',
+        'apologise for decisions',
+        'committee has not',
+        'conduct formal performance',
+        'not made yet',
+        'meeting meeting minutes',
       ]),
     ).toEqual(['grandfather clock', 'insurance policy', 'rubbish bin']);
   });

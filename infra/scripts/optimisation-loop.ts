@@ -404,9 +404,7 @@ function fallbackBrief(
       2,
     ),
     avoidMotifs: repeatedStoryPhrases(
-      segments.map(
-        (segment) => `${segment.programme.title} ${segment.programme.premise}`,
-      ),
+      segments.flatMap((segment) => [segment.programme.title, segment.programme.premise]),
     ),
     preserveStrengths: ['clear character wants', 'one legible comic rule'],
     editorialDirection:
