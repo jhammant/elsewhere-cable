@@ -128,6 +128,36 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(proposal.premise).not.toContain('one spoken phrase');
   });
 
+  it('keeps a bounded local-server error detail when an LLM request is rejected', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: 'Context length exceeded by the structured request.',
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      ),
+    );
+    const provider = new OpenAiCompatibleProvider(
+      'writer-model',
+      'http://writer.test/v1',
+      'local',
+    );
+
+    await expect(
+      provider.generateProposal({
+        systemPrompt: 'Return JSON.',
+        userPrompt: 'Create an original fictional segment.',
+      }),
+    ).rejects.toThrow(
+      'LLM request failed with HTTP 400: {"error":"Context length exceeded by the structured request."}',
+    );
+  });
+
   it('can route editorial criticism to a smaller independent model', async () => {
     const requests: Array<{ url: string; model: string; systemPrompt: string }> = [];
     vi.stubGlobal(

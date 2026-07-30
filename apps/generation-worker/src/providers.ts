@@ -398,7 +398,20 @@ ${repairInstruction}`,
       });
 
       if (!response.ok) {
-        throw new Error(`LLM request failed with HTTP ${response.status}`);
+        const responseDetail = [...(await response.text())]
+          .map((character) => {
+            const codePoint = character.codePointAt(0) ?? 0;
+            return codePoint <= 31 || codePoint === 127 ? ' ' : character;
+          })
+          .join('')
+          .replace(/\s+/gu, ' ')
+          .trim()
+          .slice(0, 600);
+        throw new Error(
+          `LLM request failed with HTTP ${response.status}${
+            responseDetail === '' ? '' : `: ${responseDetail}`
+          }`,
+        );
       }
       const completion = (await response.json()) as ChatCompletion;
       const message = completion.choices?.[0]?.message;
