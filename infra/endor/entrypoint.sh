@@ -105,8 +105,12 @@ chromium \
   --kiosk \
   "http://127.0.0.1:${ELSEWHERE_PORT}/?broadcast=1" &
 browser_pid=$!
-node /usr/local/bin/elsewhere-chromium-handover \
-  record-active "$chromium_slot" container-start >/tmp/elsewhere-renderer-active.json
+case "$chromium_slot" in
+  a | b)
+    node /usr/local/bin/elsewhere-chromium-handover \
+      record-active "$chromium_slot" container-start >/tmp/elsewhere-renderer-active.json
+    ;;
+esac
 
 ELSEWHERE_AUDIO_QUIET_SECONDS=${ELSEWHERE_AUDIO_QUIET_SECONDS:-2} \
   sh /usr/local/bin/elsewhere-audio-watchdog >/tmp/elsewhere-audio-watchdog.log 2>&1 &

@@ -1,6 +1,6 @@
 /* global AbortSignal, WebSocket, fetch */
 
-import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { clearTimeout, setTimeout } from 'node:timers';
@@ -268,15 +268,23 @@ async function installBundle(stagingPath) {
     throw new Error('Renderer staging bundle has no assets');
   }
   const livePath = `${rendererRoot}/dist`;
-  const previousPath = `${rendererRoot}/dist.previous`;
-  await rm(previousPath, { recursive: true, force: true });
-  await rename(livePath, previousPath);
+  const liveIndexPath = `${livePath}/index.html`;
+  const nextIndexPath = `${livePath}/index.html.next`;
+  const previousIndexPath = `${rendererRoot}/dist.previous-index.html`;
+  await copyFile(liveIndexPath, previousIndexPath);
   try {
-    await rename(stagingPath, livePath);
+    await mkdir(`${livePath}/assets`, { recursive: true });
+    await cp(`${stagingPath}/assets`, `${livePath}/assets`, {
+      recursive: true,
+      force: true,
+    });
+    await copyFile(`${stagingPath}/index.html`, nextIndexPath);
+    await rename(nextIndexPath, liveIndexPath);
   } catch (error) {
-    await rename(previousPath, livePath);
+    await rm(nextIndexPath, { force: true });
     throw error;
   }
+  await rm(stagingPath, { recursive: true, force: true });
   return { installed: true, assetCount: assets.length };
 }
 
@@ -301,17 +309,19 @@ function assertStagingPath(value) {
 
 async function rollbackBundle() {
   const livePath = `${rendererRoot}/dist`;
-  const previousPath = `${rendererRoot}/dist.previous`;
+  const liveIndexPath = `${livePath}/index.html`;
+  const nextIndexPath = `${livePath}/index.html.next`;
+  const previousIndexPath = `${rendererRoot}/dist.previous-index.html`;
   try {
-    await readFile(`${previousPath}/index.html`, 'utf8');
+    await readFile(previousIndexPath, 'utf8');
   } catch (error) {
     if (error?.code === 'ENOENT') {
       return { rolledBack: false, reason: 'no-previous-bundle' };
     }
     throw error;
   }
-  await rm(livePath, { recursive: true, force: true });
-  await rename(previousPath, livePath);
+  await copyFile(previousIndexPath, nextIndexPath);
+  await rename(nextIndexPath, liveIndexPath);
   return { rolledBack: true };
 }
 
@@ -360,9 +370,9 @@ function processExists(pid) {
 switch (command) {
   case 'launch-settings': {
     const current = await activeState();
-    const slot = current?.slot ?? 'a';
-    const profile = profilePath(slot);
-    const port = slot === 'a' ? 9222 : 9223;
+    const slot = current?.slot ?? 'legacy';
+    const profile = current?.profile ?? profilePath(null);
+    const port = slot === 'b' ? 9223 : 9222;
     process.stdout.write(`${profile} ${port} ${slot}\n`);
     break;
   }

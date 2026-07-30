@@ -52,12 +52,14 @@ COPY --chown=broadcast:users infra/endor/entrypoint.sh /usr/local/bin/elsewhere-
 COPY --chown=broadcast:users infra/endor/audio-watchdog.sh /usr/local/bin/elsewhere-audio-watchdog
 COPY --chown=broadcast:users infra/endor/chromium-handover.mjs /usr/local/bin/elsewhere-chromium-handover
 COPY --chown=broadcast:users infra/endor/ffmpeg-youtube.mjs /usr/local/bin/elsewhere-youtube-ffmpeg
+COPY --chown=broadcast:users infra/endor/wait-renderer-handover-window.py /usr/local/bin/elsewhere-wait-renderer-handover-window
 
 RUN chmod 0755 \
   /usr/local/bin/elsewhere-entrypoint \
   /usr/local/bin/elsewhere-audio-watchdog \
   /usr/local/bin/elsewhere-chromium-handover \
-  /usr/local/bin/elsewhere-youtube-ffmpeg
+  /usr/local/bin/elsewhere-youtube-ffmpeg \
+  /usr/local/bin/elsewhere-wait-renderer-handover-window
 
 USER broadcast
 

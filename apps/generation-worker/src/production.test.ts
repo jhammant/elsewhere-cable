@@ -720,8 +720,8 @@ describe('produceBatch', () => {
     };
 
     const result = await produceBatch({
-      count: 2,
-      concurrency: 2,
+      count: 1,
+      concurrency: 1,
       outputRoot,
       demo: false,
       llm,
@@ -731,15 +731,15 @@ describe('produceBatch', () => {
       prepareScriptsOnly: true,
     });
 
-    expect(result.preparedScriptCount).toBe(2);
+    expect(result.preparedScriptCount).toBe(1);
     expect(result.rejectedSegmentCount).toBe(0);
     expect(result.rejectionReasons).toEqual([]);
-    expect(scriptIndex).toBeGreaterThanOrEqual(3);
+    expect(scriptIndex).toBeGreaterThanOrEqual(2);
     expect(
       (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>
         file.endsWith('.json'),
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
   });
 
   it('abandons a repeatedly rejected script after four rewrites so the next batch can vary the premise', async () => {

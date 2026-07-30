@@ -71,15 +71,17 @@ rsync -a --delete apps/renderer/dist/ "$remote_host:$remote_release/dist/"
 rsync -a \
   infra/endor/chromium-handover.mjs \
   infra/endor/entrypoint.sh \
+  infra/endor/wait-renderer-handover-window.py \
   "$played_ids" \
   "$remote_host:$remote_release/"
 
-ssh "$remote_host" sh -s -- "$remote_release" "$container" "$build_id" <<'REMOTE'
+ssh "$remote_host" sh -s -- "$remote_release" "$container" "$build_id" "$remote_root" <<'REMOTE'
 set -eu
 
 release=$1
 container=$2
 build_id=$3
+remote_root=$4
 helper=/usr/local/bin/elsewhere-chromium-handover
 staging="/tmp/elsewhere-renderer-$build_id"
 handover_committed=0
@@ -88,6 +90,7 @@ new_profile=''
 probe_profile=/state/chromium/renderer-state/chromium-probe
 telemetry=/state/chromium/playout-observations.ndjson
 played_ids=/tmp/elsewhere-played-segment-ids.txt
+handover_window=/tmp/elsewhere-handover-window.ndjson
 
 cleanup() {
   if [ "$handover_committed" -eq 1 ]; then
@@ -184,8 +187,12 @@ docker exec "$container" node "$helper" seed-history 9224 "$played_ids" "$teleme
 docker exec "$container" node "$helper" probe-data 9224
 docker exec "$container" node "$helper" terminate-profile "$probe_profile"
 
-docker exec "$container" node "$helper" \
-  wait-handover-window "$telemetry" 120000
+python3 "$release/wait-renderer-handover-window.py" \
+  --container "$container" \
+  --manifest "$remote_root/content/current/manifest.json" \
+  --output "$release/handover-window.ndjson" \
+  --timeout-seconds 120
+docker cp "$release/handover-window.ndjson" "$container:$handover_window"
 
 docker exec -d \
   -u broadcast \
@@ -216,7 +223,8 @@ docker exec -d \
   "http://127.0.0.1:4174/?broadcast=1&standby=1&handover=$build_id"
 
 docker exec "$container" node "$helper" wait-ready "$debug_port" 45000
-docker exec "$container" node "$helper" seed-history "$debug_port" "$played_ids" "$telemetry"
+docker exec "$container" node "$helper" \
+  seed-history "$debug_port" "$played_ids" "$telemetry" "$handover_window"
 
 # Activation loads and validates a real segment while the previous renderer is
 # still running behind the standby slate. Only a successful activation permits

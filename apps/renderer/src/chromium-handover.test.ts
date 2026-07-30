@@ -48,6 +48,7 @@ describe('Chromium handover helper', () => {
     const { stateRoot, run } = await fixture();
 
     await expect(run('next-slot')).resolves.toBe('a');
+    await expect(run('launch-settings')).resolves.toContain('legacy-chromium 9222 legacy');
     const recorded = JSON.parse(await run('record-active', 'a', 'build-123')) as {
       slot: string;
       profile: string;
@@ -80,7 +81,7 @@ describe('Chromium handover helper', () => {
       'new renderer',
     );
     await expect(
-      readFile(path.join(rendererRoot, 'dist.previous/index.html'), 'utf8'),
+      readFile(path.join(rendererRoot, 'dist.previous-index.html'), 'utf8'),
     ).resolves.toBe('old renderer');
 
     await run('rollback-bundle');
