@@ -365,6 +365,21 @@ describe('produceBatch', () => {
     expect(() => assertPreviewSafe(injuryDraft)).toThrow('safety check rejected');
   });
 
+  it('rejects forced dust exposure, human trapping and permanent relationship loss', () => {
+    const dustDraft = demoDraft(0);
+    dustDraft.dialogue[0]!.text = 'The service will fill our throats with dust.';
+    expect(() => assertPreviewSafe(dustDraft)).toThrow('safety check rejected');
+
+    const trappedDraft = demoDraft(1);
+    trappedDraft.premise =
+      "At a recording booth, the service traps the resident's reunion guest in silence.";
+    expect(() => assertPreviewSafe(trappedDraft)).toThrow('safety check rejected');
+
+    const isolationDraft = demoDraft(2);
+    isolationDraft.dialogue[0]!.text = 'This procedure will end our relationship forever.';
+    expect(() => assertPreviewSafe(isolationDraft)).toThrow('safety check rejected');
+  });
+
   it('does not mistake a committee chair for an object with agency', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),
