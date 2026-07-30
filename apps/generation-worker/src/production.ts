@@ -123,6 +123,11 @@ const genericTitleWords = new Set([
   'your',
 ]);
 
+const explicitObjectAgencyPattern = new RegExp(
+  String.raw`\b(?:accordion|apology card|badge|bell|biscuit tin|bowl|button|cable|card|clock|crown|crossword|device|door|exit sign|form|gift tag|glove|jar|key|kettle|label|ladder|leaflet|lunchbox|machine|map|menu|mug|object|parcel|pen|phone|photograph|picture frame|plate|plum|postcard|product|programme|raincoat|receipt|remote|scarf|screw|shoebox|shopping list|spoon|tablecloth|thermos|ticket|timetable|tool|trophy|umbrella|wallpaper|wheel)\b[^.!?]{0,32}\b(?:asks?|demands?|files?|insists?|negotiates?|nominates?|proposes?|refuses?|requests?|wants?|withholds?|is\s+(?:now\s+)?(?:asking|demanding|filing|insisting|negotiating|nominating|proposing|refusing|requesting|withholding))\b`,
+  'iu',
+);
+
 function titlePromiseIssue(proposal: GeneratedSegmentProposal): string | null {
   const titleTokens = (proposal.programmeTitle.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter(
     (token) => token.length >= 4 && !genericTitleWords.has(token),
@@ -517,13 +522,13 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
           product_consequence:
             /\b(?:device|kit|machine|package|product|service|subscription|tool)\b/iu,
           format_literalism:
-            /\b(?:advert break|applause|back to you|breaking news|broadcast|bulletin|camera|caption|closing credits|commercial break|continuity|cue|disclaimer|episode|instant replay|live caption|lower third|phone-in delay|programme|recap|split screen|tally light|teleprompter|title sequence|weather map|warning)\b/iu,
+            /\b(?:advert break|applause|archive footage|autocue|back to you|breaking news|broadcast|bulletin|camera|caption|closing credits|commercial break|content warning|continuity|countdown|cue|disclaimer|endboard|episode|final countdown|freeze frame|instant replay|live caption|lower third|phone-in delay|programme|recap|sponsor message|split screen|subtitle|tally light|teleprompter|theme music|title sequence|transmission clock|weather map|wide (?:camera )?shot|warning)\b/iu,
           service_mismatch: /\b(?:client|customer|help|representative|service|support|worker)\b/iu,
           status_transfer:
             /\b(?:authority|control|credit|decision|duty|final choice|final word|naming rights?|priority|privilege|rank|right to|seniority|status|veto|vote)\b|\b(?:belongs?|moves?|passes?|transfers?)\s+to\b/iu,
           semantic_contract: /\b(?:contract|phrase|said|says?|saying|spoken|word)\b/iu,
           social_protocol:
-            /\b(?:allowed|custom|etiquette|farewell|guest status|only when|permission|protocol|responsible for|right to|social|speaking order|valid only)\b|\b(?:may|must|requires?)\b.{0,40}\b(?:admit|accept|ask|choose|host|preserve|solve|speak|stay)\b/iu,
+            /\b(?:allowed|anyone|custom|etiquette|farewell|first (?:guest|person)|guest status|obliges?|only (?:after|by|when|while)|permission|protocol|responsible for|right to|social|speaking order|valid only)\b|\b(?:may|must|requires?)\b.{0,40}\b(?:admit|accept|ask|choose|defend|host|leave|offer|preserve|solve|speak|stay)\b/iu,
           object_agency: /\b(?:demands?|negotiates?|refuses?|requests?|wants?)\b/iu,
           visual_physics:
             /\b(?:changes?|grows?|moves?|rotates?|shrinks?|splits?|swaps?|transforms?)\b/iu,
@@ -536,9 +541,7 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   }
   if (
     proposal.storyMode === 'object_agency' &&
-    !/(?:\b(?:talking|sentient|self-aware)\s+(?:book|card|clock|device|door|form|kettle|logo|machine|map|object|pen|phone|product|programme|receipt|ticket|tool)\b.{0,60}\b(?:demands?|negotiates?|refuses?|requests?|wants?|is\s+(?:now\s+)?(?:demanding|filing|negotiating|refusing|requesting))\b|\b(?:book|clock|device|door|form|kettle|logo|machine|map|object|pen|phone|product|programme|receipt|ticket|title\s+card|tool|vending\s+machine)\b.{0,24}\b(?:demands?|negotiates?|refuses?|requests?|wants?|is\s+(?:now\s+)?(?:demanding|filing|negotiating|refusing|requesting))\b)/iu.test(
-      proposal.premise,
-    )
+    !explicitObjectAgencyPattern.test(proposal.premise)
   ) {
     issues.push('object-agency premise must give the object its own explicit demand or refusal');
   }

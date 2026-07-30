@@ -112,7 +112,7 @@ describe('generation prompts', () => {
     const combinations = prompts.map((_prompt, index) => `${anchors[index]}|${mechanisms[index]}`);
 
     expect(new Set(anchors).size).toBeGreaterThanOrEqual(42);
-    expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(120);
+    expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(200);
     expect(new Set(combinations).size).toBeGreaterThan(1_000);
     expect(prompts[0]).toContain('Preserve the two incompatible wants');
     expect(prompts[0]).toContain('Treat the ordinary visual anchor as the concrete subject');
@@ -744,7 +744,9 @@ describe('generation prompts', () => {
     expect(prompt).toContain('failed a mechanical or editorial gate');
     expect(prompt).toContain('Preserve the mandatory coordinates below');
     expect(prompt).toContain('do not replace the assigned mechanism');
-    expect(prompt).not.toContain('change the character objective and single comic mechanism completely');
+    expect(prompt).not.toContain(
+      'change the character objective and single comic mechanism completely',
+    );
   });
 
   it('gives every story mode a literal acceptance contract', () => {

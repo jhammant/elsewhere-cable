@@ -334,6 +334,30 @@ describe('produceBatch', () => {
         'At a household Farewell, one neighbour wants to leave, but it remains incomplete until the quiet roommate accepts one practical favour.',
       endingBeat: 'The roommate accepts the favour and completes the farewell.',
     });
+    const newFormatLiteralism = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(3)),
+      programmeTitle: 'The Final Countdown',
+      storyMode: 'format_literalism',
+      premise:
+        'In a continuity booth, an announcer wants to leave, but the final countdown assigns every remaining second to an unfinished household task.',
+      endingBeat: 'The announcer completes the last task and allows the countdown to finish.',
+    });
+    const newSocialProtocol = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(4)),
+      programmeTitle: 'The Helpful Complaint',
+      storyMode: 'social_protocol',
+      premise:
+        'At a household advice desk, a neighbour wants to complain, but the protocol allows a complaint only while its target performs one small kindness.',
+      endingBeat: 'The neighbour accepts the kindness and makes one precise complaint.',
+    });
+    const ordinaryObjectAgency = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(5)),
+      programmeTitle: 'The Button Hearing',
+      storyMode: 'object_agency',
+      premise:
+        'At a community hearing, a button in a jar wants one day under its borrower’s ordinary name before accepting a permanent label.',
+      endingBeat: 'The borrower supplies the name and the button accepts the temporary label.',
+    });
 
     expect(proposalQualityIssues(statusTransfer)).not.toContain(
       'premise does not realise its assigned status_transfer story mode',
@@ -343,6 +367,15 @@ describe('produceBatch', () => {
     );
     expect(proposalQualityIssues(socialProtocol)).not.toContain(
       'premise does not realise its assigned social_protocol story mode',
+    );
+    expect(proposalQualityIssues(newFormatLiteralism)).not.toContain(
+      'premise does not realise its assigned format_literalism story mode',
+    );
+    expect(proposalQualityIssues(newSocialProtocol)).not.toContain(
+      'premise does not realise its assigned social_protocol story mode',
+    );
+    expect(proposalQualityIssues(ordinaryObjectAgency)).not.toContain(
+      'object-agency premise must give the object its own explicit demand or refusal',
     );
   });
 
