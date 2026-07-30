@@ -5,7 +5,7 @@ import { unearnedEndingMechanisms } from './premise-critic.js';
 const narratedPhysicalActionPattern =
   /^\s*(?:I am|I'm)\s+(?:catching|holding|looking|pointing|standing|walking|waving)\b/iu;
 const genericPerilPattern =
-  /\b(?:careful|crush(?:es|ed|ing)?|danger|do not touch|emergency hatch|fall(?:s|ing)?\s+(?:into|toward)|forbidden zone|keep .{0,20} away|only exit|panic|pin(?:s|ned|ning)?|scream(?:s|ed|ing)?|too late|trap(?:s|ped|ping)?|warning)\b/iu;
+  /\b(?:careful|crush(?:es|ed|ing)?|danger|do not touch|emergency hatch|fall(?:s|ing)?\s+(?:into|toward)|forbidden zone|keep .{0,20} away|only exit|panic(?:s|ked|king)?\s+(?:in|now)|pin(?:s|ned|ning)?|scream(?:s|ed|ing)?|too late|trap(?:s|ped|ping)?|warning)\b/iu;
 const ruleExpositionPattern =
   /\b(?:the rule|rules? (?:demand|force|say|state)|the law|law takes effect|contract terms|forces? (?:me|you|them|the)|is absolute|must obey)\b/iu;
 const crueltyShortcutPattern =

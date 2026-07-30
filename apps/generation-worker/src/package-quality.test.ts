@@ -77,6 +77,20 @@ describe('legacy package quality', () => {
     expect(legacyPackageQualityIssues(segment)).toEqual([]);
   });
 
+  it('allows harmless bureaucratic scheduling of fictional panic', () => {
+    const segment = packageWithDialogue(
+      'At an emergency desk, a bulletin schedules public panic several days in advance.',
+      [
+        'A serious event is expected yesterday and will reach you on Thursday.',
+        'Citizens assigned to Wednesday should remain mildly concerned.',
+        'Do not panic early; it invalidates your emergency window.',
+        'Late panic may be carried into next month.',
+      ],
+    );
+
+    expect(legacyPackageQualityIssues(segment)).toEqual([]);
+  });
+
   it('rejects bodily harm in an old prepared package', () => {
     const segment = packageWithDialogue(
       'At a game-show desk, the host asks a contestant to answer one question.',
