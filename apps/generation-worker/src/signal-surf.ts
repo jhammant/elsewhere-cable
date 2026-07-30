@@ -482,6 +482,77 @@ const drafts = [
     endingBeat:
       'Mara leaves the cake in plain view while the signal confidently reports its successful concealment.',
   },
+  {
+    channelNumber: 9_771_204_685,
+    channelName: 'Break-Room Constellation',
+    programmeTitle: 'The Folding Tablecloth',
+    format: 'sitcom',
+    realityId: 'CELESTIAL-OFFICE-12',
+    visualStyle: 'graphic_cel_shaded_cosmic_workplace',
+    visualMedium: 'cel_shaded',
+    castArchetype: 'celestial',
+    pacing: 'frantic',
+    storyMode: 'status_transfer',
+    premise:
+      'During a workplace promotion dispute, Senior Star needs the folding tablecloth to mark their station, but formal authority transfers to Junior Star when Senior Star demands to be addressed by title.',
+    tone: ['frantic', 'petty', 'cosmic'],
+    dialogue: [
+      {
+        speaker: 'Senior Star',
+        text: 'Keep the folding tablecloth flat. It marks my senior station.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Junior Star',
+        text: 'It also covers my lunch.',
+        action: 'LOOK_AT',
+      },
+      {
+        speaker: 'Senior Star',
+        text: 'Your lunch is outside the promotion zone.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Junior Star',
+        text: 'Should I call you Senior Star?',
+        action: 'PAUSE',
+      },
+      {
+        speaker: 'Senior Star',
+        text: 'You should know my title without asking.',
+        action: 'REACTION_ANGRY',
+      },
+      {
+        speaker: 'Junior Star',
+        text: 'Then I will call you the person near the cloth.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Senior Star',
+        text: 'Address me as Senior Star immediately.',
+        action: 'POINT_AT',
+      },
+      {
+        speaker: 'Junior Star',
+        text: 'Thank you. You have ended your own authority.',
+        action: 'REACTION_NEUTRAL',
+      },
+      {
+        speaker: 'Senior Star',
+        text: 'May I remain beside the tablecloth?',
+        action: 'REACTION_CONFUSED',
+      },
+      {
+        speaker: 'Junior Star',
+        text: 'Yes. Please hold the junior corner.',
+        action: 'FREEZE',
+      },
+    ],
+    continuityFact:
+      'Demanding a formal title transfers break-room authority to the nearest junior.',
+    endingBeat:
+      'Junior Star declares the tablecloth their new station while Senior Star requests permission to keep one corner.',
+  },
 ] satisfies GeneratedSegmentDraft[];
 
 export const signalSurfDrafts = drafts.map((draft) => generatedSegmentDraftSchema.parse(draft));
