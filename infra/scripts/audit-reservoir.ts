@@ -14,6 +14,11 @@ import {
 } from '../../apps/generation-worker/src/providers.js';
 import { containsSpokenStageDirection } from '../../apps/generation-worker/src/dialogue-quality.js';
 import { legacyPackageQualityIssues } from '../../apps/generation-worker/src/package-quality.js';
+import {
+  recordFromSegment,
+  segmentNoveltyIssues,
+  type CreativeRecord,
+} from '../../apps/generation-worker/src/novelty.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -123,6 +128,7 @@ const auditedIds =
 const accepted: PlayoutManifest['segments'] = [];
 const rejected: Array<{ segmentId: string; reasons: string[] }> = [];
 const audioQualityCache = new Map<string, Promise<string | null>>();
+const creativeHistory: CreativeRecord[] = [];
 
 async function cachedAudioQualityIssue(audioPath: string): Promise<string | null> {
   const canonicalPath = await realpath(audioPath);
@@ -140,13 +146,30 @@ async function cachedAudioQualityIssue(audioPath: string): Promise<string | null
 for (const entry of manifest.segments) {
   if (!auditedIds.has(entry.segmentId)) {
     accepted.push(entry);
+    try {
+      const segmentPath = path.join(segmentsRoot, entry.packagePath);
+      const segment = segmentPackageSchema.parse(
+        JSON.parse(await readFile(segmentPath, 'utf8')),
+      );
+      if (segment.production.generator !== 'emergency-recovery-alias') {
+        creativeHistory.push(recordFromSegment(segment));
+      }
+    } catch {
+      // Existing packages are retained here. Their regular audit remains responsible
+      // for structural errors; an unreadable package simply cannot inform novelty.
+    }
     continue;
   }
   const segmentPath = path.join(segmentsRoot, entry.packagePath);
   const reasons: string[] = [];
+  let creativeRecord: CreativeRecord | null = null;
   try {
     const segment = segmentPackageSchema.parse(JSON.parse(await readFile(segmentPath, 'utf8')));
     reasons.push(...legacyPackageQualityIssues(segment));
+    if (segment.production.generator !== 'emergency-recovery-alias') {
+      reasons.push(...segmentNoveltyIssues(segment, creativeHistory));
+      creativeRecord = recordFromSegment(segment);
+    }
     for (const event of segment.events) {
       if (event.type !== 'speech.play') {
         continue;
@@ -188,6 +211,9 @@ for (const entry of manifest.segments) {
 
   if (reasons.length === 0) {
     accepted.push(entry);
+    if (creativeRecord !== null) {
+      creativeHistory.push(creativeRecord);
+    }
   } else {
     rejected.push({ segmentId: entry.segmentId, reasons });
   }

@@ -280,13 +280,30 @@ export function storyGraphicForFormat(
   switch (format) {
     case 'advert':
     case 'ident':
+    case 'shopping':
+    case 'sitcom':
+      return 'LOWER_THIRD';
+    case 'public_access':
+      return 'WARNING';
+    case 'emergency':
+    case 'news':
+      return 'TITLE_CARD';
+  }
+}
+
+export function openingGraphicForFormat(
+  format: BroadcastFormat,
+): 'LOWER_THIRD' | 'WARNING' | 'TITLE_CARD' {
+  switch (format) {
+    case 'advert':
+    case 'ident':
+    case 'shopping':
     case 'sitcom':
       return 'TITLE_CARD';
     case 'emergency':
-    case 'public_access':
       return 'WARNING';
     case 'news':
-    case 'shopping':
+    case 'public_access':
       return 'LOWER_THIRD';
   }
 }
@@ -854,7 +871,7 @@ async function buildSegment(
       {
         atMs: 550,
         type: 'graphic.show',
-        graphic: 'LOWER_THIRD',
+        graphic: openingGraphicForFormat(draft.format),
         text: draft.programmeTitle,
       },
     ];

@@ -12,6 +12,7 @@ import {
   assertPreviewSafe,
   editorialCritiqueIssues,
   midSpeechCameraEvents,
+  openingGraphicForFormat,
   produceBatch,
   previewSafetyIssues,
   proposalQualityIssues,
@@ -82,9 +83,26 @@ afterEach(async () => {
 
 describe('produceBatch', () => {
   it('uses format-specific information graphics without displaying stage directions', () => {
-    expect(storyGraphicForFormat('news')).toBe('LOWER_THIRD');
-    expect(storyGraphicForFormat('emergency')).toBe('WARNING');
-    expect(storyGraphicForFormat('ident')).toBe('TITLE_CARD');
+    const sequences = (
+      ['advert', 'public_access', 'news', 'shopping', 'sitcom', 'emergency', 'ident'] as const
+    ).map((format) => ({
+      format,
+      opening: openingGraphicForFormat(format),
+      midpoint: storyGraphicForFormat(format),
+    }));
+
+    expect(sequences).toContainEqual({
+      format: 'emergency',
+      opening: 'WARNING',
+      midpoint: 'TITLE_CARD',
+    });
+    expect(sequences).toContainEqual({
+      format: 'news',
+      opening: 'LOWER_THIRD',
+      midpoint: 'TITLE_CARD',
+    });
+    expect(sequences.every(({ opening, midpoint }) => opening !== midpoint)).toBe(true);
+    expect(new Set(sequences.map(({ opening, midpoint }) => `${opening}:${midpoint}`)).size).toBe(4);
   });
 
   it('varies compatible channel transitions across format and pacing', () => {

@@ -81,6 +81,11 @@ const comicMechanismFamilies = [
     pattern:
       /^(?=[\s\S]*\b(?:appliance|device|kettle|machine|product|tool|vacuum)\w*\b)(?=[\s\S]*\b(?:declin|demand|refus|withhold)\w*\b)(?=[\s\S]*\b(?:until|unless)\b)(?=[\s\S]*\b(?:acknowledg|admit|credit|recognis|recogniz|thank)\w*\b)(?=[\s\S]*\b(?:driver|free|labou?r|unpaid|work(?:er|ing)?)\b)/iu,
   },
+  {
+    name: 'object negotiates working conditions before functioning',
+    pattern:
+      /^(?=[\s\S]*\b(?:appliance|device|machine|mug|object|product|receipt|tool)\w*\b)(?=[\s\S]*\b(?:declin|demand|refus|withhold)\w*\b)(?=[\s\S]*\b(?:until|unless|without)\b)(?=[\s\S]*\b(?:benefit|break|chair|contract|holiday|insurance|privilege|seat|wage|working|workplace)\w*\b)/iu,
+  },
 ] as const;
 
 function matchingMechanismFamilies(premise: string): string[] {
@@ -114,6 +119,27 @@ export function noveltyIssues(
   return [
     ...conceptNoveltyIssues(draft, history),
     ...dialogueNoveltyIssues(draft.dialogue, history),
+  ];
+}
+
+export function segmentNoveltyIssues(
+  segment: SegmentPackage,
+  history: readonly CreativeRecord[],
+): string[] {
+  return [
+    ...conceptNoveltyIssues(
+      {
+        programmeTitle: segment.programme.title,
+        premise: segment.programme.premise,
+      },
+      history,
+    ),
+    ...dialogueNoveltyIssues(
+      segment.events
+        .filter((event) => event.type === 'speech.play')
+        .map((event) => ({ text: event.subtitle })),
+      history,
+    ),
   ];
 }
 

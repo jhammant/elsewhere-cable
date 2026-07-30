@@ -161,7 +161,46 @@ describe('visual timeline energiser', () => {
             'This deliberately long statement keeps elaborating on the exact same product claim until the broadcast graphic has no responsible choice except to abbreviate it.',
         },
         29,
-      ).length,
+    ).length,
     ).toBeLessThanOrEqual(180);
+  });
+
+  it('preserves the contrasting opening and midpoint graphic sequence for every format', () => {
+    const sequences = [
+      ['advert', 'TITLE_CARD', 'LOWER_THIRD'],
+      ['public_access', 'LOWER_THIRD', 'WARNING'],
+      ['news', 'LOWER_THIRD', 'TITLE_CARD'],
+      ['shopping', 'TITLE_CARD', 'LOWER_THIRD'],
+      ['sitcom', 'TITLE_CARD', 'LOWER_THIRD'],
+      ['emergency', 'WARNING', 'TITLE_CARD'],
+      ['ident', 'TITLE_CARD', 'LOWER_THIRD'],
+    ] as const;
+
+    for (const [format, opening, midpoint] of sequences) {
+      const base = segment();
+      const candidate = {
+        ...base,
+        programme: { ...base.programme, format },
+        events: base.events.map((event) =>
+          event.type === 'graphic.show' && event.atMs <= 1_000
+            ? { ...event, graphic: opening }
+            : event,
+        ),
+      };
+      const energised = energiseVisualTimeline(candidate, {
+        addStatic: false,
+      }).segment;
+
+      expect(
+        energised.events.find(
+          (event) => event.type === 'graphic.show' && event.atMs === 550,
+        ),
+      ).toMatchObject({ graphic: opening });
+      expect(
+        energised.events.find(
+          (event) => event.type === 'graphic.show' && event.atMs === 26_600,
+        ),
+      ).toMatchObject({ graphic: midpoint });
+    }
   });
 });

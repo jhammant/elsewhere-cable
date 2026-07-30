@@ -61,6 +61,21 @@ describe('premise critic', () => {
     );
   });
 
+  it('accepts a tight eight-beat frantic scene', () => {
+    const frantic = demoDraft(0);
+    frantic.pacing = 'frantic';
+    frantic.storyMode = 'social_protocol';
+    frantic.dialogue = Array.from({ length: 8 }, (_, index) => ({
+      ...frantic.dialogue[index % frantic.dialogue.length]!,
+      text: `This reply advances the same practical disagreement at beat ${index + 1}.`,
+      action: 'REACTION_NEUTRAL',
+    }));
+
+    expect(critiquePremise(frantic).reasons).not.toContain(
+      'frantic pacing requires 8–12 dialogue beats',
+    );
+  });
+
   it('rejects rule exposition and tragedy shortcuts', () => {
     const exposition = demoDraft(0);
     exposition.dialogue[0]!.text = 'The rule forces me to surrender my chair immediately.';

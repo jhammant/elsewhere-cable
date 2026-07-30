@@ -41,14 +41,14 @@ function graphicForFormat(
   switch (format) {
     case 'advert':
     case 'ident':
+    case 'shopping':
     case 'sitcom':
-      return 'TITLE_CARD';
-    case 'emergency':
+      return 'LOWER_THIRD';
     case 'public_access':
       return 'WARNING';
+    case 'emergency':
     case 'news':
-    case 'shopping':
-      return 'LOWER_THIRD';
+      return 'TITLE_CARD';
   }
 }
 

@@ -387,18 +387,24 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
   advert: [
     'A demonstrator needs to prove one impossible product solves a harmless social embarrassment, while its owner needs the perfectly functioning product stopped before its single reputational cost becomes public.',
     'Two demonstrators need one endorsement, but temporary on-air authority passes to whichever person the product embarrasses least.',
-    'A talking receipt or product refuses to reveal the advertised price until the demonstrator grants it one concrete workplace benefit.',
+    'A demonstrator must show one ordinary before-and-after improvement, while the product insists the unimproved object is more qualified to present the advert and the spokesperson needs to keep the job.',
     'Two former friends must demonstrate a product that works only when their claims sincerely agree, exposing the one harmless opinion neither has admitted they still share.',
     'A spokesperson tries to keep credit for a successful demo, but promotion passes to the family member who explains the product without sales language.',
     'A familiar household product has accepted a new professional role and will perform only if the demonstrator acknowledges the person already doing that role for free.',
+    'A spokesperson needs one usable product before-and-after testimonial, while every family member sincerely disagrees about which ordinary version of their household was the improvement.',
+    'Two neighbours demonstrate an apology service that only succeeds when neither claims credit, while both need the advert to prove they were the considerate one.',
+    'A household product chooses the least glamorous person at the demonstration as its ideal owner, while the spokesperson needs a prestigious endorsement and the chosen neighbour wants to leave.',
   ],
   shopping: [
     'A host must sell one impossible product, while a caller who already owns it needs the host to admit the single harmless social consequence caused when it works.',
     'Two hosts want credit for one sale, while on-air authority transfers to the caller who can name the least glamorous use.',
-    'A talking product refuses to demonstrate itself until the shopping host grants it one concrete on-air privilege.',
+    'A product interviews callers before allowing its demonstration, while the host needs one sale and the caller wants to fail the interview without admitting the ordinary reason why.',
     'Two hosts compete for credit when a product assigns ownership to whoever reveals the most ordinary genuine need for it.',
     'A caller’s order becomes a promotion contest in which sales authority passes to the person who needs the product least.',
     'A returned product negotiates to choose its next owner while the host tries to conceal why its previous choice was embarrassingly accurate.',
+    'A caller only wants the dull free item in a luxury product bundle, while the host needs the main sale and a warehouse worker has the sole authority to separate them.',
+    'A previous owner gains on-air authority by correcting one flattering claim about a returned product, while the new caller needs that harmless flaw left exactly as it is.',
+    'A self-pricing product ornament keeps lowering its price for callers who understand its ordinary use, while the host needs it to choose the glamorous buyer already waiting.',
   ],
   news: [
     'A reporter wants credit for one harmless local story, while an official refuses because temporary interview authority belongs to whoever satisfies one petty visible criterion.',
@@ -409,6 +415,10 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'An anchor discovers that every correction changes which speaker the bulletin identifies as the subject, turning a professional clarification into a personal negotiation.',
     'A studio object has gathered better evidence than the correspondent and wants a named reporting role, while the correspondent needs its evidence without admitting dependence.',
     'A presenter tries to downplay one studio change, but each use of the assigned visible trigger repeats the transformation and alters who appears credible.',
+    'An anchor and local witness give equally accurate names to one mundane event, while editorial authority must pass to one speaker without making the other socially wrong.',
+    'A bulletin reporter needs a ceremonial interviewee, while every participant wants to remain incidental and the quiet organiser alone knows why the ceremony matters.',
+    'An eyewitness microphone object has recorded the useful correction and requests a named reporting role, while two correspondents need its evidence to support incompatible headlines.',
+    'A reporter tries to preserve authority while the assigned visible trigger changes one harmless studio element and makes the quiet witness appear increasingly prepared.',
   ],
   sitcom: [
     'One household member wants a harmless social exception, while a relative refuses because one impossible household custom determines who may speak, enter, leave or claim credit.',
@@ -419,6 +429,10 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'Three friends rehearse a small celebration while authority passes to whoever performs the least impressive task with genuine care.',
     'Two relatives practise an apology, but one ordinary phrase transfers responsibility for the original embarrassment every time either tries to sound more sincere.',
     'A flatmate performs an ordinary service exactly as requested, forcing the requester to choose between saving face and admitting the unstated emotional reason for asking.',
+    'A household custom lets a relative leave an awkward meal after solving one guest’s problem, but every sincere excuse solves another problem and makes the relative increasingly indispensable.',
+    'Three flatmates must offer one visitor the good chair, while seating authority passes to whoever admits the most ordinary reason for keeping their own seat.',
+    'Two siblings rehearse one polite phrase that transfers the task of greeting an awkward visitor, while both need the other to say it sincerely first.',
+    'A household message service delivers every note to the person most affected by it, while one flatmate needs an ordinary reminder returned before a visitor reads it.',
   ],
   emergency: [
     'A calm spokesperson needs to complete one live warning, while an ordinary broadcast convention such as a caption, cue or closing announcement becomes a mandatory emergency procedure.',
@@ -427,6 +441,9 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'A presenter tries to retract a harmless warning after callers begin using its broadcast wording as relationship advice, but each correction becomes another mandatory instruction.',
     'Two neighbours need the same tiny exception during a contained warning, while an impossible courtesy protocol makes each insist the other should be helped first.',
     'A recalled convenience is the only thing helping a caller through an awkward social occasion, so the service team must replace its function without repeating its unintended result.',
+    'A temporary warning requires residents to identify borrowed household items, while one neighbour needs to comply without admitting which ordinary object has been borrowed for years.',
+    'A courtesy protocol recalls a familiar apology phrase for unintended commitments, while two callers need one narrow exception to finish the apology they have already started.',
+    'A municipal timing service moves one small appointment to the exact requested minute, while the customer needs the original delay restored to avoid arriving alongside a neighbour.',
   ],
   ident: [
     'A continuity announcer needs to introduce the next programme, while the programme refuses its title for one specific professional reason.',
@@ -437,6 +454,10 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'A hand-painted letter has done the work of two missing logo elements and wants their place in the spoken station name before the ident ends.',
     'Two continuity announcers each use one routine handover phrase that quietly assigns the other responsibility for completing the same unfinished introduction.',
     'An announcer attempts a perfectly ordinary sign-off while the assigned visible trigger repeatedly changes which graphic element appears to have delivered it.',
+    'A continuity announcer must fill twelve unexpected seconds, while the outgoing guest needs that time to correct one petty misunderstanding and the floor manager needs silence.',
+    'A now-and-next title card refuses to assign either programme a slot until granted a named scheduling credit, while both presenters politely need the other programme to go first for incompatible personal reasons.',
+    'Two announcers discover that one routine handover phrase assigns responsibility for the delayed programme, while each needs the other to complete it first.',
+    'An announcer tries to finish a sign-off while the assigned visible trigger changes which logo piece appears to have spoken and therefore receives the final credit.',
   ],
   public_access: [
     'A resident wants one practical exception, while a clerk refuses because an impossible but harmless social protocol controls permission or speaking order.',
@@ -449,6 +470,11 @@ const formatStoryFrames: Record<GeneratedSegmentProposal['format'], readonly str
     'A relationship caller tries to retract one ordinary phrase after the host explains the different harmless commitment it formally makes on this channel.',
     'An amateur craft object has completed the lesson better than its presenter and negotiates for a named co-host role before allowing the final step.',
     'A volunteer delivers exactly the small community service requested, forcing the requester to admit the private social outcome they actually wanted.',
+    'An advice-show protocol lets a caller decline one small favour, while the host recognises the favour as presenting the current programme and must answer without revealing that.',
+    'A local-history panel agrees on every fact except one accurate word on a plaque, while wording authority passes to an eyewitness who needs it removed for an ordinary reason.',
+    'A resident learns that one familiar committee phrase accepts responsibility for the refreshments, while the chair needs the hearing to continue and the resident needs to leave.',
+    'A talking projector wants its own question in the local-history discussion, while the host needs its slides and the eyewitness wants one image skipped.',
+    'A community translation service converts every polite hint into a direct request, while the customer needs one hint left vague until a relative leaves the room.',
   ],
 };
 
@@ -482,6 +508,7 @@ const formatPresentationGrammars: Record<
     'a single-take showroom pitch forced to continue while the demonstration changes ownership',
     'a miniature instructional film with numbered steps and one participant refusing the final caption',
     'a kitchen trial where every confident claim triggers a tighter product close-up',
+    'an overhead catalogue layout where hands, labels and testimonial cards compete for the same neat rectangle',
   ],
   public_access: [
     'a patient call-in with the caller permanently visible in an awkward picture-in-picture box',
@@ -490,6 +517,7 @@ const formatPresentationGrammars: Record<
     'a handheld neighbourhood report that keeps returning to one unimpressed local witness',
     'a basement advice desk with handwritten diagrams added after every answer',
     'a community talent slot where the scenery helper receives increasingly formal lower thirds',
+    'a local-history slideshow whose captions are revised live by a guest seated beside the projector',
   ],
   news: [
     'a desk-to-field handoff in which the field reporter keeps returning the story to the anchor',
@@ -498,6 +526,7 @@ const formatPresentationGrammars: Record<
     'a rolling ticker bulletin whose captions become more specific than either presenter',
     'a weather-wall explanation staged like a serious local investigation',
     'a live outside broadcast where background activity supplies the only useful evidence',
+    'a caption-first bulletin where the headline appears before the newsroom agrees what the event should be called',
   ],
   shopping: [
     'a rotating-plinth demonstration with a caller inset and rapidly revised price graphics',
@@ -506,6 +535,7 @@ const formatPresentationGrammars: Record<
     'a split-screen buyer consultation where ownership changes before the order is complete',
     'a luxury close-up sequence interrupted by brutally ordinary customer questions',
     'a countdown offer whose on-screen terms keep transferring the hosts’ responsibilities',
+    'a catalogue-grid sale where each product tile becomes a live caller window when somebody objects',
   ],
   sitcom: [
     'a cold open beginning on the consequence, then cutting between the room’s competing explanations',
@@ -514,6 +544,7 @@ const formatPresentationGrammars: Record<
     'a workplace break-room scene where an ignored background task steadily takes over the foreground',
     'an interrupted closing-credits scene in which the characters still need one practical decision',
     'a bottle episode built from increasingly specific seating, serving or leaving negotiations',
+    'a fixed family-photo composition repeatedly broken by whoever can no longer maintain the shared explanation',
   ],
   emergency: [
     'a calm desk announcement alternating with one harmless procedure diagram',
@@ -522,6 +553,7 @@ const formatPresentationGrammars: Record<
     'a split-screen coordination update where both locations offer the same courtesy to each other',
     'a public-information role-play whose demonstrators disagree about the socially useful exception',
     'a measured status board that quietly records every change of mind as an official phase',
+    'a calm checklist bulletin where each completed line opens a caller box requesting one precise exception',
   ],
   ident: [
     'a handmade logo assembly where each piece receives a separate continuity introduction',
@@ -530,6 +562,7 @@ const formatPresentationGrammars: Record<
     'a continuity-sofa sign-off with the outgoing cast waiting for a dignified cue to leave',
     'a painted title-card workshop shown live while one missing letter argues from off frame',
     'a test-card rehearsal where the announcer and alignment shapes disagree about what comes next',
+    'a full-screen now-and-next card repeatedly interrupted by tiny live windows from both competing programmes',
   ],
 };
 
@@ -1285,7 +1318,7 @@ export function scriptPrompt(
   optimisationBrief: OptimisationBrief | null = null,
 ): string {
   const pacingRange = {
-    frantic: '10–12 very short lines with rapid reversals',
+    frantic: '8–12 very short lines with rapid reversals',
     staccato: '8–12 clipped lines with abrupt turns',
     conversational: '6–10 responsive lines',
     slow_burn: '6–8 lines with room for awkward pauses',

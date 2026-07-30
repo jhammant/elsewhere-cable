@@ -374,6 +374,18 @@ describe('generation prompts', () => {
     }
   });
 
+  it('gives the late-cycle ident title card an explicit object-agency refusal', () => {
+    const prompt = Array.from({ length: 2_000 }, (_, serial) => userPrompt(serial, [])).find(
+      (candidate) => candidate.includes('A now-and-next title card'),
+    );
+
+    expect(prompt).toBeDefined();
+    expect(prompt).toContain('Story mode: object_agency');
+    expect(prompt).toMatch(
+      /Format-specific comedy frame: A now-and-next title card refuses .+ until granted/iu,
+    );
+  });
+
   it('keeps stage directions out of spoken dialogue', () => {
     expect(userPrompt(12, [], [], [])).toContain('Mandatory creative coordinates');
     expect(scriptPrompt(demoDraft(0))).toContain(

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
-import { conceptNoveltyIssues, noveltyIssues, recordFromDraft } from './novelty.js';
+import {
+  conceptNoveltyIssues,
+  noveltyIssues,
+  recordFromDraft,
+  segmentNoveltyIssues,
+} from './novelty.js';
 
 function candidate(overrides: Partial<GeneratedSegmentDraft> = {}): GeneratedSegmentDraft {
   return {
@@ -140,6 +145,81 @@ describe('creative novelty', () => {
 
     expect(noveltyIssues(disguisedRepeat, [recordFromDraft(previous)])).toContain(
       'comic mechanism repeats "object withholds service until hidden worker receives credit"',
+    );
+  });
+
+  it('rejects another talking product negotiating working conditions before it functions', () => {
+    const previous = candidate({
+      programmeTitle: 'The Uncooperative Receipt',
+      premise:
+        'At a pharmacy counter, a spokesperson must sell a sentient receipt, but it refuses to show its price until granted health insurance.',
+    });
+    const disguisedRepeat = candidate({
+      programmeTitle: 'The Receipt Refusal',
+      premise:
+        'In a ferry cafeteria, an inventor demonstrates a thermal mug while its talking receipt withholds the total unless it receives a permanent chair contract.',
+    });
+
+    expect(noveltyIssues(disguisedRepeat, [recordFromDraft(previous)])).toContain(
+      'comic mechanism repeats "object negotiates working conditions before functioning"',
+    );
+  });
+
+  it('rechecks a packaged segment against the catalogue before publication', () => {
+    const previous = candidate({
+      programmeTitle: 'The Uncooperative Receipt',
+      premise:
+        'At a pharmacy counter, a spokesperson must sell a sentient receipt, but it refuses to show its price until granted health insurance.',
+    });
+    const packaged = {
+      schemaVersion: 1 as const,
+      segmentId: 'seg_receipt_refusal',
+      channel: {
+        id: 'channel_ferry_cafe',
+        number: 8_118_440_004,
+        name: 'Ferry Cafeteria Demonstrations',
+        realityId: 'FERRY-11',
+      },
+      programme: {
+        id: 'programme_receipt_refusal',
+        title: 'The Receipt Refusal',
+        format: 'shopping' as const,
+        premise:
+          'In a ferry cafeteria, an inventor demonstrates a thermal mug while its talking receipt withholds the total unless it receives a permanent chair contract.',
+      },
+      durationMs: 20_000,
+      visualStyle: 'flat_cutout' as const,
+      tone: ['dry', 'surreal'],
+      events: [
+        {
+          atMs: 1_000,
+          type: 'speech.play' as const,
+          speechId: 'speech_receipt',
+          characterId: 'receipt',
+          characterName: 'Receipt',
+          voiceId: 'voice_receipt',
+          subtitle: 'No chair contract, no total.',
+          audioFile: 'audio/speech_receipt.wav',
+          durationMs: 1_500,
+        },
+      ],
+      continuityUpdates: [],
+      suggestedExit: {
+        earliestMs: 15_000,
+        preferredMs: 19_000,
+        transition: 'STATIC_BURST' as const,
+      },
+      production: {
+        generatedAt: new Date(0).toISOString(),
+        generator: 'test',
+        model: 'test',
+        safetyStatus: 'approved-for-local-preview' as const,
+        audioPrepared: true,
+      },
+    };
+
+    expect(segmentNoveltyIssues(packaged, [recordFromDraft(previous)])).toContain(
+      'comic mechanism repeats "object negotiates working conditions before functioning"',
     );
   });
 });
