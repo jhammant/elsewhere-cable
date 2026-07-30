@@ -949,7 +949,11 @@ body {
 .broadcast[data-medium='signal_corruption'] .channel-panel,
 .broadcast[data-medium='signal_corruption'] .lower-third,
 .broadcast[data-medium='signal_corruption'] .broadcast-clock,
-.broadcast[data-medium='signal_corruption'] .format-bug {
+.broadcast[data-medium='signal_corruption'] .format-bug,
+.broadcast[data-medium='signal_corruption'] .scanlines,
+.broadcast[data-medium='signal_corruption'] .signal-noise,
+.broadcast[data-medium='signal_corruption'] .tracking-line,
+.broadcast[data-medium='signal_corruption'] .programme-mask::before {
   display: none;
 }
 
@@ -958,6 +962,18 @@ body {
   width: auto;
   height: auto;
   border: 0;
+}
+
+.broadcast[data-medium='signal_corruption'] .programme-mask::after {
+  opacity: 0.34;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 3.6rem,
+    rgba(255, 55, 135, 0.28) 3.65rem 3.82rem,
+    transparent 3.9rem 7.1rem,
+    rgba(72, 237, 255, 0.24) 7.15rem 7.28rem
+  );
+  animation: corruption-bars 2.4s steps(4) infinite;
 }
 
 .broadcast[data-medium='signal_corruption'] .subtitle {
