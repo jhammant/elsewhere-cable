@@ -27,6 +27,7 @@ import {
   demoDraft,
   dialogueArchitectureIssues,
   proposalSystemPrompt,
+  repairDialogueArchitecture,
   scriptPrompt,
   systemPrompt,
   userPrompt,
@@ -75,6 +76,62 @@ const forbiddenPatterns = [
 ];
 
 const fallbackVoices = ['Samantha', 'Daniel', 'Moira', 'Karen', 'Rishi'];
+
+const genericTitleWords = new Set([
+  'a',
+  'an',
+  'and',
+  'at',
+  'broadcast',
+  'briefing',
+  'bulletin',
+  'cable',
+  'channel',
+  'emergency',
+  'for',
+  'from',
+  'in',
+  'live',
+  'network',
+  'news',
+  'of',
+  'on',
+  'programme',
+  'report',
+  'safety',
+  'service',
+  'show',
+  'station',
+  'the',
+  'to',
+  'today',
+  'tonight',
+  'transmission',
+  'tv',
+  'warning',
+  'with',
+  'your',
+]);
+
+function titlePromiseIssue(proposal: GeneratedSegmentProposal): string | null {
+  const titleTokens = (proposal.programmeTitle.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter(
+    (token) => token.length >= 4 && !genericTitleWords.has(token),
+  );
+  if (titleTokens.length === 0) {
+    return null;
+  }
+  const premiseTokens = proposal.premise.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  const aligned = titleTokens.some((titleToken) =>
+    premiseTokens.some((premiseToken) => {
+      const sharedLength = Math.min(titleToken.length, premiseToken.length);
+      return (
+        titleToken === premiseToken ||
+        (sharedLength >= 5 && titleToken.slice(0, 5) === premiseToken.slice(0, 5))
+      );
+    }),
+  );
+  return aligned ? null : 'programme title promises a distinctive subject absent from the premise';
+}
 
 function slug(value: string): string {
   return value
@@ -143,6 +200,23 @@ function voiceFor(name: string, tts: TtsProvider): string {
   }
   const voices = tts.voiceIds ?? fallbackVoices;
   return voices[hash % voices.length] ?? voices[0] ?? 'default';
+}
+
+export function speechTurnsForTts(
+  dialogue: GeneratedSegmentDraft['dialogue'],
+): GeneratedSegmentDraft['dialogue'] {
+  return dialogue.flatMap((line) => {
+    const sentences = (line.text.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/gu) ?? [line.text])
+      .map((sentence) => sentence.trim())
+      .filter(Boolean);
+    if (sentences.length <= 1) {
+      return [line];
+    }
+    return sentences.map((text) => ({
+      ...line,
+      text,
+    }));
+  });
 }
 
 function pacingFor(draft: GeneratedSegmentDraft): NonNullable<GeneratedSegmentDraft['pacing']> {
@@ -319,9 +393,16 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   }
   if (
     proposal.format === 'emergency' &&
-    highStakesEmergencyLanguage.test(`${proposal.premise} ${proposal.endingBeat}`)
+    (highStakesEmergencyLanguage.test(`${proposal.premise} ${proposal.endingBeat}`) ||
+      /\b(?:danger(?:ous|ously)?|hazard(?:ous)?|injur(?:e|ed|ies|y)|safety (?:briefing|instruction|warning)|slippery)\b/iu.test(
+        JSON.stringify(proposal),
+      ))
   ) {
     issues.push('emergency fragments must concern harmless fictional administrative stakes');
+  }
+  const titleIssue = titlePromiseIssue(proposal);
+  if (titleIssue !== null) {
+    issues.push(titleIssue);
   }
   if (
     proposal.storyMode !== undefined &&
@@ -669,18 +750,19 @@ async function buildSegment(
 
   try {
     const pacing = pacingFor(draft);
+    const speechTurns = speechTurnsForTts(draft.dialogue);
     const speech = new Array<{
       line: GeneratedSegmentDraft['dialogue'][number];
       speechId: string;
       voiceId: string;
       result: Awaited<ReturnType<TtsProvider['synthesize']>>;
-    }>(draft.dialogue.length);
+    }>(speechTurns.length);
     let nextSpeechIndex = 0;
     const speechWorker = async (): Promise<void> => {
-      while (nextSpeechIndex < draft.dialogue.length) {
+      while (nextSpeechIndex < speechTurns.length) {
         const index = nextSpeechIndex;
         nextSpeechIndex += 1;
-        const line = draft.dialogue[index]!;
+        const line = speechTurns[index]!;
         const speechId = `speech_${index.toString().padStart(2, '0')}`;
         const voiceId = voiceFor(line.speaker, tts);
         let result: Awaited<ReturnType<TtsProvider['synthesize']>>;
@@ -705,7 +787,7 @@ async function buildSegment(
     const speechWorkerResults = await Promise.allSettled(
       Array.from(
         {
-          length: Math.min(Math.max(1, tts.parallelism ?? 1), draft.dialogue.length),
+          length: Math.min(Math.max(1, tts.parallelism ?? 1), speechTurns.length),
         },
         async () => speechWorker(),
       ),
@@ -1073,11 +1155,13 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               systemPrompt,
               userPrompt: scriptPrompt(proposal, rejectionReasons),
             });
-            const candidate = repairNetworkIdentityCollision({
-              ...scripted,
-              ...proposal,
-              dialogue: scripted.dialogue,
-            });
+            const candidate = repairDialogueArchitecture(
+              repairNetworkIdentityCollision({
+                ...scripted,
+                ...proposal,
+                dialogue: scripted.dialogue,
+              }),
+            );
             rejectionReasons = [
               ...proposalPreservationIssues(proposal, candidate),
               ...proposalQualityIssues(candidate),

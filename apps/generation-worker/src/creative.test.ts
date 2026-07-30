@@ -7,6 +7,7 @@ import {
   demoDraft,
   dialogueArchitectureIssues,
   dialogueSpeakerPattern,
+  repairDialogueArchitecture,
   scriptPrompt,
   systemPrompt,
   userPrompt,
@@ -223,6 +224,69 @@ describe('generation prompts', () => {
       })),
     };
     expect(dialogueArchitectureIssues(varied)).toEqual([]);
+  });
+
+  it('converts rigid local-model dialogue into an uneven exchange without inventing words', () => {
+    const base = demoDraft(4);
+    const coordinateOptions = (
+      [
+        'cel_shaded',
+        'paper_cutout',
+        'pixel_broadcast',
+        'archive_film',
+        'neon_wireframe',
+        'signal_corruption',
+        'stop_motion',
+        'claymation',
+        'thermal_camera',
+      ] as const
+    ).map((visualMedium) => ['advert', visualMedium, 'object_agency', 'conversational'] as const);
+    const coordinates = coordinateOptions.find(([format, visualMedium, storyMode, pacing]) =>
+      assignedDialogueShapeForCoordinates({
+        format,
+        visualMedium,
+        storyMode,
+        pacing,
+      }).startsWith('Unequal exchange:'),
+    );
+    expect(coordinates).toBeDefined();
+    const [format, visualMedium, storyMode, pacing] = coordinates!;
+    const rigid = {
+      ...base,
+      format,
+      visualMedium,
+      storyMode,
+      pacing,
+      dialogue: Array.from({ length: 8 }, (_, index) => ({
+        speaker: index % 2 === 0 ? 'Host' : 'Guest',
+        text: `This unusually detailed response number ${index} changes our small negotiation today.`,
+        action: 'REACTION_NEUTRAL' as const,
+      })),
+    };
+    const spokenWords = rigid.dialogue.flatMap((line) =>
+      line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu),
+    );
+
+    const repaired = repairDialogueArchitecture(rigid);
+
+    expect(repaired.dialogue).toHaveLength(10);
+    expect(dialogueArchitectureIssues(repaired)).toEqual([]);
+    expect(
+      repaired.dialogue.flatMap((line) => line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)),
+    ).toEqual(spokenWords);
+  });
+
+  it('leaves an architecture alone when a safe delivery-only repair cannot fit', () => {
+    const base = demoDraft(4);
+    const rigid = {
+      ...base,
+      dialogue: Array.from({ length: 12 }, (_, index) => ({
+        speaker: index % 2 === 0 ? 'Host' : 'Guest',
+        text: 'This existing spoken line stays exactly where it is.',
+        action: 'REACTION_NEUTRAL' as const,
+      })),
+    };
+    expect(repairDialogueArchitecture(rigid)).toBe(rigid);
   });
 
   it('fully applies corrective pacing while the delivered feed is too silent', () => {

@@ -964,6 +964,98 @@ export function dialogueArchitectureIssues(draft: GeneratedSegmentDraft): string
   return issues;
 }
 
+function splitDialogueTurn(
+  line: GeneratedSegmentDraft['dialogue'][number],
+): [GeneratedSegmentDraft['dialogue'][number], GeneratedSegmentDraft['dialogue'][number]] | null {
+  const words = line.text.trim().split(/\s+/u).filter(Boolean);
+  if (words.length < 6) {
+    return null;
+  }
+  const candidates = Array.from({ length: words.length - 5 }, (_, index) => index + 3);
+  const midpoint = words.length / 2;
+  const splitAt = candidates
+    .map((position) => {
+      const previous = words[position - 1] ?? '';
+      const next = words[position]?.replace(/^[^\p{L}\p{N}]+/gu, '').toLowerCase() ?? '';
+      const hasWrittenPause = /[,;:—–-]$/u.test(previous);
+      const beginsTurn = /^(?:and|because|but|except|only|so|then|unless|while|yet)$/u.test(next);
+      return {
+        position,
+        score: (hasWrittenPause ? 8 : 0) + (beginsTurn ? 6 : 0) - Math.abs(position - midpoint),
+      };
+    })
+    .sort((left, right) => right.score - left.score)[0]?.position;
+  if (splitAt === undefined) {
+    return null;
+  }
+  const firstText = words.slice(0, splitAt).join(' ');
+  const secondText = words.slice(splitAt).join(' ');
+  return [
+    {
+      ...line,
+      text: /[.!?…,:;—–-]$/u.test(firstText) ? firstText : `${firstText}…`,
+    },
+    {
+      ...line,
+      text: secondText,
+    },
+  ];
+}
+
+/**
+ * Production conversion for a common local-model failure: a good script arrives
+ * as a rigid two-person relay even though its assigned architecture needs held or
+ * interrupted turns. Splitting an existing long turn changes only delivery and
+ * timing; it never invents dialogue, characters, rules or actions.
+ */
+export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): GeneratedSegmentDraft {
+  const architecture = assignedDialogueShapeForCoordinates(draft);
+  const speakers = draft.dialogue.map((line) => line.speaker.trim().toLowerCase());
+  const strictlyAlternating =
+    draft.dialogue.length >= 8 &&
+    new Set(speakers).size === 2 &&
+    speakers.slice(1).every((speaker, index) => speaker !== speakers[index]);
+  const requiresBrokenAlternation = architecturesThatRequireBrokenAlternation.some((prefix) =>
+    architecture.startsWith(prefix),
+  );
+  if (!strictlyAlternating || !requiresBrokenAlternation) {
+    return draft;
+  }
+
+  const requiredSplits = architecture.startsWith('Unequal exchange:') ? 2 : 1;
+  if (draft.dialogue.length + requiredSplits > 12) {
+    return draft;
+  }
+  const splittable = draft.dialogue
+    .map((line, index) => ({ index, split: splitDialogueTurn(line) }))
+    .filter(
+      (
+        candidate,
+      ): candidate is {
+        index: number;
+        split: [
+          GeneratedSegmentDraft['dialogue'][number],
+          GeneratedSegmentDraft['dialogue'][number],
+        ];
+      } => candidate.split !== null,
+    )
+    .sort((left, right) => {
+      const leftWords = draft.dialogue[left.index]!.text.trim().split(/\s+/u).length;
+      const rightWords = draft.dialogue[right.index]!.text.trim().split(/\s+/u).length;
+      return rightWords - leftWords || left.index - right.index;
+    })
+    .slice(0, requiredSplits);
+  if (splittable.length < requiredSplits) {
+    return draft;
+  }
+
+  const replacements = new Map(splittable.map(({ index, split }) => [index, split]));
+  return {
+    ...draft,
+    dialogue: draft.dialogue.flatMap((line, index) => replacements.get(index) ?? [line]),
+  };
+}
+
 export function assignedStoryMode(
   serial: number,
   optimisationBrief: OptimisationBrief | null = null,

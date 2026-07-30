@@ -16,6 +16,7 @@ import {
   proposalQualityIssues,
   repairNetworkIdentityCollision,
   semanticNoveltyIssue,
+  speechTurnsForTts,
   storyGraphicForFormat,
 } from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
@@ -23,10 +24,11 @@ import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './pr
 const temporaryDirectories: string[] = [];
 
 function universallyAlignedProposal(draft: ReturnType<typeof demoDraft>) {
+  const programmeIdentity = draft.programmeTitle.replace(/[^\p{L}\p{N}\s]+/gu, ' ');
   const premise =
     draft.channelNumber % 2 === 0
-      ? 'During an emergency news programme, a refrigerator wants a worker to offer its service, but the family customer refuses permission until a spoken contract transfers status and the studio camera moves.'
-      : "At a live community workplace channel, a worker's meeting minutes want to sell a news product, yet the customer refuses social permission; an emergency spoken contract reassigns rank whenever the studio camera rotates.";
+      ? `During ${programmeIdentity}, an emergency news programme, a refrigerator wants a worker to offer its service, but the family customer refuses permission until a spoken contract transfers status and the studio camera moves.`
+      : `At ${programmeIdentity}, a live community workplace channel, a worker's meeting minutes want to sell a news product, yet the customer refuses social permission; an emergency spoken contract reassigns rank whenever the studio camera rotates.`;
   return generatedSegmentProposalSchema.parse({
     ...draft,
     premise,
@@ -193,6 +195,25 @@ describe('produceBatch', () => {
     );
   });
 
+  it('rejects an unrelated title and realistic safety language in emergency comedy', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      format: 'emergency',
+      programmeTitle: 'The Kelp Forest Safety Briefing',
+      storyMode: 'social_protocol',
+      premise:
+        'During a public warning in a glass-bottomed boxing gym, a light wants to help a caretaker, but an announcer refuses its protocol.',
+      endingBeat: 'The light issues dangerously slippery safety instructions before it bows.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toEqual(
+      expect.arrayContaining([
+        'programme title promises a distinctive subject absent from the premise',
+        'emergency fragments must concern harmless fictional administrative stakes',
+      ]),
+    );
+  });
+
   it('rejects an ending that invents an accidental second mechanism', () => {
     const proposal = generatedSegmentProposalSchema.parse({
       ...universallyAlignedProposal(demoDraft(0)),
@@ -317,6 +338,37 @@ describe('produceBatch', () => {
     expect(repaired.channelName).toBe(`${draft.programmeTitle} Transmission`);
     expect(repaired.programmeTitle).toBe(draft.programmeTitle);
     expect(repaired.premise).toBe(draft.premise);
+  });
+
+  it('packages separate TTS turns for each sentence without dropping spoken words', () => {
+    const dialogue = [
+      {
+        speaker: 'Neighbour B',
+        text: 'Clearly. My reservation is purely theoretical and void of hunger.',
+        action: 'POINT_AT' as const,
+      },
+      {
+        speaker: 'Neighbour A',
+        text: 'Then the empty booth is mine.',
+        action: 'LOOK_AT' as const,
+      },
+    ];
+
+    const turns = speechTurnsForTts(dialogue);
+
+    expect(turns.map((turn) => turn.text)).toEqual([
+      'Clearly.',
+      'My reservation is purely theoretical and void of hunger.',
+      'Then the empty booth is mine.',
+    ]);
+    expect(turns.map((turn) => turn.speaker)).toEqual([
+      'Neighbour B',
+      'Neighbour B',
+      'Neighbour A',
+    ]);
+    expect(
+      turns.flatMap((turn) => turn.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)).join(' '),
+    ).toBe(dialogue.flatMap((turn) => turn.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)).join(' '));
   });
 
   it('repairs numbered channels that misuse the network identity', () => {

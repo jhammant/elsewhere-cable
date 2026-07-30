@@ -76,6 +76,11 @@ const comicMechanismFamilies = [
     pattern:
       /^(?=[\s\S]*\b(?:graphic|logo|lower third|title card)\b)(?=[\s\S]*\b(?:billing|byline|credit|name|thank)\w*\b)(?=[\s\S]*\b(?:demand|refus|until|want)\w*\b)/iu,
   },
+  {
+    name: 'object withholds service until hidden worker receives credit',
+    pattern:
+      /^(?=[\s\S]*\b(?:appliance|device|kettle|machine|product|tool|vacuum)\w*\b)(?=[\s\S]*\b(?:declin|demand|refus|withhold)\w*\b)(?=[\s\S]*\b(?:until|unless)\b)(?=[\s\S]*\b(?:acknowledg|admit|credit|recognis|recogniz|thank)\w*\b)(?=[\s\S]*\b(?:driver|free|labou?r|unpaid|work(?:er|ing)?)\b)/iu,
+  },
 ] as const;
 
 function matchingMechanismFamilies(premise: string): string[] {

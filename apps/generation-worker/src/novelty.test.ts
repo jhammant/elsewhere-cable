@@ -125,4 +125,21 @@ describe('creative novelty', () => {
       'comic mechanism repeats "broadcast graphic demands credit before moving"',
     );
   });
+
+  it('rejects the same labour-credit sketch when the appliance and setting change', () => {
+    const previous = candidate({
+      programmeTitle: "The Kettle's Union",
+      premise:
+        'At a suburban lunch, a host advertises a kettle that refuses to boil until the neighbour admits its unpaid labor role.',
+    });
+    const disguisedRepeat = candidate({
+      programmeTitle: 'The Silent Sales Pitch',
+      premise:
+        'At a village demonstration, a magician advertises a vacuum machine that refuses to sell unless he acknowledges the driver who works for free.',
+    });
+
+    expect(noveltyIssues(disguisedRepeat, [recordFromDraft(previous)])).toContain(
+      'comic mechanism repeats "object withholds service until hidden worker receives credit"',
+    );
+  });
 });
