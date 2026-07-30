@@ -1670,10 +1670,20 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                   premise: generated.premise,
                   dialogue: [],
                 };
-                rejectedAttemptHistory.push(rejectedRecord);
-                if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
-                  semanticRejectedAttemptHistory.push(rejectedRecord);
-                  rejectedAttemptEmbeddings.push(candidateEmbedding);
+                const rejectedForNovelty = rejectionReasons.some((reason) => {
+                  const category = proposalRejectionCategory(reason);
+                  return category === 'semantic-novelty' || category === 'concept-novelty';
+                });
+                // A pure structural failure gets one correction against the same creative
+                // coordinates. Do not make that repair fail novelty merely because it preserves
+                // the assigned premise. Once the correction is exhausted—or the idea itself is
+                // already repetitive—retire it before moving to different coordinates.
+                if (rejectedForNovelty || structuralRetryUsed) {
+                  rejectedAttemptHistory.push(rejectedRecord);
+                  if (candidateEmbedding !== null && candidateEmbedding !== undefined) {
+                    semanticRejectedAttemptHistory.push(rejectedRecord);
+                    rejectedAttemptEmbeddings.push(candidateEmbedding);
+                  }
                 }
                 return false;
               }

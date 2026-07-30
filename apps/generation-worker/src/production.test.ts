@@ -1326,20 +1326,12 @@ describe('produceBatch', () => {
     expect(result.segmentCount).toBe(1);
   });
 
-  it('does not let a retry paraphrase or repeat an earlier rejected attempt', async () => {
+  it('lets a structural retry repair its assigned concept without self-novelty', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-rejected-attempt-history-'));
     temporaryDirectories.push(root);
     const outputRoot = path.join(root, 'segments');
     const scriptQueueRoot = path.join(root, 'scripts');
     const repeated = universallyAlignedProposal(demoDraft(0));
-    const replacement = generatedSegmentProposalSchema.parse({
-      ...repeated,
-      programmeTitle: 'The Courteous Kettle Committee',
-      premise:
-        'In a community shopping newsroom, a workplace anchor wants a talking kettle product to approve a public emergency procedure, advertising offer, sitcom household bulletin and continuity channel signal, but the kettle requests permission to grant the worker authority whenever a spoken contract cue moves the demonstration camera.',
-      endingBeat:
-        'The kettle grants the worker authority and the anchor completes the customer service bulletin.',
-    });
     let proposalCalls = 0;
     let scriptCalls = 0;
     const proposalPrompts: string[] = [];
@@ -1355,7 +1347,7 @@ describe('produceBatch', () => {
             programmeTitle: repeated.programmeTitle.toUpperCase(),
           });
         }
-        return Promise.resolve(proposalCalls === 2 ? repeated : replacement);
+        return Promise.resolve(repeated);
       },
       generateStructured(request) {
         scriptCalls += 1;
@@ -1383,7 +1375,7 @@ describe('produceBatch', () => {
     });
 
     expect(result.preparedScriptCount).toBe(1);
-    expect(proposalCalls).toBeGreaterThanOrEqual(3);
+    expect(proposalCalls).toBe(2);
     expect(scriptCalls).toBe(1);
     const coordinates = proposalPrompts.map(
       (prompt) =>
@@ -1392,7 +1384,6 @@ describe('produceBatch', () => {
         )?.[0] ?? '',
     );
     expect(coordinates[1]).toBe(coordinates[0]);
-    expect(coordinates[2]).not.toBe(coordinates[1]);
   });
 
   it('prepares dialogue with bounded TTS endpoint parallelism', async () => {
