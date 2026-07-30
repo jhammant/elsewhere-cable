@@ -10,11 +10,15 @@ import {
   type SegmentPackage,
 } from '../../packages/schemas/src/index.js';
 import {
+  categoryDiversityScore,
   concreteMotifPhrases,
+  deliveryNeedsCorrection,
   deliveryPacingDirection,
   pacingCandidatesForDelivery,
   pacingModes,
+  programmeUniquenessScore,
   repeatedStoryPhrases,
+  windowDiversityMetrics,
 } from '../../apps/generation-worker/src/optimisation-policy.js';
 
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
@@ -379,6 +383,19 @@ function fallbackBrief(
 ): OptimisationBrief {
   const clarity = segments.length === 0 ? 3 : 6;
   const pacingDirection = deliveryPacingDirection(delivery);
+  const windowMetrics = windowDiversityMetrics(
+    segments.map((segment) => ({
+      programmeTitle: segment.programme.title,
+      format: segment.programme.format,
+      visualMedium: segment.visualMedium ?? 'legacy',
+      castArchetype: segment.castArchetype ?? 'legacy',
+      pacing: segment.pacing ?? 'conversational',
+    })),
+  );
+  const repetitionDirection =
+    windowMetrics.programmeRepeats > 0
+      ? `The sample repeated ${windowMetrics.programmeRepeats} programme slots; rotate through unseen approved programmes before reusing a source.`
+      : null;
   return optimisationBriefSchema.parse({
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -413,6 +430,7 @@ function fallbackBrief(
         : [
             'Prefer earned status reversals, contrasting story scales and visible consequences.',
             pacingDirection,
+            repetitionDirection,
           ]
             .filter((value) => value !== null)
             .join(' '),
@@ -420,6 +438,7 @@ function fallbackBrief(
       ...delivery,
       fallbackOccurrences,
     },
+    windowMetrics,
   });
 }
 
@@ -474,6 +493,7 @@ async function criticBrief(
             role: 'user',
             content: JSON.stringify({
               delivery,
+              windowMetrics: baseline.windowMetrics,
               programmes: programmeEvidence,
             }),
           },
@@ -554,10 +574,27 @@ async function criticBrief(
         ? baseline.editorialDirection
         : criticDirection;
     const pacingDirection = deliveryPacingDirection(delivery);
-    const editorialDirection =
-      pacingDirection === null
-        ? boundedCriticDirection
-        : `${safeText(boundedCriticDirection, 320) ?? baseline.editorialDirection} ${pacingDirection}`;
+    const repetitionDirection =
+      (baseline.windowMetrics?.programmeRepeats ?? 0) > 0
+        ? `The sample repeated ${baseline.windowMetrics!.programmeRepeats} programme slots; rotate through unseen approved programmes before reusing a source.`
+        : null;
+    const editorialDirection = [
+      safeText(boundedCriticDirection, 260) ?? baseline.editorialDirection,
+      pacingDirection,
+      repetitionDirection,
+    ]
+      .filter((value) => value !== null)
+      .join(' ');
+    const originalityCeiling = programmeUniquenessScore(
+      baseline.windowMetrics ?? { programmeUniquenessRatio: 0 },
+    );
+    const paceVarietyCeiling = Math.min(
+      categoryDiversityScore(
+        segments.map((segment) => segment.pacing ?? 'conversational'),
+        pacingModes.length,
+      ),
+      deliveryNeedsCorrection(delivery) ? 6 : 10,
+    );
     const nextBrief = optimisationBriefSchema.parse({
       ...baseline,
       scores: {
@@ -565,8 +602,8 @@ async function criticBrief(
         comedyEscalation: score('comedyEscalation'),
         dialogueCoherence: score('dialogueCoherence'),
         visualMatch: score('visualMatch'),
-        paceVariety: score('paceVariety'),
-        originality: score('originality'),
+        paceVariety: Math.min(score('paceVariety'), paceVarietyCeiling),
+        originality: Math.min(score('originality'), originalityCeiling),
         shareability: score('shareability'),
       },
       avoidMotifs: [...new Set([...baseline.avoidMotifs, ...criticMotifs])].slice(0, 12),
@@ -614,6 +651,10 @@ Generated ${brief.generatedAt}
         : `${Math.round(brief.delivery.freezeRatio * 100)}%`
     }
 - Fallback/failure occurrences: ${brief.delivery.fallbackOccurrences}
+- Unique programmes: ${brief.windowMetrics?.uniqueProgrammes ?? 'unknown'}
+- Repeated programme slots: ${brief.windowMetrics?.programmeRepeats ?? 'unknown'}
+- Visual media represented: ${brief.windowMetrics?.uniqueVisualMedia ?? 'unknown'}
+- Cast archetypes represented: ${brief.windowMetrics?.uniqueCastArchetypes ?? 'unknown'}
 - Increase formats: ${brief.increaseFormats.join(', ')}
 - Increase pacing: ${brief.increasePacing.join(', ')}
 - Avoid motifs: ${brief.avoidMotifs.join(', ') || 'none'}

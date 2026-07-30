@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  categoryDiversityScore,
   concreteMotifPhrases,
   deliveryPacingDirection,
   pacingCandidatesForDelivery,
+  programmeUniquenessScore,
   repeatedStoryPhrases,
+  windowDiversityMetrics,
 } from './optimisation-policy.js';
 
 describe('delivery-aware pacing policy', () => {
@@ -84,5 +87,48 @@ describe('delivery-aware pacing policy', () => {
         'meeting meeting minutes',
       ]),
     ).toEqual(['grandfather clock', 'insurance policy', 'rubbish bin']);
+  });
+
+  it('measures exact programme repetition separately from style coverage', () => {
+    const metrics = windowDiversityMetrics([
+      {
+        programmeTitle: 'Programme A',
+        format: 'news',
+        visualMedium: 'pixel_broadcast',
+        castArchetype: 'humanoid',
+        pacing: 'frantic',
+      },
+      {
+        programmeTitle: 'Programme A',
+        format: 'news',
+        visualMedium: 'paper_cutout',
+        castArchetype: 'paper_puppets',
+        pacing: 'staccato',
+      },
+      {
+        programmeTitle: 'Programme B',
+        format: 'sitcom',
+        visualMedium: 'cel_shaded',
+        castArchetype: 'humanoid',
+        pacing: 'conversational',
+      },
+    ]);
+
+    expect(metrics).toEqual({
+      uniqueProgrammes: 2,
+      programmeRepeats: 1,
+      programmeUniquenessRatio: 2 / 3,
+      uniqueFormats: 2,
+      uniqueVisualMedia: 3,
+      uniqueCastArchetypes: 2,
+      uniquePacingModes: 3,
+    });
+    expect(programmeUniquenessScore(metrics)).toBe(7);
+  });
+
+  it('scores category balance without awarding full marks for four of six modes', () => {
+    expect(categoryDiversityScore(['a', 'b', 'c', 'd'], 6)).toBe(8);
+    expect(categoryDiversityScore(['a', 'a', 'a', 'a'], 6)).toBe(0);
+    expect(categoryDiversityScore(['a', 'b', 'c', 'd', 'e', 'f'], 6)).toBe(10);
   });
 });

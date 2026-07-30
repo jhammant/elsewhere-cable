@@ -127,6 +127,17 @@ export const optimisationBriefSchema = z.object({
     freezeRatio: z.number().min(0).max(1).nullable(),
     fallbackOccurrences: z.number().int().nonnegative(),
   }),
+  windowMetrics: z
+    .object({
+      uniqueProgrammes: z.number().int().nonnegative(),
+      programmeRepeats: z.number().int().nonnegative(),
+      programmeUniquenessRatio: z.number().min(0).max(1),
+      uniqueFormats: z.number().int().nonnegative(),
+      uniqueVisualMedia: z.number().int().nonnegative(),
+      uniqueCastArchetypes: z.number().int().nonnegative(),
+      uniquePacingModes: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 const timedEventSchema = z.object({

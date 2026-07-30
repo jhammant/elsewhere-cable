@@ -14,6 +14,24 @@ interface DeliveryPacingSignal {
   freezeRatio: number | null;
 }
 
+interface DiversityDescriptor {
+  programmeTitle: string;
+  format: string;
+  visualMedium: string;
+  castArchetype: string;
+  pacing: string;
+}
+
+export interface WindowDiversityMetrics {
+  uniqueProgrammes: number;
+  programmeRepeats: number;
+  programmeUniquenessRatio: number;
+  uniqueFormats: number;
+  uniqueVisualMedia: number;
+  uniqueCastArchetypes: number;
+  uniquePacingModes: number;
+}
+
 const motifStopWords = new Set([
   'and',
   'about',
@@ -161,4 +179,45 @@ export function deliveryPacingDirection(delivery: DeliveryPacingSignal): string 
     return 'Reduce prolonged silence and static holds; favour visible action, frequent shot changes and continuous audible presence.';
   }
   return null;
+}
+
+export function windowDiversityMetrics(
+  descriptors: readonly DiversityDescriptor[],
+): WindowDiversityMetrics {
+  const uniqueCount = (select: (value: DiversityDescriptor) => string): number =>
+    new Set(descriptors.map(select)).size;
+  const uniqueProgrammes = uniqueCount((value) => value.programmeTitle);
+  return {
+    uniqueProgrammes,
+    programmeRepeats: Math.max(0, descriptors.length - uniqueProgrammes),
+    programmeUniquenessRatio: descriptors.length === 0 ? 0 : uniqueProgrammes / descriptors.length,
+    uniqueFormats: uniqueCount((value) => value.format),
+    uniqueVisualMedia: uniqueCount((value) => value.visualMedium),
+    uniqueCastArchetypes: uniqueCount((value) => value.castArchetype),
+    uniquePacingModes: uniqueCount((value) => value.pacing),
+  };
+}
+
+export function programmeUniquenessScore(
+  metrics: Pick<WindowDiversityMetrics, 'programmeUniquenessRatio'>,
+): number {
+  return Math.max(0, Math.min(10, Math.round(metrics.programmeUniquenessRatio * 10)));
+}
+
+export function categoryDiversityScore(
+  values: readonly string[],
+  expectedCategoryCount: number,
+): number {
+  if (values.length === 0 || expectedCategoryCount <= 1) {
+    return 0;
+  }
+  const frequencies = new Map<string, number>();
+  for (const value of values) {
+    frequencies.set(value, (frequencies.get(value) ?? 0) + 1);
+  }
+  const entropy = [...frequencies.values()].reduce((total, count) => {
+    const probability = count / values.length;
+    return total - probability * Math.log(probability);
+  }, 0);
+  return Math.max(0, Math.min(10, Math.round((entropy / Math.log(expectedCategoryCount)) * 10)));
 }
