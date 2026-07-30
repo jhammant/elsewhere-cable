@@ -174,6 +174,61 @@ describe('generation prompts', () => {
     expect(prompt.length).toBeLessThan(userPrompt(1_933, []).length * 0.75);
   });
 
+  it('applies popularity research to generated kernels as framing rather than a second rule', () => {
+    const kernel =
+      'Rule: Touching the spare teaspoon assigns hosting duty | Protagonist goal: The host wants to serve tea | Opposing goal: The guest wants to leave with the teaspoon | Earned payoff: The guest hosts while the host leaves';
+    const prompt = userPrompt(
+      1_933,
+      [],
+      [],
+      [],
+      {
+        schemaVersion: 1,
+        generatedAt: '2026-07-30T15:37:43.812Z',
+        windowMinutes: 30,
+        sampleSize: 30,
+        scores: {
+          premiseClarity: 7,
+          comedyEscalation: 8,
+          dialogueCoherence: 8,
+          visualMatch: 8,
+          paceVariety: 8,
+          originality: 8,
+          shareability: 8,
+        },
+        increaseFormats: [],
+        increasePacing: [],
+        avoidMotifs: [],
+        preserveStrengths: [],
+        editorialDirection: 'Keep the single kernel legible.',
+        delivery: {
+          isLive: true,
+          concurrentViewers: 2,
+          silenceRatio: 0.02,
+          freezeRatio: 0.03,
+          fallbackOccurrences: 0,
+        },
+        audienceHypothesis: {
+          pattern: 'live_occasion',
+          evidenceCount: 3,
+          sampleShare: 0.1,
+          relativeViewVelocity: 1,
+          hypothesis:
+            'Test a programme that feels like an interruptible one-time event with an immediate on-air stake.',
+        },
+      },
+      {
+        catalogueSize: 2_000,
+        mechanismVariant: kernel,
+      },
+    );
+
+    expect(prompt).toContain('Public viewing-pattern hypothesis: live_occasion');
+    expect(prompt).toContain('one-time on-air event happening now');
+    expect(prompt).toContain('cannot add a role, prop, causal rule or ending mechanism');
+    expect(prompt).toContain(`Exact comedy kernel: ${kernel}.`);
+  });
+
   it('gives novelty retries bounded catalogue collisions without exposing control markup', () => {
     const prompt = userPrompt(17, [], [], ['premise semantically repeats'], null, {
       catalogueSize: 2_000,

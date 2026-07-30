@@ -2040,6 +2040,27 @@ export function userPrompt(
     ? `Use the format-specific scene frame only to establish the television format, physical setting and two active role types. The kernel's protagonist goal and opposing goal are the only character wants; map them onto those roles without importing desires from the frame. The kernel's earned payoff is the only ending outcome. Use one concrete kernel noun as the visible anchor and introduce no other required object, mechanism, social rule, relationship pressure or payoff shape.`
     : `Use the format-specific scene frame as the whole television setup and the single mechanism variant as the whole surreal rule. Do not copy a second rule from another coordinate. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
 Treat the ordinary visual anchor as the concrete subject inside the one format-specific frame; do not add another character, subplot, rule or surreal mechanism to accommodate it. Moving, displaying, labelling or discussing the anchor is ordinary character business and cannot create a second automatic consequence. Preserve the two incompatible wants already named in the scene frame, sharpen them with the assigned relationship pressure, then let the single mechanism variant complicate those wants. The tactic progression varies how the roles pursue those wants; it never changes how the mechanism works. The payoff shape is a social consequence of the same conflict, not an additional ending rule.`;
+  const audiencePatternApplication =
+    optimisationBrief?.audienceHypothesis === undefined
+      ? 'none'
+      : {
+          visible_transformation:
+            'make each beat visibly change the state of the existing central object or relationship',
+          bounded_challenge:
+            'make the existing incompatible goals legible under one finite, escalating constraint',
+          explanation:
+            'let the existing conflict reveal increasingly concrete consequences without adding a narrator',
+          reveal_chain:
+            'let each answer about the existing rule create a more specific obstacle for the same goal',
+          ranked_accumulation:
+            'let an accumulating order or list sharpen the existing conflict without becoming a second rule',
+          social_reaction:
+            'give each established role a distinct reaction that materially changes the next tactic',
+          live_occasion:
+            'frame the existing kernel as a one-time on-air event happening now, with its immediate stake visible from the opening beat',
+          process_satisfaction:
+            'show the existing central task as a legible physical process whose side effects escalate',
+        }[optimisationBrief.audienceHypothesis.pattern];
   const optimisationBlock =
     optimisationBrief === null
       ? ''
@@ -2053,6 +2074,7 @@ Treat the ordinary visual anchor as the concrete subject inside the one format-s
             ? 'none'
             : `${optimisationBrief.audienceHypothesis.pattern}: ${optimisationBrief.audienceHypothesis.hypothesis}`
         }.
+- Popularity-pattern application: ${audiencePatternApplication}. This is framing, beat shape or performance guidance only; it cannot add a role, prop, causal rule or ending mechanism.
 - Editorial direction: ${optimisationBrief.editorialDirection}.`;
   const noveltyExclusions = [
     ...new Set(
@@ -2190,6 +2212,7 @@ This is a kernel-first proposal. Use one causal rule, two incompatible goals and
 ${retryStrategy}
 ${retryBlock}
 ${previousProposalBlock}
+${optimisationBlock}
 ${noveltyExclusionBlock}
 Mandatory kernel proposal coordinates:
 - Physical setting: ${setting}.
