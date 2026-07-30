@@ -19,6 +19,7 @@ import {
   semanticNoveltyIssue,
   speechTurnsForTts,
   storyGraphicForFormat,
+  transitionsForSegment,
 } from './production.js';
 import type { LlmProvider, SpeechRequest, SpeechResult, TtsProvider } from './providers.js';
 
@@ -84,6 +85,25 @@ describe('produceBatch', () => {
     expect(storyGraphicForFormat('news')).toBe('LOWER_THIRD');
     expect(storyGraphicForFormat('emergency')).toBe('WARNING');
     expect(storyGraphicForFormat('ident')).toBe('TITLE_CARD');
+  });
+
+  it('varies compatible channel transitions across format and pacing', () => {
+    const pairs = (
+      [
+        ['advert', 'frantic', 8_429_105_736],
+        ['public_access', 'near_silent', 894_210_573],
+        ['news', 'staccato', 73_118_402],
+        ['shopping', 'conversational', 9_701_442_880],
+        ['sitcom', 'slow_burn', 551_902_741],
+        ['emergency', 'interrupted', 6_000_401_991],
+        ['ident', 'near_silent', 407_118_650],
+      ] as const
+    ).map(([format, pacing, channelNumber]) =>
+      transitionsForSegment(format, pacing, channelNumber),
+    );
+
+    expect(new Set(pairs.flatMap(({ opening, ending }) => [opening, ending])).size).toBe(4);
+    expect(pairs.every(({ opening, ending }) => opening !== ending)).toBe(true);
   });
 
   it('adds visual beats to long energetic speech while preserving deliberate holds', () => {

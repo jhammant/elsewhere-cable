@@ -234,6 +234,44 @@ function pacingFor(draft: GeneratedSegmentDraft): NonNullable<GeneratedSegmentDr
 
 type BroadcastFormat = GeneratedSegmentDraft['format'];
 type PacingMode = NonNullable<GeneratedSegmentDraft['pacing']>;
+type BroadcastTransition = SegmentPackage['suggestedExit']['transition'];
+
+const transitionCycle = [
+  'HARD_CUT',
+  'STATIC_BURST',
+  'FADE_TO_IDENT',
+  'SIGNAL_LOSS',
+] as const satisfies readonly BroadcastTransition[];
+
+export function transitionsForSegment(
+  format: BroadcastFormat,
+  pacing: PacingMode,
+  channelNumber: number,
+): { opening: BroadcastTransition; ending: BroadcastTransition } {
+  const formatOffset = {
+    advert: 0,
+    public_access: 1,
+    news: 2,
+    shopping: 3,
+    sitcom: 1,
+    emergency: 3,
+    ident: 2,
+  }[format];
+  const pacingOffset = {
+    frantic: 3,
+    staccato: 1,
+    conversational: 0,
+    slow_burn: 2,
+    interrupted: 3,
+    near_silent: 2,
+  }[pacing];
+  const openingIndex =
+    (Math.abs(channelNumber) + formatOffset + pacingOffset) % transitionCycle.length;
+  return {
+    opening: transitionCycle[openingIndex]!,
+    ending: transitionCycle[(openingIndex + 2) % transitionCycle.length]!,
+  };
+}
 
 export function storyGraphicForFormat(
   format: BroadcastFormat,
@@ -759,6 +797,7 @@ async function buildSegment(
 
   try {
     const pacing = pacingFor(draft);
+    const transitions = transitionsForSegment(draft.format, pacing, draft.channelNumber);
     const speechTurns = speechTurnsForTts(draft.dialogue);
     const speech = new Array<{
       line: GeneratedSegmentDraft['dialogue'][number];
@@ -809,7 +848,7 @@ async function buildSegment(
     }
 
     const events: SegmentEvent[] = [
-      { atMs: 0, type: 'transition.play', transition: 'STATIC_BURST' },
+      { atMs: 0, type: 'transition.play', transition: transitions.opening },
       { atMs: 300, type: 'camera.cut', camera: 'CAMERA_WIDE' },
       {
         atMs: 550,
@@ -900,7 +939,7 @@ async function buildSegment(
     events.push({
       atMs: cursorMs + timing.endingHoldMs,
       type: 'transition.play',
-      transition: 'STATIC_BURST',
+      transition: transitions.ending,
     });
     const durationMs = Math.max(8_000, cursorMs + timing.endingHoldMs + 520);
 
@@ -937,7 +976,7 @@ async function buildSegment(
       suggestedExit: {
         earliestMs: Math.max(0, durationMs - 3_000),
         preferredMs: durationMs,
-        transition: 'STATIC_BURST',
+        transition: transitions.ending,
       },
       production: {
         generatedAt: new Date().toISOString(),

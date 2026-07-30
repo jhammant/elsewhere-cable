@@ -461,7 +461,77 @@ const performanceDynamics = [
   'two characters discover they want the same outcome and then compete for authorship',
   'a confident explanation becomes a reluctant request for help',
   'a minor confession creates an unexpected but fragile alliance',
+  'an apparent victory becomes unwanted responsibility, and its winner tries to give it back without losing face',
+  'an expert protects their status while a novice solves the practical problem in embarrassingly plain language',
+  'two allies maintain a shared public story while quietly disagreeing about the one detail that would make it useful',
+  'a performer keeps addressing the camera while their off-camera negotiation becomes the more important scene',
+  'one role deliberately loses a petty contest because winning would make the other person leave',
+  'a group sustains one polite fiction until a newcomer asks the most ordinary possible question',
+  'the least expressive participant makes the only consequential choice and leaves everyone else performing around it',
+  'two rivals discover a shared preference, then compete to prove who disliked it first',
 ] as const;
+
+const formatPresentationGrammars: Record<
+  GeneratedSegmentProposal['format'],
+  readonly string[]
+> = {
+  advert: [
+    'a breathless tabletop demonstration with oversized labels and abrupt proof shots',
+    'a solemn filmed testimonial repeatedly contradicted by the product visible beside it',
+    'a split-screen before-and-after comparison whose two presenters can hear each other',
+    'a single-take showroom pitch forced to continue while the demonstration changes ownership',
+    'a miniature instructional film with numbered steps and one participant refusing the final caption',
+    'a kitchen trial where every confident claim triggers a tighter product close-up',
+  ],
+  public_access: [
+    'a patient call-in with the caller permanently visible in an awkward picture-in-picture box',
+    'a three-chair committee panel whose hand-painted name cards keep changing speaking order',
+    'a craft demonstration shot entirely from above while the presenters negotiate below frame',
+    'a handheld neighbourhood report that keeps returning to one unimpressed local witness',
+    'a basement advice desk with handwritten diagrams added after every answer',
+    'a community talent slot where the scenery helper receives increasingly formal lower thirds',
+  ],
+  news: [
+    'a desk-to-field handoff in which the field reporter keeps returning the story to the anchor',
+    'a diagram-led bulletin where every correction redraws the same simple map',
+    'a split-screen interview with an increasingly authoritative studio object in the third panel',
+    'a rolling ticker bulletin whose captions become more specific than either presenter',
+    'a weather-wall explanation staged like a serious local investigation',
+    'a live outside broadcast where background activity supplies the only useful evidence',
+  ],
+  shopping: [
+    'a rotating-plinth demonstration with a caller inset and rapidly revised price graphics',
+    'a quiet unboxing presented as a major launch while the product negotiates each reveal',
+    'a warehouse walk-and-talk that repeatedly returns to the same unsold item',
+    'a split-screen buyer consultation where ownership changes before the order is complete',
+    'a luxury close-up sequence interrupted by brutally ordinary customer questions',
+    'a countdown offer whose on-screen terms keep transferring the hosts’ responsibilities',
+  ],
+  sitcom: [
+    'a cold open beginning on the consequence, then cutting between the room’s competing explanations',
+    'a one-room door farce where entrances alter who must maintain the household’s shared story',
+    'an awkward dinner scene punctuated by direct-to-camera reaction inserts but no narrator',
+    'a workplace break-room scene where an ignored background task steadily takes over the foreground',
+    'an interrupted closing-credits scene in which the characters still need one practical decision',
+    'a bottle episode built from increasingly specific seating, serving or leaving negotiations',
+  ],
+  emergency: [
+    'a calm desk announcement alternating with one harmless procedure diagram',
+    'a scrolling-instruction bulletin corrected live by the resident already following it',
+    'a hotline call shown beside a model reconstruction of one minor civic inconvenience',
+    'a split-screen coordination update where both locations offer the same courtesy to each other',
+    'a public-information role-play whose demonstrators disagree about the socially useful exception',
+    'a measured status board that quietly records every change of mind as an official phase',
+  ],
+  ident: [
+    'a handmade logo assembly where each piece receives a separate continuity introduction',
+    'a station-clock handover interrupted by the outgoing programme’s unresolved practical choice',
+    'a minimalist geometric ident whose elements negotiate through captions and tiny gestures',
+    'a continuity-sofa sign-off with the outgoing cast waiting for a dignified cue to leave',
+    'a painted title-card workshop shown live while one missing letter argues from off frame',
+    'a test-card rehearsal where the announcer and alignment shapes disagree about what comes next',
+  ],
+};
 
 const dialogueShapes = [
   'Cold open: begin halfway through the disagreement with no greeting or premise recital; reveal the practical stakes through the second and third replies.',
@@ -1113,6 +1183,9 @@ export function userPrompt(
     castStructures[axisIndex(serial, 0x63d835f, castStructures.length)]!;
   const performanceDynamic =
     performanceDynamics[axisIndex(serial, 0x6f922b3, performanceDynamics.length)]!;
+  const presentationPool = formatPresentationGrammars[format];
+  const presentationGrammar =
+    presentationPool[axisIndex(serial, 0x75a34c1, presentationPool.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
   const pacing = assignedPacing(serial, optimisationBrief);
   const dialogueShape = assignedDialogueShapeForCoordinates({
@@ -1193,6 +1266,7 @@ Mandatory creative coordinates for this attempt:
 ${physicalMechanismBlock}
 - Cast structure: ${cast}.
 - Performance dynamic: ${performanceDynamic}. This shapes the acting and relationship beats, not the surreal mechanism.
+- Broadcast presentation: ${presentationGrammar}. Treat this as camera and graphic grammar only; it cannot add a second story mechanism, an unseen narrator or extra cast.
 - Dialogue architecture: ${dialogueShape}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.

@@ -38,6 +38,7 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Scope ceiling:');
       expect(prompt).toContain('Comedy mechanism family:');
       expect(prompt).toContain('Cast structure:');
+      expect(prompt).toContain('Broadcast presentation:');
       expect(prompt).toContain('Visual medium:');
       expect(prompt).toContain('Visual production grammar:');
       expect(prompt).toContain('Pacing:');
@@ -66,6 +67,19 @@ describe('generation prompts', () => {
 
     expect(new Set(locations).size).toBeGreaterThan(28);
     expect(new Set(casts).size).toBeGreaterThan(30);
+  });
+
+  it('varies recognisable broadcast presentation independently of the comedy rule', () => {
+    const prompts = Array.from({ length: 420 }, (_, serial) => userPrompt(serial, []));
+    const presentations = prompts.map(
+      (prompt) => prompt.match(/Broadcast presentation: (.+)\. Treat/u)?.[1] ?? '',
+    );
+
+    expect(new Set(presentations).size).toBeGreaterThanOrEqual(40);
+    for (const prompt of prompts) {
+      expect(prompt).toContain('camera and graphic grammar only');
+      expect(prompt).toContain('cannot add a second story mechanism');
+    }
   });
 
   it('assigns pacing deterministically even when a provider omits it', () => {
