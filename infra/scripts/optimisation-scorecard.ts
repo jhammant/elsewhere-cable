@@ -45,6 +45,7 @@ interface GenerationObservation {
   strategy?: string;
   revision?: string;
   requestedScripts: number;
+  approvedScripts?: number;
   proposalAttempts: number;
   durationSeconds: number;
   pendingDelta: number;
@@ -122,6 +123,8 @@ function parseGenerationObservation(value: unknown): GenerationObservation {
     (record.revision !== undefined &&
       (typeof record.revision !== 'string' || !/^[A-Za-z0-9._-]{1,80}$/u.test(record.revision))) ||
     !Number.isInteger(record.requestedScripts) ||
+    (record.approvedScripts !== undefined &&
+      (!Number.isInteger(record.approvedScripts) || record.approvedScripts < 0)) ||
     !Number.isInteger(record.proposalAttempts) ||
     !Number.isInteger(record.durationSeconds) ||
     !Number.isInteger(record.pendingDelta) ||
@@ -286,7 +289,10 @@ const approvedGeneration = recentGeneration.filter(
   (observation) => observation.status === 'approved',
 );
 const generatedScriptCount = approvedGeneration.reduce(
-  (total, observation) => total + Math.max(0, observation.pendingDelta),
+  (total, observation) =>
+    total +
+    (observation.approvedScripts ??
+      Math.max(0, observation.pendingDelta) + Math.max(0, observation.completedDelta)),
   0,
 );
 const generationWallSeconds = recentGeneration.reduce(
@@ -304,7 +310,10 @@ const generationStrategies = [...generationByStrategy.entries()].map(([key, obse
   const [strategy, revision] = key.split('@', 2) as [string, string];
   const approved = observations.filter((observation) => observation.status === 'approved');
   const approvedScripts = approved.reduce(
-    (total, observation) => total + Math.max(0, observation.pendingDelta),
+    (total, observation) =>
+      total +
+      (observation.approvedScripts ??
+        Math.max(0, observation.pendingDelta) + Math.max(0, observation.completedDelta)),
     0,
   );
   const computeSeconds = observations.reduce(

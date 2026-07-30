@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -185,7 +185,16 @@ async function main(): Promise<void> {
       : { historyRoots: [path.resolve(workspaceRoot, historyRoot)] }),
   });
 
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  const serialisedResult = `${JSON.stringify(result, null, 2)}\n`;
+  const resultFile = argument('result-file');
+  if (resultFile !== undefined) {
+    await writeFile(
+      path.isAbsolute(resultFile) ? resultFile : path.resolve(workspaceRoot, resultFile),
+      serialisedResult,
+      'utf8',
+    );
+  }
+  process.stdout.write(serialisedResult);
 }
 
 await main();

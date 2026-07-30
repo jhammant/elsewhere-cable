@@ -81,6 +81,9 @@ while :; do
     --model "$llm_model" \
     --embedding-base-url "$embedding_base_url" \
     --embedding-model "$embedding_model"
+  result_file=$(mktemp "${TMPDIR:-/tmp}/elsewhere-generation-result.XXXXXX")
+  trap 'rm -f "$result_file"' EXIT HUP INT TERM
+  set -- "$@" --result-file "$result_file"
   if [ -r "$optimisation_brief" ]; then
     set -- "$@" --optimisation-brief "$optimisation_brief"
   fi
@@ -95,15 +98,30 @@ while :; do
   else
     batch_status=rejected
   fi
+  approved_script_count=$(
+    node -e '
+      const fs = require("node:fs");
+      try {
+        const result = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+        const count = Number(result.preparedScriptCount ?? 0);
+        process.stdout.write(String(Number.isInteger(count) && count >= 0 ? count : 0));
+      } catch {
+        process.stdout.write("0");
+      }
+    ' "$result_file"
+  )
+  rm -f "$result_file"
+  trap - EXIT HUP INT TERM
   batch_finished_epoch=$(date '+%s')
   pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
   completed_count=$(find "$script_queue/completed" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
-  printf '{"generatedAt":"%s","status":"%s","strategy":"%s","revision":"%s","requestedScripts":%s,"proposalAttempts":%s,"durationSeconds":%s,"pendingDelta":%s,"completedDelta":%s,"pendingScripts":%s,"completedScripts":%s}\n' \
+  printf '{"generatedAt":"%s","status":"%s","strategy":"%s","revision":"%s","requestedScripts":%s,"approvedScripts":%s,"proposalAttempts":%s,"durationSeconds":%s,"pendingDelta":%s,"completedDelta":%s,"pendingScripts":%s,"completedScripts":%s}\n' \
     "$batch_started_at" \
     "$batch_status" \
     "$generation_strategy" \
     "$generation_revision" \
     "$batch_count" \
+    "$approved_script_count" \
     "$proposal_attempts" \
     "$((batch_finished_epoch - batch_started_epoch))" \
     "$((pending_count - pending_before))" \
