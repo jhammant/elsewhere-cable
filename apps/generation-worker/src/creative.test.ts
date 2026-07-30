@@ -159,15 +159,19 @@ describe('generation prompts', () => {
       mechanismVariant: kernel,
     });
 
-    expect(prompt).toContain(`Mechanism variant: ${kernel}. Treat this`);
-    expect(prompt).toContain('Kernel-first constraint:');
-    expect(prompt).toContain("The kernel's protagonist goal and opposing goal");
-    expect(prompt).toContain("The kernel's earned payoff is the only ending outcome");
-    expect(prompt).toContain('choose one ordinary concrete noun already present');
+    expect(prompt).toContain(`Exact comedy kernel: ${kernel}.`);
+    expect(prompt).toContain('This is a kernel-first proposal.');
+    expect(prompt).toContain('map protagonist goal to the first active role');
+    expect(prompt).toContain('endingBeat must play the earned payoff exactly');
+    expect(prompt).toContain('concrete kernel nouns');
+    expect(prompt).toContain('Mandatory kernel proposal coordinates:');
+    expect(prompt).toContain('Return structured JSON only.');
+    expect(prompt).not.toContain('Mandatory creative coordinates for this attempt:');
     expect(prompt).not.toContain('- Relationship pressure:');
     expect(prompt).not.toContain('- Tactic progression:');
     expect(prompt).not.toContain('- Payoff shape:');
     expect(prompt).not.toContain('- Ordinary visual anchor:');
+    expect(prompt.length).toBeLessThan(userPrompt(1_933, []).length * 0.75);
   });
 
   it('gives novelty retries bounded catalogue collisions without exposing control markup', () => {

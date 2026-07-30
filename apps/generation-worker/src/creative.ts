@@ -2174,6 +2174,40 @@ Repair contract: ${
       : rejectedForNovelty
         ? 'The previous attempt failed a novelty gate, so this attempt has different mandatory coordinates. Follow only the new coordinates below and do not paraphrase the rejected concept.'
         : 'The previous attempt failed a mechanical or editorial gate. Preserve the mandatory coordinates below and correct only the listed defects; do not replace the assigned mechanism with another one.';
+  if (generatedComedyKernel) {
+    return `Create batch segment ${index + 1} using the ${format} format.
+This is a kernel-first proposal. Use one causal rule, two incompatible goals and one earned payoff.
+${retryStrategy}
+${retryBlock}
+${previousProposalBlock}
+${noveltyExclusionBlock}
+Mandatory kernel proposal coordinates:
+- Physical setting: ${setting}.
+- Television format: ${format}. Include at least one of these format words literally in the premise: ${formatAnchorTerms[format]}.
+- Role frame: ${storyFrame}. Use this only to choose two active role types and recognise the television format. Import no object, desire, rule or ending from it.
+- Story mode: ${storyMode}.
+- Exact comedy kernel: ${mechanismVariant}.
+- Kernel mapping: map protagonist goal to the first active role and opposing goal to the second. Those are the only character wants.
+- Kernel payoff: endingBeat must play the earned payoff exactly with those same roles, rule and concrete kernel nouns. Add no exemption, test, procedure, helper, third role, second object or second rule.
+- Story-mode acceptance contract: ${storyModeAcceptanceContract[storyMode]}.
+${physicalMechanismBlock}
+- Visual medium: ${visualMedium}. It changes presentation only, never story physics.
+- Cast archetype: ${castArchetype}.
+- Pacing: ${pacing}.
+- Graphic package: ${graphicPackage}. It is presentation metadata only.
+
+Before returning JSON, enforce every gate:
+1. premise is one complete sentence of 8–48 words beginning At, In, Inside, On or During;
+2. premise literally uses needs, wants or must to state both incompatible goals;
+3. premise states the kernel rule and no other causal rule;
+4. programmeTitle uses a distinctive concrete kernel noun and premise repeats that noun literally;
+5. endingBeat is one playable choice or status reversal caused only by the kernel;
+6. continuityFact is one unique 5–16 word in-world fact about the same kernel;
+7. channelNumber is very high and memorable;
+8. no real people, brands, existing fiction, dangerous emergency language or renderer instructions.
+
+Return structured JSON only.`;
+  }
   return `Create batch segment ${index + 1} using the ${format} format.
 This proposal will be compared semantically with ${recentTitles.length} recent programme titles, ${recentPremises.length} recent premises and the complete broadcast catalogue. Do not rely on familiar Elsewhere Cable motifs.
 ${retryStrategy}
