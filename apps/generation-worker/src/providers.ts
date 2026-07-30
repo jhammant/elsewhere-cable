@@ -224,8 +224,11 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
   );
   const physicalSetting =
     request.userPrompt.match(/Physical setting: ([^\n]+)\./u)?.[1] ?? 'an assigned studio set';
+  const exactKernelLine = request.userPrompt.match(/^- Exact comedy kernel: (.+)$/mu)?.[1];
   const assignedMechanism =
-    request.userPrompt.match(/Mechanism variant: ([^\n]+?)\. Treat this/u)?.[1] ?? null;
+    exactKernelLine?.replace(/\.$/u, '') ??
+    request.userPrompt.match(/Mechanism variant: ([^\n]+?)\. Treat this/u)?.[1] ??
+    null;
   const assignedKernel = comedyKernelFromMechanism(assignedMechanism);
   const formatRole = {
     advert: 'spokesperson',

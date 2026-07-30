@@ -153,6 +153,34 @@ describe('OpenAiCompatibleTtsProvider', () => {
     );
   });
 
+  it('carries the kernel-first label into the proposal and ending examples', () => {
+    const proposal = JSON.parse(
+      proposalStructuralExample({
+        systemPrompt: 'Return JSON.',
+        userPrompt: `Create batch segment 74 using the public_access format.
+This is a kernel-first proposal. Use one causal rule, two incompatible goals and one earned payoff.
+- Physical setting: a quiet village hall.
+- Story mode: social_protocol.
+- Exact comedy kernel: Rule: Touching the brass key requires its holder to introduce the next silence. | Protagonist goal: The caretaker wants to lock the hall before the final bus. | Opposing goal: The volunteer wants the key left out for the morning class. | Earned payoff: The caretaker introduces the silence and leaves the key with the volunteer.
+- Visual medium: paper_cutout.
+- Pacing: slow_burn.`,
+      }),
+    ) as { premise: string; endingBeat: string };
+
+    expect(proposal.premise).toContain(
+      'The caretaker wants to lock the hall before the final bus.',
+    );
+    expect(proposal.premise).toContain(
+      'The volunteer wants the key left out for the morning class.',
+    );
+    expect(proposal.premise).toContain(
+      'Touching the brass key requires its holder to introduce the next silence.',
+    );
+    expect(proposal.endingBeat).toContain(
+      'The caretaker introduces the silence and leaves the key with the volunteer.',
+    );
+  });
+
   it('keeps a bounded local-server error detail when an LLM request is rejected', async () => {
     vi.stubGlobal(
       'fetch',
