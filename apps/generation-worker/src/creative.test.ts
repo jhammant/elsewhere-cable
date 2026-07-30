@@ -14,6 +14,7 @@ import {
   scriptPrompt,
   systemPrompt,
   userPrompt,
+  visualStyleForMedium,
 } from './creative.js';
 
 describe('generation prompts', () => {
@@ -179,6 +180,17 @@ describe('generation prompts', () => {
       'storybook_wash',
       'isometric_manual',
     ]).toContain(assigned);
+  });
+
+  it('gives every renderer a distinct canonical visual style', () => {
+    const media = Array.from(
+      new Set(Array.from({ length: 2_000 }, (_, serial) => assignedVisualMedium(serial))),
+    );
+    const styles = media.map((medium) => visualStyleForMedium(medium));
+
+    expect(media).toHaveLength(22);
+    expect(new Set(styles)).toHaveLength(22);
+    expect(styles.every((style) => style.length > 0 && style.length <= 80)).toBe(true);
   });
 
   it('rotates cast body families away from recent segments', () => {

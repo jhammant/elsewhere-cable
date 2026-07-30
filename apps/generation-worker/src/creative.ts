@@ -1085,6 +1085,35 @@ const visualDirections: Record<(typeof requestedMediums)[number], string> = {
     'axonometric instruction-sheet scenery, numbered assembly figures, registration marks and diagram-step motion',
 };
 
+const canonicalVisualStyles: Record<(typeof requestedMediums)[number], string> = {
+  cel_shaded: 'saturated_cel_animation_with_hard_outlines',
+  paper_cutout: 'hinged_construction_paper_tabletop',
+  pixel_broadcast: 'low_resolution_sprite_broadcast',
+  archive_film: 'scratched_hand_cranked_archive_film',
+  neon_wireframe: 'luminous_black_space_wireframe',
+  public_access_vhs: 'analogue_public_access_vhs_studio',
+  signal_corruption: 'fragmented_rgb_transmission_data',
+  stop_motion: 'tactile_stepped_miniature_animation',
+  collage_zine: 'torn_misregistered_editorial_collage',
+  ink_monochrome: 'boiling_black_brush_linework',
+  miniature_diorama: 'tilt_shift_tabletop_diorama',
+  corporate_vector: 'strict_infographic_vector_grid',
+  claymation: 'thumb_marked_squash_and_stretch_clay',
+  shadow_theatre: 'backlit_parchment_rod_puppets',
+  hand_drawn: 'unstable_pencil_notebook_animation',
+  thermal_camera: 'false_colour_thermal_surveillance',
+  ascii_terminal: 'phosphor_green_character_cell_terminal',
+  blueprint_schematic: 'cyan_exploded_architectural_schematic',
+  stained_glass: 'luminous_leaded_stained_glass_panels',
+  xerox_punk: 'high_contrast_photocopied_flyposter',
+  storybook_wash: 'soft_watercolour_storybook_parallax',
+  isometric_manual: 'axonometric_numbered_assembly_manual',
+};
+
+export function visualStyleForMedium(medium: (typeof requestedMediums)[number]): string {
+  return canonicalVisualStyles[medium];
+}
+
 function axisIndex(serial: number, salt: number, length: number): number {
   let value = (serial ^ salt) >>> 0;
   value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);

@@ -33,6 +33,7 @@ import {
   scriptPrompt,
   systemPrompt,
   userPrompt,
+  visualStyleForMedium,
 } from './creative.js';
 import { containsSpokenStageDirection } from './dialogue-quality.js';
 import { energiseVisualTimeline } from './visual-energiser.js';
@@ -1065,7 +1066,7 @@ async function buildSegment(
         premise: draft.premise,
       },
       durationMs,
-      visualStyle: draft.visualStyle,
+      visualStyle: visualStyleForMedium(draft.visualMedium),
       visualMedium: draft.visualMedium,
       castArchetype: draft.castArchetype,
       pacing,
@@ -1251,6 +1252,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               visualMedium: assignedVisualMedium(creativeSerial, recentMediums, catalogueMediums),
               castArchetype: assignedCastArchetype(creativeSerial, recentCastArchetypes),
             });
+            generated.visualStyle = visualStyleForMedium(generated.visualMedium);
             const candidateEmbedding =
               options.embeddingProvider === null
                 ? null
