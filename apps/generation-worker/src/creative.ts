@@ -2037,6 +2037,32 @@ export function userPrompt(
     rejectionReasons.some((reason) => reason.includes('object-agency premise'))
       ? 'give the ordinary object one explicit demand or refusal and a concrete institutional benefit'
       : null,
+    rejectionReasons.some(
+      (reason) =>
+        reason.startsWith('proposal critic:') &&
+        /\b(?:ending|payoff|resolution|resolves?)\b/iu.test(reason),
+    )
+      ? 'rewrite endingBeat as a direct playable payoff using only the roles, ordinary anchor and exact mechanism already named in the premise; introduce no new prop, role, action, test, exemption or rule'
+      : null,
+    rejectionReasons.some(
+      (reason) =>
+        reason.startsWith('proposal critic:') &&
+        /\b(?:arbitrary|loophole|mechanism|rule|unstated|vague)\b/iu.test(reason),
+    )
+      ? 'state one exact causal rule in the premise and let every obstacle and payoff follow from that same rule without a loophole or second procedure'
+      : null,
+    rejectionReasons.some(
+      (reason) =>
+        reason.startsWith('proposal critic:') && /\b(?:conflict|goal|role|want)\b/iu.test(reason),
+    )
+      ? 'name two established roles with incompatible concrete wants and make the assigned mechanism directly obstruct one of those wants'
+      : null,
+    rejectionReasons.some(
+      (reason) =>
+        reason.startsWith('proposal critic:') && /\b(?:narration|stageab|visual)\b/iu.test(reason),
+    )
+      ? 'make the conflict and payoff physically playable with the named roles and ordinary anchor in the assigned set, without narration'
+      : null,
     rejectionReasons.some((reason) =>
       /(?:repeats|resembles|reuses|mechanism repeats)/u.test(reason),
     )

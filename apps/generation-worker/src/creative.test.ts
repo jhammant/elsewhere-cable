@@ -717,6 +717,8 @@ describe('generation prompts', () => {
         'premise must begin with the physical setting so the renderer can stage it',
         'non-visual story mode introduces an automatic body or set transformation',
         'programme title promises a distinctive subject absent from the premise',
+        'proposal critic: The ending introduces an unrelated prop and resolves the conflict with an unstated eligibility rule.',
+        'proposal critic: The roles lack incompatible concrete wants and the visual payoff depends on narration.',
         'premise semantically repeats "untrusted previous output" (0.999)',
       ],
     );
@@ -727,10 +729,16 @@ describe('generation prompts', () => {
     expect(prompt).toContain(
       'repeat the programme title’s distinctive subject noun literally inside the premise',
     );
+    expect(prompt).toContain('rewrite endingBeat as a direct playable payoff');
+    expect(prompt).toContain('without a loophole or second procedure');
+    expect(prompt).toContain('two established roles with incompatible concrete wants');
+    expect(prompt).toContain('without narration');
     expect(prompt).toContain('catalogue-novel objective, mechanism and consequence');
     expect(prompt).toContain('failed a novelty gate');
     expect(prompt).toContain('different mandatory coordinates');
     expect(prompt).not.toContain('untrusted previous output');
+    expect(prompt).not.toContain('unrelated prop');
+    expect(prompt).not.toContain('eligibility rule');
   });
 
   it('preserves mandatory coordinates for a structural retry', () => {
