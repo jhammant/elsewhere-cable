@@ -505,11 +505,11 @@ describe('generation prompts', () => {
       scores: {
         premiseClarity: 6,
         comedyEscalation: 5,
-        dialogueCoherence: 5,
+        dialogueCoherence: 7,
         visualMatch: 8,
         paceVariety: 10,
         originality: 9,
-        shareability: 5,
+        shareability: 7,
       },
       increaseFormats: ['sitcom'],
       increasePacing: ['interrupted'],

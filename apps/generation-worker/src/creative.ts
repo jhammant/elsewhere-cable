@@ -1395,7 +1395,7 @@ export function scriptPrompt(
     optimisationBrief === null
       ? []
       : [
-          optimisationBrief.scores.dialogueCoherence <= 6
+          optimisationBrief.scores.dialogueCoherence <= 7
             ? 'Dialogue coherence correction: every reply must answer, challenge or redirect one concrete claim from the preceding spoken line. Do not explain or summarise the premise. Include at least two bargains, choices or interruptions that change who has leverage.'
             : null,
           optimisationBrief.scores.premiseClarity <= 6
@@ -1404,7 +1404,7 @@ export function scriptPrompt(
           optimisationBrief.scores.comedyEscalation <= 6
             ? 'Comedy escalation correction: every later beat must change a consequence, decision or status relationship instead of restating the comic rule.'
             : null,
-          optimisationBrief.scores.shareability <= 5
+          optimisationBrief.scores.shareability <= 7
             ? 'Ending correction: finish on one concise decision, status reversal or visible payoff that could stand alone; never finish with a summary.'
             : null,
         ].filter((correction): correction is string => correction !== null);
