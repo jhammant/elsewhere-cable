@@ -118,6 +118,26 @@ describe('generation prompts', () => {
     expect(prompts[0]).toContain('Treat the ordinary visual anchor as the concrete subject');
   });
 
+  it('prioritises the newest mechanism tranche for a mature catalogue', () => {
+    const prompts = Array.from({ length: 1_000 }, (_, serial) =>
+      userPrompt(serial, [], [], [], null, { catalogueSize: 2_000 }),
+    );
+    const mechanisms = prompts.map(
+      (prompt) => prompt.match(/Mechanism variant: (.+)\. Treat this/u)?.[1] ?? '',
+    );
+
+    expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(80);
+    expect(mechanisms).toContain(
+      'the product extends its warranty whenever the owner admits a more realistic intended use',
+    );
+    expect(mechanisms).toContain(
+      'saying whenever you are ready requires the speaker to identify one preparation they can complete meanwhile',
+    );
+    expect(mechanisms).not.toContain(
+      'the product delivers apologies before their buyers decide what they regret',
+    );
+  });
+
   it('crosses relationship, tactic and payoff axes without inventing more mechanisms', () => {
     const prompts = Array.from({ length: 1_200 }, (_, serial) => userPrompt(serial, []));
     const relationships = prompts.map(

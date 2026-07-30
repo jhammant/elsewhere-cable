@@ -1920,6 +1920,7 @@ export function userPrompt(
   recentCreativeCoordinates: {
     visualMediums?: readonly GeneratedSegmentDraft['visualMedium'][];
     castArchetypes?: readonly GeneratedSegmentDraft['castArchetype'][];
+    catalogueSize?: number;
   } = {},
   previousProposal: GeneratedSegmentProposal | null = null,
 ): string {
@@ -1937,7 +1938,15 @@ export function userPrompt(
     storyEngines[axisIndex(serial, 0x37bcf62, storyEngines.length)]!;
   const storyScale = storyScales[axisIndex(serial, 0x3bce725, storyScales.length)]!;
   const mechanismFamily = storyModes.find(({ id }) => id === storyMode)!;
-  const mechanismVariants = storyModeMechanismVariants[storyMode];
+  const allMechanismVariants = storyModeMechanismVariants[storyMode];
+  // Once the catalogue is mature, obvious variants have usually already aired in
+  // several combinations. Prefer the newest expansion tranche rather than wasting
+  // local inference on old mechanisms that the semantic gate will correctly reject.
+  // visual_physics already has a large combinatorial trigger/element/transform space.
+  const mechanismVariants =
+    (recentCreativeCoordinates.catalogueSize ?? 0) >= 1_000 && storyMode !== 'visual_physics'
+      ? allMechanismVariants.slice(-12)
+      : allMechanismVariants;
   const mechanismVariant =
     mechanismVariants[axisIndex(serial, 0x3f5297b, mechanismVariants.length)]!;
   const relationshipPressure =

@@ -1582,6 +1582,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               {
                 visualMediums: recentMediums,
                 castArchetypes: recentCastArchetypes,
+                catalogueSize: creativeHistory.length,
               },
               structuralRepairProposal,
             );
