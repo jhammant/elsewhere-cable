@@ -75,7 +75,7 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
     genericPerilLanguage.test(line.text),
   ).length;
   const ruleExpositionLines = draft.dialogue.filter((line) =>
-    /\b(?:the rule|rule is|the law|law takes effect|contract terms|forces? (?:me|you|them|the)|is absolute|regardless of our feelings)\b/iu.test(
+    /\b(?:the rule|rule is|the law|law takes effect|contract terms|forces? (?:me|you|them|the)|is absolute|regardless of our feelings|(?:the\s+)?(?:system|policy|procedure|protocol)\s+(?:demands?|insists?|requires?|triggers?)|(?:refusal|agreement|silence|speaking|whispering)\s+triggers?|(?:automatic|public|safety|uppercase)\s+mandate)\b/iu.test(
       line.text,
     ),
   ).length;

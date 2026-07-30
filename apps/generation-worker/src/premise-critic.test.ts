@@ -117,6 +117,16 @@ describe('premise critic', () => {
     );
   });
 
+  it('rejects repeated system-trigger exposition disguised as character dialogue', () => {
+    const exposition = demoDraft(0);
+    exposition.dialogue[0]!.text = 'The system demands your childhood nickname for compliance.';
+    exposition.dialogue[1]!.text = 'Refusal triggers an automatic public broadcast of it.';
+
+    expect(critiquePremise(exposition).reasons).toContain(
+      'characters explain the rule instead of pursuing conflicting goals inside it',
+    );
+  });
+
   it('rejects an ending that invents a transformation absent from the premise', () => {
     const unrelatedEnding = demoDraft(0);
     unrelatedEnding.endingBeat = 'The committee table suddenly shrinks into a postage stamp.';
