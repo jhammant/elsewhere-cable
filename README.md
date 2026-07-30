@@ -109,14 +109,19 @@ reserve while placing each newly authored programme a few clips ahead of the liv
 ```bash
 ELSEWHERE_PACKAGE_PREPARED_SCRIPTS=1 \
 ELSEWHERE_RECOVERY_REFILL_COUNT=12 \
+ELSEWHERE_RECOVERY_MIN_AHEAD_MINUTES=15 \
 ELSEWHERE_PRIORITISE_LIVE_ORIGINALS=1 \
 ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD=3 \
 pnpm generate:live:loop
 ```
 
-Recovery entries reuse audio-audited catalogue programmes under new playout IDs. They are an
-availability reserve, not new material. New originals are inserted after a three-clip safety
-lookahead so an atomic Endor sync cannot disturb the segment currently playing.
+`ELSEWHERE_RECOVERY_REFILL_COUNT` is the emergency batch ceiling, not an amount added after every
+original. Ghost observes Endor's live cursor and adds those aliases only when less than the
+configured 15-minute runway remains. The same check runs while the prepared-script queue is empty,
+so a stopped writer cannot drain the live browser into dead air. Recovery entries reuse
+audio-audited catalogue programmes under new playout IDs. They are an availability reserve, not
+new material. New originals are inserted after a three-clip safety lookahead so an atomic Endor
+sync cannot disturb the segment currently playing.
 
 The sync uses hard links to the previous Endor release for unchanged packages, so publishing a
 larger manifest does not duplicate every existing audio file.

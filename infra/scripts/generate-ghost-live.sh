@@ -15,6 +15,7 @@ embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 reservoir_target_hours=${ELSEWHERE_RESERVOIR_TARGET_HOURS:-72}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
 recovery_refill_count=${ELSEWHERE_RECOVERY_REFILL_COUNT:-0}
+recovery_min_ahead_minutes=${ELSEWHERE_RECOVERY_MIN_AHEAD_MINUTES:-15}
 prioritise_live_originals=${ELSEWHERE_PRIORITISE_LIVE_ORIGINALS:-0}
 live_priority_lookahead=${ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD:-3}
 package_prepared_scripts=${ELSEWHERE_PACKAGE_PREPARED_SCRIPTS:-0}
@@ -44,14 +45,20 @@ if [ "$generation_concurrency" -lt 1 ] || [ "$generation_concurrency" -gt 4 ]; t
   echo "ELSEWHERE_GENERATION_CONCURRENCY must be an integer from 1 to 4." >&2
   exit 64
 fi
-case "$recovery_refill_count" in
-  '' | *[!0-9]*)
-    echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
-    exit 64
-    ;;
-esac
+for value in "$recovery_refill_count" "$recovery_min_ahead_minutes"; do
+  case "$value" in
+    '' | *[!0-9]*)
+      echo "Recovery count and minimum-ahead minutes must be integers." >&2
+      exit 64
+      ;;
+  esac
+done
 if [ "$recovery_refill_count" -lt 0 ] || [ "$recovery_refill_count" -gt 100 ]; then
   echo "ELSEWHERE_RECOVERY_REFILL_COUNT must be an integer from 0 to 100." >&2
+  exit 64
+fi
+if [ "$recovery_min_ahead_minutes" -lt 5 ] || [ "$recovery_min_ahead_minutes" -gt 360 ]; then
+  echo "ELSEWHERE_RECOVERY_MIN_AHEAD_MINUTES must be an integer from 5 to 360." >&2
   exit 64
 fi
 if [ "$prioritise_live_originals" != "0" ] && [ "$prioritise_live_originals" != "1" ]; then
@@ -72,6 +79,22 @@ if [ "$package_prepared_scripts" != "0" ] && [ "$package_prepared_scripts" != "1
   echo "ELSEWHERE_PACKAGE_PREPARED_SCRIPTS must be 0 or 1." >&2
   exit 64
 fi
+
+refill_recovery_if_needed() {
+  if [ "$recovery_refill_count" -eq 0 ]; then
+    return 1
+  fi
+  if pnpm exec tsx infra/scripts/recovery-refill-needed.ts \
+    --segments "$output_root" \
+    --minimum-ahead-minutes "$recovery_min_ahead_minutes"; then
+    pnpm exec tsx infra/scripts/emergency-refill.ts \
+      --segments "$output_root" \
+      --count "$recovery_refill_count"
+    return 0
+  fi
+  echo "Observed recovery runway is healthy; no replay aliases added."
+  return 1
+}
 
 pnpm exec tsx infra/scripts/bootstrap-live-queue.ts \
   --base "$history_root" \
@@ -94,6 +117,9 @@ while :; do
     if [ "$mode" = "once" ]; then
       echo "No prepared scripts are waiting for packaging." >&2
       exit 66
+    fi
+    if refill_recovery_if_needed; then
+      ELSEWHERE_LIVE_SEGMENTS_DIR="$output_root" pnpm endor:publish:once
     fi
     echo "Prepared script queue empty; waiting without affecting playout."
     sleep 15
@@ -142,9 +168,7 @@ while :; do
     --recent "$batch_count" \
     --apply
   if [ "$recovery_refill_count" -gt 0 ]; then
-    pnpm exec tsx infra/scripts/emergency-refill.ts \
-      --segments "$output_root" \
-      --count "$recovery_refill_count"
+    if refill_recovery_if_needed; then :; fi
   fi
   if [ "$prioritise_live_originals" = "1" ]; then
     if ! pnpm exec tsx infra/scripts/prioritise-live-originals.ts \
