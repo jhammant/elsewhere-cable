@@ -293,6 +293,35 @@ const generationWallSeconds = recentGeneration.reduce(
   (total, observation) => total + observation.durationSeconds,
   0,
 );
+const generationByStrategy = new Map<string, GenerationObservation[]>();
+for (const observation of recentGeneration) {
+  const strategy = observation.strategy ?? 'legacy-unattributed';
+  const revision = observation.revision ?? 'unknown';
+  const key = `${strategy}@${revision}`;
+  generationByStrategy.set(key, [...(generationByStrategy.get(key) ?? []), observation]);
+}
+const generationStrategies = [...generationByStrategy.entries()].map(([key, observations]) => {
+  const [strategy, revision] = key.split('@', 2) as [string, string];
+  const approved = observations.filter((observation) => observation.status === 'approved');
+  const approvedScripts = approved.reduce(
+    (total, observation) => total + Math.max(0, observation.pendingDelta),
+    0,
+  );
+  const computeSeconds = observations.reduce(
+    (total, observation) => total + observation.durationSeconds,
+    0,
+  );
+  return {
+    strategy,
+    revision,
+    batches: observations.length,
+    approvedBatches: approved.length,
+    approvedScripts,
+    computeSeconds,
+    scriptsPerGenerationHour:
+      computeSeconds === 0 ? null : Number((approvedScripts / (computeSeconds / 3_600)).toFixed(2)),
+  };
+});
 const previous = scores.at(-2) ?? null;
 const comparableScores = scores.filter(
   (score) => score.novelty !== null && score.evidenceCoverage >= 80,
@@ -347,6 +376,7 @@ const report = {
     latestAt: recentGeneration.at(-1)?.generatedAt ?? null,
     latestStrategy: recentGeneration.at(-1)?.strategy ?? null,
     latestRevision: recentGeneration.at(-1)?.revision ?? null,
+    strategies: generationStrategies,
   },
   recommendedArms,
   history: scores,
@@ -402,6 +432,13 @@ reported separately so a tiny early audience cannot distort the quality evaluato
 - Latest batch: ${report.generation.latestStatus ?? 'unknown'}
 - Latest strategy: ${report.generation.latestStrategy ?? 'unknown'}
 - Latest revision: ${report.generation.latestRevision ?? 'unknown'}
+
+${report.generation.strategies
+  .map(
+    (strategy) =>
+      `- ${strategy.strategy}@${strategy.revision}: ${strategy.approvedScripts} scripts from ${strategy.batches} batches in ${(strategy.computeSeconds / 60).toFixed(1)} compute-minutes (${strategy.scriptsPerGenerationHour?.toFixed(2) ?? 'unknown'} scripts/hour)`,
+  )
+  .join('\n')}
 
 ## Active experiment
 
