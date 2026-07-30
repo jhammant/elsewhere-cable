@@ -38,6 +38,25 @@ interface DrawnCharacter {
   actionUntil: number;
 }
 
+export type TwoDimensionalComposition =
+  | 'wide_tableau'
+  | 'split_screen'
+  | 'asymmetric_depth'
+  | 'vertical_duet'
+  | 'panel_grid'
+  | 'orbit_diagram';
+
+export interface TwoDimensionalPlacement {
+  x: number;
+  baselineOffset: number;
+  scale: number;
+}
+
+export interface TwoDimensionalStageComposition {
+  mode: TwoDimensionalComposition;
+  placements: TwoDimensionalPlacement[];
+}
+
 export interface Character2DDesign {
   archetype: StructuralCastArchetype;
   silhouette: CharacterSilhouette;
@@ -64,6 +83,150 @@ function stableHash(value: string): number {
     hash = Math.imul(hash, 16_777_619);
   }
   return hash >>> 0;
+}
+
+export function resolve2DStageComposition(
+  segment: SegmentPackage,
+  castCount: number,
+): TwoDimensionalStageComposition {
+  const count = Math.max(1, Math.min(6, castCount));
+  const fullFrame = ['news', 'shopping', 'advert', 'sitcom', 'ident', 'emergency'].includes(
+    segment.programme.format,
+  );
+  const left = fullFrame ? 145 : 120;
+  const right = fullFrame ? 1_135 : 815;
+  const centre = (left + right) / 2;
+  const width = right - left;
+  const hash = stableHash(`${segment.channel.id}:${segment.programme.id}:composition`);
+
+  if (count === 1) {
+    const singleModes: TwoDimensionalComposition[] = [
+      'wide_tableau',
+      'asymmetric_depth',
+      'orbit_diagram',
+    ];
+    const mode = singleModes[hash % singleModes.length]!;
+    return {
+      mode,
+      placements: [
+        mode === 'wide_tableau'
+          ? { x: centre, baselineOffset: 10, scale: 1.12 }
+          : mode === 'asymmetric_depth'
+            ? {
+                x: hash % 2 === 0 ? left + width * 0.2 : right - width * 0.2,
+                baselineOffset: 42,
+                scale: 1.34,
+              }
+            : { x: centre, baselineOffset: -42, scale: 0.78 },
+      ],
+    };
+  }
+
+  if (count === 2) {
+    const duetModes: TwoDimensionalComposition[] = [
+      'wide_tableau',
+      'split_screen',
+      'asymmetric_depth',
+      'vertical_duet',
+      'orbit_diagram',
+    ];
+    const mode = duetModes[hash % duetModes.length]!;
+    if (mode === 'split_screen') {
+      return {
+        mode,
+        placements: [
+          { x: left + width * 0.22, baselineOffset: 18, scale: 1.08 },
+          { x: right - width * 0.22, baselineOffset: 18, scale: 1.08 },
+        ],
+      };
+    }
+    if (mode === 'asymmetric_depth') {
+      const largeOnLeft = hash % 2 === 0;
+      return {
+        mode,
+        placements: [
+          {
+            x: largeOnLeft ? left + width * 0.16 : right - width * 0.2,
+            baselineOffset: 48,
+            scale: 1.28,
+          },
+          {
+            x: largeOnLeft ? right - width * 0.17 : left + width * 0.2,
+            baselineOffset: -116,
+            scale: 0.62,
+          },
+        ],
+      };
+    }
+    if (mode === 'vertical_duet') {
+      return {
+        mode,
+        placements: [
+          { x: centre - width * 0.17, baselineOffset: -132, scale: 0.68 },
+          { x: centre + width * 0.16, baselineOffset: 58, scale: 1.18 },
+        ],
+      };
+    }
+    if (mode === 'orbit_diagram') {
+      return {
+        mode,
+        placements: [
+          { x: left + width * 0.2, baselineOffset: -64, scale: 0.76 },
+          { x: right - width * 0.2, baselineOffset: 52, scale: 1.06 },
+        ],
+      };
+    }
+    return {
+      mode,
+      placements: [
+        { x: left + width * 0.12, baselineOffset: 0, scale: 0.96 },
+        { x: right - width * 0.12, baselineOffset: 0, scale: 0.96 },
+      ],
+    };
+  }
+
+  const ensembleModes: TwoDimensionalComposition[] = [
+    'panel_grid',
+    'orbit_diagram',
+    'wide_tableau',
+    'asymmetric_depth',
+  ];
+  const mode = ensembleModes[hash % ensembleModes.length]!;
+  const placements = Array.from({ length: count }, (_, index) => {
+    if (mode === 'panel_grid') {
+      const columns = count > 4 ? 3 : 2;
+      const row = Math.floor(index / columns);
+      const column = index % columns;
+      return {
+        x: left + (width * (column + 0.5)) / columns,
+        baselineOffset: -112 + row * 144,
+        scale: count > 4 ? 0.55 : 0.68,
+      };
+    }
+    if (mode === 'orbit_diagram') {
+      const angle = (index / count) * Math.PI * 2 - Math.PI / 2;
+      return {
+        x: centre + Math.cos(angle) * width * 0.36,
+        baselineOffset: Math.sin(angle) * 112 - 28,
+        scale: 0.58 + ((Math.sin(angle) + 1) / 2) * 0.24,
+      };
+    }
+    if (mode === 'asymmetric_depth') {
+      return index === 0
+        ? { x: left + width * 0.14, baselineOffset: 52, scale: 1.12 }
+        : {
+            x: left + width * (0.4 + ((index - 1) / Math.max(1, count - 2)) * 0.52),
+            baselineOffset: -92 + (index % 2) * 36,
+            scale: 0.5,
+          };
+    }
+    return {
+      x: left + (width * index) / Math.max(1, count - 1),
+      baselineOffset: index % 2 === 0 ? 10 : -34,
+      scale: count >= 5 ? 0.58 : 0.72,
+    };
+  });
+  return { mode, placements };
 }
 
 export function premisePropKind(premise: string): PremisePropKind {
@@ -201,6 +364,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private activeSpeaker = '';
   private activeSpeakerUntil = 0;
   private camera: CameraName = 'CAMERA_WIDE';
+  private composition: TwoDimensionalComposition = 'wide_tableau';
   private startedAt = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -235,35 +399,31 @@ export class Broadcast2DScene implements PlayoutVisuals {
       }
     }
     const entries = [...speakers.entries()].slice(0, 6);
-    const fullFrame = this.usesFullFrame(segment);
-    const stageLeft = fullFrame ? 145 : 120;
-    const stageRight = fullFrame ? 1_135 : 815;
-    const spacing = (stageRight - stageLeft) / Math.max(1, entries.length - 1);
-    this.characters = entries.map(([id, name], index) => ({
-      id,
-      name,
-      x:
-        entries.length === 1
-          ? (stageLeft + stageRight) / 2
-          : stageLeft +
-            spacing * index +
-            (((stableHash(`${segment.segmentId}:${id}:layout`) >>> 4) % 37) - 18),
-      index,
-      seed: stableHash(`${segment.programme.id}:${id}`),
-      design: resolve2DCharacterDesign(
+    const stageComposition = resolve2DStageComposition(segment, entries.length);
+    this.composition = stageComposition.mode;
+    this.characters = entries.map(([id, name], index) => {
+      const placement = stageComposition.placements[index]!;
+      const design = resolve2DCharacterDesign(
         productionDesign.castArchetype,
         stableHash(`${segment.programme.id}:${id}`),
         index,
-      ),
-      action: 'IDLE',
-      actionUntil: 0,
-    }));
-    if (this.characters.length >= 5) {
-      for (const character of this.characters) {
-        character.design.scaleX *= 0.72;
-        character.design.scaleY *= 0.78;
-      }
-    }
+      );
+      return {
+        id,
+        name,
+        x: placement.x + (((stableHash(`${segment.segmentId}:${id}:layout`) >>> 4) % 21) - 10),
+        index,
+        seed: stableHash(`${segment.programme.id}:${id}`),
+        design: {
+          ...design,
+          baselineOffset: design.baselineOffset + placement.baselineOffset,
+          scaleX: design.scaleX * placement.scale,
+          scaleY: design.scaleY * placement.scale,
+        },
+        action: 'IDLE' as const,
+        actionUntil: 0,
+      };
+    });
     this.camera = 'CAMERA_WIDE';
     this.cacheStaticScene(segment);
     this.render();
@@ -298,6 +458,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.save();
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.drawImage(this.staticCanvas, 0, 0);
+    this.drawCompositionFrame(elapsed);
     this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed);
 
     const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
@@ -334,6 +495,76 @@ export class Broadcast2DScene implements PlayoutVisuals {
 
   private stageCentre(): number {
     return this.segment !== null && this.usesFullFrame(this.segment) ? 640 : 465;
+  }
+
+  private drawCompositionFrame(elapsed: number): void {
+    const context = this.context;
+    const centre = this.stageCentre();
+    const fullFrame = this.segment !== null && this.usesFullFrame(this.segment);
+    const left = fullFrame ? 72 : 52;
+    const right = fullFrame ? 1_208 : 880;
+    context.save();
+    if (this.composition === 'split_screen') {
+      context.fillStyle = 'rgba(5, 9, 17, 0.16)';
+      context.fillRect(left, 62, centre - left - 14, 530);
+      context.fillRect(centre + 14, 62, right - centre - 14, 530);
+      context.strokeStyle = 'rgba(245, 239, 189, 0.72)';
+      context.lineWidth = 5;
+      context.beginPath();
+      context.moveTo(centre, 52);
+      context.lineTo(centre, 610);
+      context.stroke();
+    } else if (this.composition === 'vertical_duet') {
+      context.fillStyle = 'rgba(5, 9, 17, 0.14)';
+      context.fillRect(left, 50, right - left, 235);
+      context.fillStyle = 'rgba(245, 239, 189, 0.11)';
+      context.fillRect(left, 306, right - left, 304);
+      context.strokeStyle = 'rgba(245, 239, 189, 0.66)';
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(left, 295);
+      context.lineTo(right, 295);
+      context.stroke();
+    } else if (this.composition === 'panel_grid') {
+      context.strokeStyle = 'rgba(245, 239, 189, 0.56)';
+      context.lineWidth = 4;
+      const columns = this.characters.length > 4 ? 3 : 2;
+      const rows = Math.ceil(this.characters.length / columns);
+      const width = (right - left) / columns;
+      const height = 540 / rows;
+      for (let index = 0; index < this.characters.length; index += 1) {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        context.strokeRect(left + column * width + 8, 58 + row * height, width - 16, height - 12);
+      }
+    } else if (this.composition === 'orbit_diagram') {
+      context.strokeStyle = 'rgba(245, 239, 189, 0.54)';
+      context.lineWidth = 3;
+      context.setLineDash([14, 12]);
+      context.beginPath();
+      context.ellipse(centre, 340, (right - left) * 0.35, 205, elapsed * 0.006, 0, Math.PI * 2);
+      context.stroke();
+      context.setLineDash([]);
+      for (let index = 0; index < 6; index += 1) {
+        const angle = elapsed * 0.08 + (index / 6) * Math.PI * 2;
+        context.fillStyle = 'rgba(245, 239, 189, 0.66)';
+        context.beginPath();
+        context.arc(
+          centre + Math.cos(angle) * (right - left) * 0.35,
+          340 + Math.sin(angle) * 205,
+          5,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+      }
+    } else if (this.composition === 'asymmetric_depth') {
+      context.strokeStyle = 'rgba(245, 239, 189, 0.54)';
+      context.lineWidth = 4;
+      context.strokeRect(left + 16, 66, (right - left) * 0.42, 528);
+      context.strokeRect(centre + 80, 108, Math.max(180, right - centre - 112), 264);
+    }
+    context.restore();
   }
 
   private drawBackdrop(segment: SegmentPackage, elapsed: number): void {

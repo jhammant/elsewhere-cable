@@ -3,6 +3,7 @@ import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import {
   premisePropKind,
   resolve2DCharacterDesign,
+  resolve2DStageComposition,
   usesTwoDimensionalRenderer,
 } from './scene-2d.js';
 import { flatStyleFingerprint, flatStyleGrammars, type FlatVisualMedium } from './style-grammar.js';
@@ -134,5 +135,46 @@ describe('2D premise props', () => {
     expect(premisePropKind('During a weather report, one umbrella requests credit.')).toBe(
       'umbrella',
     );
+  });
+});
+
+describe('2D programme composition', () => {
+  it('keeps returning programmes on a deterministic layout', () => {
+    const programme = segment('paper_cutout');
+    const first = resolve2DStageComposition(programme, 2);
+    const second = resolve2DStageComposition(programme, 2);
+
+    expect(first).toEqual(second);
+    expect(first.placements).toHaveLength(2);
+  });
+
+  it('uses several genuinely different compositions across channel identities', () => {
+    const modes = Array.from({ length: 80 }, (_, index) => {
+      const programme = segment('paper_cutout');
+      programme.channel.id = `channel_${index}`;
+      programme.programme.id = `programme_${index}`;
+      return resolve2DStageComposition(programme, index % 3 === 0 ? 5 : 2).mode;
+    });
+
+    expect(new Set(modes).size).toBe(6);
+  });
+
+  it('keeps every placement inside the drawable programme plane', () => {
+    for (let castCount = 1; castCount <= 6; castCount += 1) {
+      for (let index = 0; index < 40; index += 1) {
+        const programme = segment('paper_cutout');
+        programme.channel.id = `channel_${index}`;
+        programme.programme.id = `programme_${index}`;
+        const composition = resolve2DStageComposition(programme, castCount);
+
+        expect(composition.placements).toHaveLength(castCount);
+        for (const placement of composition.placements) {
+          expect(placement.x).toBeGreaterThanOrEqual(120);
+          expect(placement.x).toBeLessThanOrEqual(1_135);
+          expect(placement.scale).toBeGreaterThanOrEqual(0.5);
+          expect(placement.scale).toBeLessThanOrEqual(1.34);
+        }
+      }
+    }
   });
 });
