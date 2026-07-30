@@ -2585,3 +2585,710 @@ h1 {
     animation: none;
   }
 }
+
+/*
+ * Title-sequence package. The outer frame is supplied by the validated
+ * broadcast-package safe plane; each grammar changes structure, typography,
+ * material and motion rather than merely recolouring the same card.
+ */
+.programme-graphic-meta,
+.title-sequence-ornament {
+  display: none;
+}
+
+.programme-graphic[data-kind='TITLE_CARD'] {
+  box-sizing: border-box;
+  inset: var(--title-top) var(--title-right) auto var(--title-left);
+  display: grid;
+  width: auto;
+  height: var(--title-height);
+  min-height: 0;
+  align-content: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.programme-graphic[data-kind='TITLE_CARD'] > .programme-graphic-kicker,
+.programme-graphic[data-kind='TITLE_CARD'] > strong,
+.programme-graphic[data-kind='TITLE_CARD'] > .programme-graphic-meta {
+  position: relative;
+  z-index: 2;
+}
+
+.programme-graphic[data-kind='TITLE_CARD'] > .programme-graphic-meta {
+  display: block;
+  margin-top: 2.2%;
+  font-size: clamp(0.28rem, 0.55vw, 0.52rem);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.programme-graphic[data-kind='TITLE_CARD'] > .title-sequence-ornament {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.programme-graphic[data-kind='TITLE_CARD'] > .title-sequence-ornament > i {
+  position: absolute;
+  display: block;
+}
+
+.broadcast[data-title-sequence='signal_aperture'] .programme-graphic[data-kind='TITLE_CARD'] {
+  border: 0.18rem solid #d5ffef;
+  border-radius: 50%;
+  color: #eafff8;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(7, 19, 26, 0.72) 0 19%, transparent 20%),
+    conic-gradient(
+      from 22deg,
+      rgba(88, 255, 210, 0.88),
+      rgba(38, 73, 114, 0.9),
+      rgba(255, 107, 159, 0.82),
+      rgba(88, 255, 210, 0.88)
+    );
+  box-shadow:
+    0 0 0 0.65rem rgba(2, 9, 17, 0.82),
+    0 0 3rem rgba(100, 255, 220, 0.48);
+  text-align: center;
+  transform: scale(0.25) rotate(-28deg);
+  transition:
+    opacity 80ms linear,
+    transform 420ms cubic-bezier(0.1, 0.85, 0.22, 1);
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD'].is-visible {
+  transform: scale(1) rotate(0);
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-kicker {
+  color: #b6ffeb;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > strong {
+  font-family: 'Arial Narrow', Impact, sans-serif;
+  font-size: clamp(1rem, 3vw, 2.7rem);
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 0.75rem #031414;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i {
+  inset: 50% auto auto 50%;
+  width: var(--size, 20%);
+  aspect-ratio: 1;
+  border: 1px solid rgba(224, 255, 246, 0.72);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(1) {
+  --size: 20%;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(2) {
+  --size: 28%;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(3) {
+  --size: 36%;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(4) {
+  --size: 44%;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(5) {
+  --size: 52%;
+}
+
+.broadcast[data-title-sequence='signal_aperture']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(6) {
+  --size: 60%;
+}
+
+.broadcast[data-title-sequence='civic_index'] .programme-graphic[data-kind='TITLE_CARD'] {
+  padding: 5% 15% 5% 6%;
+  border: 0.16rem solid #172f2a;
+  border-radius: 0;
+  color: #17342f;
+  background:
+    repeating-linear-gradient(0deg, rgba(23, 52, 47, 0.08) 0 1px, transparent 1px 13px), #e7dfbd;
+  box-shadow:
+    0.75rem 0.75rem 0 #b8664b,
+    1.5rem 1.5rem 0 rgba(15, 34, 31, 0.48);
+  text-align: left;
+  transform: translateY(-22%) rotate(0.8deg);
+  transition:
+    opacity 80ms linear,
+    transform 240ms steps(4, end);
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD'].is-visible {
+  transform: translateY(0) rotate(-0.4deg);
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-kicker,
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-meta {
+  color: #8c3d31;
+  font-family: ui-monospace, 'Courier New', monospace;
+}
+
+.broadcast[data-title-sequence='civic_index'] .programme-graphic[data-kind='TITLE_CARD'] > strong {
+  max-width: 82%;
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: clamp(0.9rem, 2.45vw, 2.25rem);
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i {
+  right: -1%;
+  width: 13%;
+  height: 12%;
+  border: 1px solid #17342f;
+  background: #c8d39c;
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(1) {
+  top: 5%;
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(2) {
+  top: 21%;
+  width: 18%;
+  background: #dca365;
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(3) {
+  top: 37%;
+  width: 10%;
+  background: #96c8bd;
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(4) {
+  top: 53%;
+  width: 16%;
+  background: #d17a68;
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(5) {
+  top: 69%;
+  width: 12%;
+  background: #b8a5cf;
+}
+
+.broadcast[data-title-sequence='civic_index']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(6) {
+  top: 85%;
+  width: 20%;
+  background: #d6ce83;
+}
+
+.broadcast[data-title-sequence='cut_paper_stack'] .programme-graphic[data-kind='TITLE_CARD'] {
+  padding: 6% 8%;
+  border: 0;
+  color: #18212a;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  transform: translateX(-16%) rotate(-2deg);
+  transition:
+    opacity 60ms steps(2, end),
+    transform 300ms steps(5, end);
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD'].is-visible {
+  transform: translateX(0) rotate(0.8deg);
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-kicker {
+  display: inline-block;
+  width: max-content;
+  padding: 0.5% 1%;
+  color: #f8f0d1;
+  background: #303648;
+  transform: rotate(-1.7deg);
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > strong {
+  width: 82%;
+  padding: 2.5% 3%;
+  background: #f0d653;
+  box-shadow: 0.45rem 0.45rem 0 rgba(33, 29, 31, 0.48);
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: clamp(1rem, 2.8vw, 2.5rem);
+  transform: rotate(-0.7deg);
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-meta {
+  width: max-content;
+  padding: 0.6% 1.2%;
+  color: #1b2530;
+  background: #f48b9d;
+  transform: rotate(1.2deg);
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i {
+  left: -5%;
+  width: 115%;
+  height: 23%;
+  background: #53c9c2;
+  transform: rotate(var(--tilt, 0deg));
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(1) {
+  top: 2%;
+  --tilt: -3deg;
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(2) {
+  top: 22%;
+  left: 5%;
+  width: 95%;
+  background: #f0d653;
+  --tilt: 1deg;
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(3) {
+  top: 48%;
+  left: -1%;
+  width: 104%;
+  background: #f48b9d;
+  --tilt: -1.5deg;
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(4) {
+  top: 73%;
+  left: 9%;
+  width: 88%;
+  background: #d9d2b8;
+  --tilt: 2deg;
+}
+
+.broadcast[data-title-sequence='cut_paper_stack']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(n + 5) {
+  display: none;
+}
+
+.broadcast[data-title-sequence='orbit_registry'] .programme-graphic[data-kind='TITLE_CARD'] {
+  padding: 6% 7% 6% 38%;
+  border: 1px solid rgba(162, 226, 255, 0.62);
+  border-radius: 0;
+  color: #e7f7ff;
+  background:
+    radial-gradient(circle at 22% 50%, #eaff8b 0 2%, transparent 2.3%),
+    linear-gradient(118deg, rgba(5, 18, 39, 0.96), rgba(26, 14, 54, 0.94));
+  box-shadow: inset 0 0 3rem rgba(83, 148, 255, 0.18);
+  text-align: left;
+  transform: translateY(13%) scale(0.94);
+  transition:
+    opacity 100ms linear,
+    transform 520ms cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD'].is-visible {
+  transform: translateY(0) scale(1);
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-kicker,
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-meta {
+  color: #9fd8ed;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > strong {
+  font-family: 'Trebuchet MS', sans-serif;
+  font-size: clamp(0.9rem, 2.35vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i {
+  top: 50%;
+  left: 22%;
+  width: var(--size, 19%);
+  aspect-ratio: 1;
+  border: 1px solid rgba(150, 220, 255, 0.48);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(var(--angle, 0deg));
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i::after {
+  position: absolute;
+  top: -0.2rem;
+  left: 50%;
+  width: 0.38rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #f1ff9d;
+  box-shadow: 0 0 0.55rem #a7eaff;
+  content: '';
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(1) {
+  --size: 19%;
+  --angle: 14deg;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(2) {
+  --size: 26%;
+  --angle: 61deg;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(3) {
+  --size: 33%;
+  --angle: 118deg;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(4) {
+  --size: 40%;
+  --angle: 177deg;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(5) {
+  --size: 47%;
+  --angle: 236deg;
+}
+
+.broadcast[data-title-sequence='orbit_registry']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(6) {
+  --size: 54%;
+  --angle: 301deg;
+}
+
+.broadcast[data-title-sequence='vertical_marquee'] .programme-graphic[data-kind='TITLE_CARD'] {
+  padding: 4% 7% 4% 30%;
+  border: 0.38rem solid #0d1116;
+  border-radius: 0;
+  color: #0d1116;
+  background: #f8e244;
+  box-shadow:
+    0.75rem 0.75rem 0 #ff596e,
+    1.5rem 1.5rem 0 #2d83d2;
+  text-align: left;
+  transform: translateY(28%);
+  transition:
+    opacity 60ms linear,
+    transform 190ms cubic-bezier(0.1, 0.8, 0.2, 1.2);
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD'].is-visible {
+  transform: translateY(0);
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-kicker,
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-meta {
+  color: #8b1631;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > strong {
+  font-family: Impact, 'Arial Black', sans-serif;
+  font-size: clamp(1.1rem, 3.3vw, 3.1rem);
+  letter-spacing: -0.055em;
+  line-height: 0.8;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i {
+  top: -10%;
+  bottom: -10%;
+  left: var(--left, 5%);
+  width: 3.5%;
+  background: var(--bar, #e83c66);
+  transform: skewY(-8deg);
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(1) {
+  --left: 5%;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(2) {
+  --left: 13.5%;
+  --bar: #273e8b;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(3) {
+  --left: 22%;
+  --bar: #f7f2d0;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(4) {
+  --left: 30.5%;
+  --bar: #24a9a0;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(5) {
+  --left: 39%;
+  --bar: #13171c;
+}
+
+.broadcast[data-title-sequence='vertical_marquee']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(6) {
+  --left: 47.5%;
+  --bar: #f48c34;
+}
+
+.broadcast[data-title-sequence='microfiche_window'] .programme-graphic[data-kind='TITLE_CARD'] {
+  padding: 6% 8%;
+  border: 1px solid #8dffb6;
+  border-radius: 0;
+  color: #a5ffc3;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(97, 255, 151, 0.12) 12px),
+    repeating-linear-gradient(90deg, transparent 0 17px, rgba(97, 255, 151, 0.08) 18px),
+    rgba(0, 20, 10, 0.94);
+  box-shadow:
+    inset 0 0 2.2rem rgba(93, 255, 143, 0.17),
+    0 0 1.4rem rgba(54, 255, 124, 0.2);
+  font-family: ui-monospace, 'Courier New', monospace;
+  text-align: left;
+  transform: scaleX(0.2);
+  transform-origin: left center;
+  transition:
+    opacity 50ms steps(2, end),
+    transform 260ms steps(6, end);
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD'].is-visible {
+  transform: scaleX(1);
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-kicker,
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .programme-graphic-meta {
+  color: #67c889;
+  font-family: inherit;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > strong {
+  max-width: 86%;
+  font-family: inherit;
+  font-size: clamp(0.85rem, 2.15vw, 2rem);
+  letter-spacing: 0.02em;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament::before,
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament::after {
+  position: absolute;
+  z-index: 1;
+  background: rgba(110, 255, 160, 0.58);
+  content: '';
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament::before {
+  top: 49.8%;
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament::after {
+  top: 0;
+  bottom: 0;
+  left: 72%;
+  width: 1px;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i {
+  right: 2%;
+  width: 18%;
+  height: 5%;
+  border: 1px solid rgba(112, 255, 163, 0.58);
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(1) {
+  top: 5%;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(2) {
+  top: 17%;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(3) {
+  top: 29%;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(4) {
+  top: 65%;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(5) {
+  top: 77%;
+}
+
+.broadcast[data-title-sequence='microfiche_window']
+  .programme-graphic[data-kind='TITLE_CARD']
+  > .title-sequence-ornament
+  > i:nth-child(6) {
+  top: 89%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .programme-graphic[data-kind='TITLE_CARD'] {
+    transition: opacity 80ms linear;
+  }
+}

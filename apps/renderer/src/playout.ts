@@ -7,13 +7,18 @@ import {
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
 import { continuityCopyForSegment, type ContinuityCopy } from './continuity-copy.js';
-import { resolveBroadcastPackage } from './broadcast-package.js';
+import { resolveBroadcastPackage, type BroadcastPackage } from './broadcast-package.js';
 import { resolveProductionDesign } from './production-design.js';
 import {
   BroadcastSoundDesigner,
   soundCuesForSegment,
   type ScheduledSoundCue,
 } from './sound-design.js';
+import {
+  assertTitleSequenceFramesComplete,
+  resolveTitleSequenceGrammar,
+  titleSequenceFrame,
+} from './title-sequence.js';
 
 interface PlayoutElements {
   broadcast: HTMLElement;
@@ -27,6 +32,7 @@ interface PlayoutElements {
   graphic: HTMLElement;
   graphicKicker: HTMLElement;
   graphicText: HTMLElement;
+  graphicMeta: HTMLElement;
   programmeTitle: HTMLElement;
   realityId: HTMLElement;
   nextLabel: HTMLElement;
@@ -101,6 +107,7 @@ function elements(): PlayoutElements {
     graphic: requiredElement('#programme-graphic'),
     graphicKicker: requiredElement('#programme-graphic-kicker'),
     graphicText: requiredElement('#programme-graphic-text'),
+    graphicMeta: requiredElement('#programme-graphic-meta'),
     programmeTitle: requiredElement('#programme-title'),
     realityId: requiredElement('#reality-id'),
     nextLabel: requiredElement('#next-label'),
@@ -177,6 +184,7 @@ export class PlayoutEngine {
   };
 
   constructor(private readonly visuals: PlayoutVisuals) {
+    assertTitleSequenceFramesComplete();
     this.soundDesigner = new BroadcastSoundDesigner(() => this.audioUnlocked);
     const parameters = new URLSearchParams(window.location.search);
     const requestedStart = Number(parameters.get('start') ?? 0);
@@ -421,10 +429,17 @@ export class PlayoutEngine {
     this.ui.broadcast.dataset.medium = productionDesign.visualMedium;
     this.ui.broadcast.dataset.cast = productionDesign.castArchetype;
     this.ui.broadcast.dataset.pacing = segment.pacing ?? 'conversational';
-    this.ui.broadcast.dataset.package = resolveBroadcastPackage({
+    const broadcastPackage = resolveBroadcastPackage({
       ...segment,
       visualMedium: productionDesign.visualMedium,
     });
+    this.ui.broadcast.dataset.package = broadcastPackage;
+    this.ui.broadcast.dataset.titleSequence = resolveTitleSequenceGrammar({
+      ...segment,
+      visualMedium: productionDesign.visualMedium,
+    });
+    this.applyTitleSequenceFrame(broadcastPackage);
+    this.ui.graphicMeta.textContent = `CH ${compactChannel} · ${segment.channel.realityId}`;
     this.ui.formatBug.textContent =
       segment.channel.number === 113
         ? "CHILDREN'S TELEVISION"
@@ -472,6 +487,7 @@ export class PlayoutEngine {
 
   private showGraphic(graphic: 'LOWER_THIRD' | 'WARNING' | 'TITLE_CARD', text: string): void {
     const isWarning = graphic === 'WARNING';
+    this.ui.graphic.dataset.kind = graphic;
     this.ui.graphicKicker.textContent = isWarning
       ? this.graphicKickers.warning
       : graphic === 'TITLE_CARD'
@@ -498,6 +514,14 @@ export class PlayoutEngine {
       () => this.ui.graphic.classList.remove('is-visible'),
       isWarning ? Math.min(3_200, titleDuration + 900) : titleDuration,
     );
+  }
+
+  private applyTitleSequenceFrame(broadcastPackage: BroadcastPackage): void {
+    const frame = titleSequenceFrame(broadcastPackage);
+    this.ui.graphic.style.setProperty('--title-left', `${frame.leftPercent}%`);
+    this.ui.graphic.style.setProperty('--title-right', `${frame.rightPercent}%`);
+    this.ui.graphic.style.setProperty('--title-top', `${frame.topPercent}%`);
+    this.ui.graphic.style.setProperty('--title-height', `${frame.heightPercent}%`);
   }
 
   private playSpeech(url: string): void {

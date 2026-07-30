@@ -69,6 +69,22 @@ The scheduler derives these only from concrete story words, places them outside 
 speech intervals, keeps their gain deliberately low, and falls back to silence if Web
 Audio cannot create a cue. They contain no sampled or third-party media.
 
+## title-sequence-bank-v1
+
+Six original procedural title systems provide structural changes of pace rather than
+palette swaps:
+
+- `signal_aperture`: concentric signal portals and an iris-like registration.
+- `civic_index`: carbon-copy docket rules, file tabs and stepped administrative motion.
+- `cut_paper_stack`: hand-cut coloured slabs assembled in deliberately imperfect steps.
+- `orbit_registry`: indexed celestial paths around a small impossible body.
+- `vertical_marquee`: hard studio columns and oversized compressed programme type.
+- `microfiche_window`: crosshairs, frame counters and a mechanical archival scan.
+
+A recurring programme deterministically retains its grammar. Format-specific pools prevent
+every genre from using the same visual language, while broadcast-package safe frames keep
+titles clear of side panels, channel numbers and subtitles.
+
 ## Growth rules
 
 - Add new IDs; never silently replace an existing ID.

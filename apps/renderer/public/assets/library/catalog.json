@@ -421,6 +421,32 @@
       }
     },
     {
+      "id": "asset_graphic_title_sequence_bank_v1",
+      "kind": "broadcast_graphic",
+      "role": "title_sequence_package",
+      "version": 1,
+      "status": "ready",
+      "uri": "procedure://renderer/graphics/title-sequence-bank-v1",
+      "tags": [
+        "signal-aperture",
+        "civic-index",
+        "cut-paper-stack",
+        "orbit-registry",
+        "vertical-marquee",
+        "microfiche-window"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": [],
+      "provenance": {
+        "source": "procedural_original",
+        "createdAt": "2026-07-30T15:15:00.000Z",
+        "generator": "broadcast-title-sequence-resolver",
+        "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
       "id": "asset_sfx_procedural_broadcast_bank_v1",
       "kind": "sound_effect",
       "role": "sound_effect_bank",
