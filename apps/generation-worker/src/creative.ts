@@ -1114,6 +1114,30 @@ export function visualStyleForMedium(medium: (typeof requestedMediums)[number]):
   return canonicalVisualStyles[medium];
 }
 
+const legacyTransportMediums: Partial<
+  Record<(typeof requestedMediums)[number], (typeof requestedMediums)[number]>
+> = {
+  ascii_terminal: 'pixel_broadcast',
+  blueprint_schematic: 'corporate_vector',
+  stained_glass: 'hand_drawn',
+  xerox_punk: 'collage_zine',
+  storybook_wash: 'hand_drawn',
+  isometric_manual: 'corporate_vector',
+};
+
+export function transportVisualMediumFor(
+  medium: (typeof requestedMediums)[number],
+): (typeof requestedMediums)[number] {
+  return legacyTransportMediums[medium] ?? medium;
+}
+
+export function visualMediumForStyle(style: string): (typeof requestedMediums)[number] | null {
+  return (
+    (Object.entries(canonicalVisualStyles).find(([, candidate]) => candidate === style)?.[0] as
+      (typeof requestedMediums)[number] | undefined) ?? null
+  );
+}
+
 function axisIndex(serial: number, salt: number, length: number): number {
   let value = (serial ^ salt) >>> 0;
   value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);

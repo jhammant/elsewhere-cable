@@ -1,4 +1,4 @@
-export const currentEndorTarget = 'endor-renderer-106cd82';
+export const currentEndorTarget = 'endor-controller-b3c2ed1-renderer-106cd82';
 
 export const currentEndorVisualMedia = new Set([
   'cel_shaded',
@@ -17,10 +17,4 @@ export const currentEndorVisualMedia = new Set([
   'shadow_theatre',
   'hand_drawn',
   'thermal_camera',
-  'ascii_terminal',
-  'blueprint_schematic',
-  'stained_glass',
-  'xerox_punk',
-  'storybook_wash',
-  'isometric_manual',
 ]);

@@ -7,7 +7,7 @@ import {
   playoutManifestSchema,
   segmentPackageSchema,
 } from '@elsewhere-cable/schemas';
-import { demoDraft, scriptPrompt, visualStyleForMedium } from './creative.js';
+import { demoDraft, scriptPrompt, visualMediumForStyle, visualStyleForMedium } from './creative.js';
 import {
   assertPreviewSafe,
   editorialCritiqueIssues,
@@ -547,7 +547,9 @@ describe('produceBatch', () => {
       ),
     );
     expect(firstSegment.visualMedium).toBeDefined();
-    expect(firstSegment.visualStyle).toBe(visualStyleForMedium(firstSegment.visualMedium!));
+    const authoredMedium = visualMediumForStyle(firstSegment.visualStyle);
+    expect(authoredMedium).not.toBeNull();
+    expect(firstSegment.visualStyle).toBe(visualStyleForMedium(authoredMedium!));
     expect(firstSegment.castArchetype).toBeDefined();
     const storyGraphic = firstSegment.events.find(
       (event) => event.type === 'graphic.show' && event.text !== firstSegment.programme.title,

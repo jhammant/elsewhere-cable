@@ -13,7 +13,9 @@ import {
   repairDialogueArchitecture,
   scriptPrompt,
   systemPrompt,
+  transportVisualMediumFor,
   userPrompt,
+  visualMediumForStyle,
   visualStyleForMedium,
 } from './creative.js';
 
@@ -191,6 +193,14 @@ describe('generation prompts', () => {
     expect(media).toHaveLength(22);
     expect(new Set(styles)).toHaveLength(22);
     expect(styles.every((style) => style.length > 0 && style.length <= 80)).toBe(true);
+  });
+
+  it('carries extended renderer styles through the live controller protocol', () => {
+    expect(transportVisualMediumFor('xerox_punk')).toBe('collage_zine');
+    expect(transportVisualMediumFor('blueprint_schematic')).toBe('corporate_vector');
+    expect(transportVisualMediumFor('cel_shaded')).toBe('cel_shaded');
+    expect(visualMediumForStyle(visualStyleForMedium('xerox_punk'))).toBe('xerox_punk');
+    expect(visualMediumForStyle('unknown_style')).toBeNull();
   });
 
   it('rotates cast body families away from recent segments', () => {

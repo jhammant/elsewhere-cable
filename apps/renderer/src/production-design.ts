@@ -8,8 +8,18 @@ export interface ProductionDesign {
   castArchetype: CastArchetype;
 }
 
+const transportedVisualMediumByStyle: Partial<Record<string, VisualMedium>> = {
+  phosphor_green_character_cell_terminal: 'ascii_terminal',
+  cyan_exploded_architectural_schematic: 'blueprint_schematic',
+  luminous_leaded_stained_glass_panels: 'stained_glass',
+  high_contrast_photocopied_flyposter: 'xerox_punk',
+  soft_watercolour_storybook_parallax: 'storybook_wash',
+  axonometric_numbered_assembly_manual: 'isometric_manual',
+};
+
 export function resolveProductionDesign(segment: SegmentPackage): ProductionDesign {
   const visualMedium =
+    transportedVisualMediumByStyle[segment.visualStyle] ??
     segment.visualMedium ??
     (segment.channel.number === 113
       ? 'paper_cutout'

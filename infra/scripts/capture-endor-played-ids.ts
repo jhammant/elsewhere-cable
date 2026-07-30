@@ -3,7 +3,10 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { promisify } from 'node:util';
-import { retainedPlayedSegmentIds } from '../../apps/generation-worker/src/playback-history.js';
+import {
+  retainedPlayedSegmentIds,
+  successfulPlayedSegmentIds,
+} from '../../apps/generation-worker/src/playback-history.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -28,9 +31,7 @@ const { stdout, stderr } = await execFileAsync(
     timeout: 60_000,
   },
 );
-const segmentIds = [...`${stdout}\n${stderr}`.matchAll(/\bseg_[a-z0-9_]+\b/gu)].map(
-  (match) => match[0],
-);
+const segmentIds = successfulPlayedSegmentIds(`${stdout}\n${stderr}`);
 const uniqueIds = [...new Set(segmentIds)];
 let existingIds: string[] = [];
 try {

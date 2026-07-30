@@ -32,7 +32,9 @@ import {
   repairDialogueArchitecture,
   scriptPrompt,
   systemPrompt,
+  transportVisualMediumFor,
   userPrompt,
+  visualMediumForStyle,
   visualStyleForMedium,
 } from './creative.js';
 import { containsSpokenStageDirection } from './dialogue-quality.js';
@@ -620,8 +622,13 @@ async function readCreativeHistory(
       const segment = segmentPackageSchema.parse(
         JSON.parse(await readFile(path.join(root, entry.packagePath), 'utf8')),
       );
+      const record = recordFromSegment(segment);
+      const authoredVisualMedium = visualMediumForStyle(segment.visualStyle);
+      if (authoredVisualMedium !== null) {
+        record.visualMedium = authoredVisualMedium;
+      }
       records.push({
-        record: recordFromSegment(segment),
+        record,
         generatedAt: segment.production.generatedAt,
         manifestIndex,
       });
@@ -1067,7 +1074,7 @@ async function buildSegment(
       },
       durationMs,
       visualStyle: visualStyleForMedium(draft.visualMedium),
-      visualMedium: draft.visualMedium,
+      visualMedium: transportVisualMediumFor(draft.visualMedium),
       castArchetype: draft.castArchetype,
       pacing,
       storyMode: draft.storyMode,

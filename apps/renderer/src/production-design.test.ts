@@ -76,4 +76,16 @@ describe('resolveProductionDesign', () => {
       castArchetype: 'talking_objects',
     });
   });
+
+  it('decodes extended visual styles carried through the legacy controller protocol', () => {
+    const transported = segment({
+      channelNumber: 91,
+      programmeId: 'photocopied_notice',
+      format: 'advert',
+    });
+    transported.visualMedium = 'collage_zine';
+    transported.visualStyle = 'high_contrast_photocopied_flyposter';
+
+    expect(resolveProductionDesign(transported).visualMedium).toBe('xerox_punk');
+  });
 });
