@@ -416,7 +416,12 @@ ${repairInstruction}`,
       'elsewhere_proposal',
       proposalStructuralExample(request),
       1_024,
-      undefined,
+      {
+        temperature: 0.92,
+        topP: 0.95,
+        presencePenalty: 0.3,
+        frequencyPenalty: 0.15,
+      },
       this.proposalEndpoint ?? undefined,
     );
   }

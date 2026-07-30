@@ -177,7 +177,12 @@ describe('OpenAiCompatibleTtsProvider', () => {
   });
 
   it('can route premise proposals to a smaller independent model', async () => {
-    const requests: Array<{ url: string; model: string | undefined }> = [];
+    const requests: Array<{
+      url: string;
+      model: string | undefined;
+      temperature: number | undefined;
+      presencePenalty: number | undefined;
+    }> = [];
     vi.stubGlobal(
       'fetch',
       vi.fn((input: string | URL | Request, init?: RequestInit) => {
@@ -186,8 +191,17 @@ describe('OpenAiCompatibleTtsProvider', () => {
         if (typeof init?.body !== 'string') {
           throw new Error('Expected a JSON request body');
         }
-        const body = JSON.parse(init.body) as { model?: string };
-        requests.push({ url, model: body.model });
+        const body = JSON.parse(init.body) as {
+          model?: string;
+          temperature?: number;
+          presence_penalty?: number;
+        };
+        requests.push({
+          url,
+          model: body.model,
+          temperature: body.temperature,
+          presencePenalty: body.presence_penalty,
+        });
         return Promise.resolve(
           Response.json({
             choices: [
@@ -238,6 +252,8 @@ describe('OpenAiCompatibleTtsProvider', () => {
       {
         url: 'http://proposal.test/v1/chat/completions',
         model: 'proposal-model',
+        temperature: 0.92,
+        presencePenalty: 0.3,
       },
     ]);
   });
