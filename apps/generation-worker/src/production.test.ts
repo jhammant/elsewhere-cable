@@ -949,6 +949,7 @@ describe('produceBatch', () => {
     const draft = demoDraft(0);
     let proposalCalls = 0;
     let scriptCalls = 0;
+    const scriptPrompts: string[] = [];
     const llm: LlmProvider = {
       id: 'critic-rejection-test-llm',
       model: 'test-model',
@@ -958,6 +959,7 @@ describe('produceBatch', () => {
       },
       generateStructured(request) {
         scriptCalls += 1;
+        scriptPrompts.push(request.userPrompt);
         const proposalJson = request.userPrompt.match(
           /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
         )?.[1];
@@ -1014,6 +1016,10 @@ describe('produceBatch', () => {
     expect(result.preparedScriptCount).toBe(1);
     expect(scriptCalls).toBe(5);
     expect(proposalCalls).toBe(1);
+    expect(scriptPrompts[4]).toContain('Previous-review corrections');
+    expect(scriptPrompts[4]).toContain(
+      'The approved premise is not producing a coherent playable scene.',
+    );
     expect(await readdir(path.join(scriptQueueRoot, 'proposals', 'pending'))).toHaveLength(0);
     expect(
       (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>

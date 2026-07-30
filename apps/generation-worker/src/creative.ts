@@ -1914,6 +1914,13 @@ ${retryCorrections.map((correction) => `- ${correction}`).join('\n')}
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
+Immutable story contract:
+- The approved premise is the whole fiction for this fragment, not a starting point for another invention.
+- Lines one and two make the established roles' incompatible immediate wants clear through natural disagreement.
+- The middle beats apply the proposal's exact trigger, show its exact consequence, then force a bargain, refusal, concealment, concession or status change using only that same cause.
+- A physical action may reveal a reaction or change leverage, but it cannot become a new test, workaround, option, ritual, power, object, authority condition or resolution method.
+- Never add a third choice, an alternative trigger, or a clever new way around the approved rule. Vary the characters' tactics and emotions instead.
+- The final spoken line is a concise character decision or reaction caused by the approved endingBeat. It must not describe staging, instruct the renderer or explain the rule.
 Visible blocking: throughout the exchange, the cast must ${visibleBusiness}. Refer to the approved premise's central object while doing it. This is practical stage business, never a new rule or source of magic.
 ${liveEditorialBlock}${retryCorrectionBlock}Dialogue architecture: ${dialogueShape}
 Required speaker rhythm: ${speakerPattern}. Map A, B and C only to roles already established in the premise. Preserve consecutive turns exactly where shown; a second turn by one role must advance or revise their goal rather than repeat their previous line.

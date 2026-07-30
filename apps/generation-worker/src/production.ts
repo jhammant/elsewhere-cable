@@ -881,6 +881,18 @@ async function removeApprovedProposal(proposal: QueuedApprovedProposal): Promise
   await rm(proposal.filePath, { force: true });
 }
 
+function approvedProposalRetryReasons(lastFailure: string | undefined): string[] {
+  if (lastFailure === undefined) {
+    return [];
+  }
+  return lastFailure
+    .replace(/^Could not script approved premise after \d+ attempts:\s*/u, '')
+    .split(/\s*;\s*/u)
+    .map((reason) => reason.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 async function writePreparedScripts(
   queueRoot: string,
   drafts: readonly GeneratedSegmentDraft[],
@@ -1614,7 +1626,12 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         if (proposal === undefined) {
           continue;
         }
-        let rejectionReasons: string[] = [];
+        // Approved premises survive across writer cycles. Carry the critic's bounded,
+        // inert defect labels into the first rewrite instead of accidentally giving the
+        // provider the same clean-slate prompt on every cycle.
+        let rejectionReasons = approvedProposalRetryReasons(
+          queuedProposalSources[index]?.lastFailure,
+        );
         // Give a viable premise several complete rewrites, but do not spend an entire
         // generation cycle polishing one concept the critic consistently rejects. The
         // unattended writer will immediately start a fresh batch with new coordinates.
