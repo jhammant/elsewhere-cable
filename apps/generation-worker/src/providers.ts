@@ -311,6 +311,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     private readonly baseUrl: string,
     private readonly apiKey: string,
     private readonly criticEndpoint: OpenAiCompatibleEndpoint | null = null,
+    private readonly proposalEndpoint: OpenAiCompatibleEndpoint | null = null,
   ) {}
 
   private async generateWithSchema<T>(
@@ -415,6 +416,8 @@ ${repairInstruction}`,
       'elsewhere_proposal',
       proposalStructuralExample(request),
       1_024,
+      undefined,
+      this.proposalEndpoint ?? undefined,
     );
   }
 

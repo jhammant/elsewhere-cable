@@ -159,6 +159,72 @@ describe('OpenAiCompatibleTtsProvider', () => {
     );
   });
 
+  it('can route premise proposals to a smaller independent model', async () => {
+    const requests: Array<{ url: string; model?: string }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request, init?: RequestInit) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (typeof init?.body !== 'string') {
+          throw new Error('Expected a JSON request body');
+        }
+        const body = JSON.parse(init.body) as { model?: string };
+        requests.push({ url, model: body.model });
+        return Promise.resolve(
+          Response.json({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    channelNumber: 7_000_000_001,
+                    channelName: 'Proposal Channel',
+                    programmeTitle: 'Proposal Programme',
+                    format: 'public_access',
+                    realityId: 'PROPOSAL-1',
+                    visualStyle: 'proposal_style',
+                    visualMedium: 'paper_cutout',
+                    castArchetype: 'paper_puppets',
+                    pacing: 'staccato',
+                    storyMode: 'social_protocol',
+                    premise:
+                      'At a village hall, a clerk wants the final chair while a resident defends its speaking turn.',
+                    tone: ['dry'],
+                    continuityFact: 'Empty chairs receive one speaking turn.',
+                    endingBeat: 'The clerk sits on the floor beside the chair.',
+                  }),
+                },
+              },
+            ],
+          }),
+        );
+      }),
+    );
+
+    const provider = new OpenAiCompatibleProvider(
+      'writer-model',
+      'http://writer.test/v1',
+      'writer',
+      null,
+      {
+        model: 'proposal-model',
+        baseUrl: 'http://proposal.test/v1',
+        apiKey: 'proposal',
+      },
+    );
+    await provider.generateProposal({
+      systemPrompt: 'system',
+      userPrompt: 'Create a public_access segment.',
+    });
+
+    expect(requests).toEqual([
+      {
+        url: 'http://proposal.test/v1/chat/completions',
+        model: 'proposal-model',
+      },
+    ]);
+  });
+
   it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
     expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(5_000);
     expect(

@@ -80,6 +80,11 @@ async function main(): Promise<void> {
     argument('critic-base-url') ?? process.env.ELSEWHERE_CRITIC_BASE_URL ?? baseUrl;
   const criticApiKey =
     process.env.ELSEWHERE_CRITIC_API_KEY ?? process.env.ELSEWHERE_LLM_API_KEY ?? 'ollama-local';
+  const proposalModel = argument('proposal-model') ?? process.env.ELSEWHERE_PROPOSAL_MODEL;
+  const proposalBaseUrl =
+    argument('proposal-base-url') ?? process.env.ELSEWHERE_PROPOSAL_BASE_URL ?? baseUrl;
+  const proposalApiKey =
+    process.env.ELSEWHERE_PROPOSAL_API_KEY ?? process.env.ELSEWHERE_LLM_API_KEY ?? 'ollama-local';
   const outputRoot = path.resolve(
     workspaceRoot,
     argument('output') ?? process.env.ELSEWHERE_SEGMENTS_DIR ?? 'data/segments',
@@ -131,6 +136,13 @@ async function main(): Promise<void> {
                 model: criticModel,
                 baseUrl: criticBaseUrl,
                 apiKey: criticApiKey,
+              },
+          proposalModel === undefined
+            ? null
+            : {
+                model: proposalModel,
+                baseUrl: proposalBaseUrl,
+                apiKey: proposalApiKey,
               },
         );
   const embeddingProvider =
