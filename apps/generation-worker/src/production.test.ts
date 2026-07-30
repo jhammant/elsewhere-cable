@@ -1581,6 +1581,21 @@ describe('produceBatch', () => {
         ...kernel,
       }),
     ).toBeNull();
+    expect(
+      sanitisedMechanismSeed({
+        storyMode: 'product_consequence',
+        mechanism:
+          'A courtesy thermos repeats compliments in the voice of their intended recipient.',
+        ...kernel,
+      }),
+    ).not.toBeNull();
+    expect(
+      sanitisedMechanismSeed({
+        storyMode: 'visual_physics',
+        mechanism: 'Opening the guest book tilts the interview table toward its newest signature.',
+        ...kernel,
+      }),
+    ).not.toBeNull();
   });
 
   it('puts fresh valid seeds ahead of the fixed fallback catalogue without duplicates', () => {

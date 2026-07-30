@@ -1106,7 +1106,7 @@ export function sanitisedMechanismSeed(seed: MechanismSeed): MechanismSeed | nul
   }
   const alignment: Record<MechanismSeed['storyMode'], RegExp> = {
     social_protocol:
-      /\b(?:etiquette|expects?|may|must|only|protocol|requires|ritual|rule|turn)\b/iu,
+      /\b(?:custom|duty|etiquette|expects?|may|must|obliges?|only|protocol|requires|ritual|rule|turn)\b/iu,
     service_mismatch:
       /\b(?:appointment|booking|delivery|operator|recipient|service|session|worker|customer|caller)\b/iu,
     status_transfer:
@@ -1114,10 +1114,10 @@ export function sanitisedMechanismSeed(seed: MechanismSeed): MechanismSeed | nul
     format_literalism:
       /\b(?:applause|broadcast|camera|caption|credits|cutaway|lower third|replay|subtitle|title card)\b/iu,
     object_agency: /\b(?:demands?|negotiates?|refuses?|requests?|wants?)\b/iu,
-    product_consequence: /\b(?:appliance|device|kit|machine|product|service|subscription|tool)\b/iu,
+    product_consequence: /./u,
     semantic_contract: /\b(?:phrase|saying|word)\b/iu,
     visual_physics:
-      /\b(?:bends?|changes?|detaches?|duplicates?|flattens?|freezes?|grows?|rotates?|shrinks?|slides?|swaps?|transforms?)\b/iu,
+      /\b(?:bends?|changes?|closes?|detaches?|duplicates?|expands?|flattens?|folds?|freezes?|grows?|moves?|opens?|rotates?|shrinks?|slides?|stretches?|swaps?|tilts?|transforms?)\b/iu,
   };
   if (!alignment[seed.storyMode].test(mechanism)) {
     return null;
@@ -1600,7 +1600,15 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             seenMechanisms.add(key);
             return true;
           });
-        const modeCounts = Object.fromEntries(
+        const generatedModeCounts = Object.fromEntries(
+          [...new Set(generatedMechanismSeeds.map(({ storyMode }) => storyMode))]
+            .sort()
+            .map((storyMode) => [
+              storyMode,
+              generatedMechanismSeeds.filter((seed) => seed.storyMode === storyMode).length,
+            ]),
+        );
+        const acceptedModeCounts = Object.fromEntries(
           [...new Set(dynamicMechanismSeeds.map(({ storyMode }) => storyMode))]
             .sort()
             .map((storyMode) => [
@@ -1616,7 +1624,8 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             event: 'mechanism_seed_batch',
             generatedCount: generatedMechanismSeeds.length,
             acceptedCount: dynamicMechanismSeeds.length,
-            modeCounts,
+            generatedModeCounts,
+            acceptedModeCounts,
           })}\n`,
         );
       } catch (error) {
