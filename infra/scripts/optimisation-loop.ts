@@ -346,14 +346,14 @@ function airedSegmentIds(logs: string): string[] {
 
 async function readAiredSegments(ids: readonly string[]): Promise<SegmentPackage[]> {
   const segments: SegmentPackage[] = [];
-  for (const id of ids.slice(-30)) {
+  for (const id of ids.slice(-500)) {
     try {
       const segment = segmentPackageSchema.parse(
         JSON.parse(await readFile(path.join(segmentsRoot, id, 'segment.json'), 'utf8')),
       );
       segments.push(segment);
     } catch {
-      // Recovery aliases and retired packages remain observable but are not critic input.
+      // Retired or missing packages remain observable but cannot inform bounded metrics.
     }
   }
   return segments;
@@ -451,7 +451,7 @@ async function criticBrief(
   if (segments.length === 0) {
     return baseline;
   }
-  const programmeEvidence = segments.map((segment) => ({
+  const programmeEvidence = segments.slice(-30).map((segment) => ({
     title: segment.programme.title,
     format: segment.programme.format,
     premise: segment.programme.premise,
