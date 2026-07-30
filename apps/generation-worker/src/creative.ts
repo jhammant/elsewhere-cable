@@ -1875,11 +1875,44 @@ export function scriptPrompt(
       : `Live thirty-minute dialogue corrections (mandatory, subordinate to the approved proposal and every safety rule):
 ${liveEditorialCorrections.map((correction) => `- ${correction}`).join('\n')}
 `;
+  const retryCorrections = [
+    rejectionReasons.some((reason) =>
+      /\b(?:contradict|inconsisten|new|second|unearned|unrelated)\w*\b.{0,80}\b(?:mechanism|rule|trigger|condition|power)\b|\b(?:mechanism|rule|trigger|condition|power)\b.{0,80}\b(?:contradict|inconsisten|new|second|unearned|unrelated)\w*\b/iu.test(
+        reason,
+      ),
+    )
+      ? 'Single-mechanism correction: every beat must use the exact trigger, consequence and authority relationship already stated in the proposal; introduce no substitute rule, condition or power.'
+      : null,
+    rejectionReasons.some((reason) =>
+      /\b(?:escalat|leverage|restate|repeat|status)\w*\b/iu.test(reason),
+    )
+      ? 'Escalation correction: each reply must force a new choice, concession or change of leverage caused by that same mechanism; nobody may merely restate how it works.'
+      : null,
+    rejectionReasons.some((reason) =>
+      /\b(?:explain|instruction|meta|narrat|prose|rule declaration|system)\w*\b/iu.test(reason),
+    )
+      ? 'Natural-dialogue correction: characters speak only to pursue their immediate wants through questions, bargains, accusations or refusals; they never mention a system, script, mechanism or rule.'
+      : null,
+    rejectionReasons.some((reason) =>
+      /\b(?:goal|negotiate|objective|premise|unmotivated)\w*\b/iu.test(reason),
+    )
+      ? 'Goal correction: every role must keep pursuing the concrete want stated in the proposal, and every response must directly alter whether that want can be achieved.'
+      : null,
+    rejectionReasons.some((reason) => /\b(?:ending|payoff|resolution)\w*\b/iu.test(reason))
+      ? 'Ending correction: earn the approved ending from actions already performed in the dialogue; use no new participant, object, repetition count or consequence.'
+      : null,
+  ].filter((correction): correction is string => correction !== null);
+  const retryCorrectionBlock =
+    retryCorrections.length === 0
+      ? ''
+      : `Previous-review corrections (mandatory):
+${retryCorrections.map((correction) => `- ${correction}`).join('\n')}
+`;
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
-${liveEditorialBlock}Dialogue architecture: ${dialogueShape}
+${liveEditorialBlock}${retryCorrectionBlock}Dialogue architecture: ${dialogueShape}
 Required speaker rhythm: ${speakerPattern}. Map A, B and C only to roles already established in the premise. Preserve consecutive turns exactly where shown; a second turn by one role must advance or revise their goal rather than repeat their previous line.
 Follow that architecture exactly using only roles already present in the premise. Do not invent a narrator, unseen speaker or new participant merely to satisfy the architecture.
 Characters must never say "the rule forces", "the law takes effect" or narrate a visible transformation merely to explain it. Let them bargain, conceal, accuse, boast, misunderstand and change decisions while the renderer shows physical action. Visual medium is a rendering style, not permission to invent new story physics. Do not introduce tragedy, trauma, dead relatives or an unrelated spectacle. Never include word counts, drafting notes or model commentary in programme fields. The ending may only use characters, objects and mechanisms already established by the approved premise. Never end with somebody screaming, trembling or staring in horror; end on a comic decision, loss of status, reluctant agreement or earned visual consequence.
