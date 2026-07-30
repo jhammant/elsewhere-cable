@@ -828,6 +828,76 @@ describe('produceBatch', () => {
     expect(await readdir(path.join(scriptQueueRoot, 'completed'))).toHaveLength(2);
   });
 
+  it('publishes a finished script without waiting for a slower batch sibling', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-streaming-script-queue-'));
+    temporaryDirectories.push(root);
+    const outputRoot = path.join(root, 'segments');
+    const scriptQueueRoot = path.join(root, 'scripts');
+    let proposalCalls = 0;
+    let releaseSecondProposal = (): void => undefined;
+    const secondProposalGate = new Promise<void>((resolve) => {
+      releaseSecondProposal = resolve;
+    });
+    const llm: LlmProvider = {
+      id: 'streaming-script-test-llm',
+      model: 'test-model',
+      async generateProposal() {
+        const index = proposalCalls;
+        proposalCalls += 1;
+        if (index === 1) {
+          await secondProposalGate;
+        }
+        return universallyAlignedProposal(demoDraft(index));
+      },
+      generateStructured(request) {
+        const proposalJson = request.userPrompt.match(
+          /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
+        )?.[1];
+        const proposal = generatedSegmentProposalSchema.parse(JSON.parse(proposalJson ?? '{}'));
+        const draft = demoDraft(proposal.channelNumber);
+        return Promise.resolve({
+          ...draft,
+          ...proposal,
+          dialogue: architectureAlignedDialogue(draft, proposal),
+        });
+      },
+    };
+
+    const production = produceBatch({
+      count: 2,
+      concurrency: 2,
+      outputRoot,
+      demo: false,
+      llm,
+      tts: null,
+      embeddingProvider: null,
+      scriptQueueRoot,
+      prepareScriptsOnly: true,
+    });
+    try {
+      let pendingCount = 0;
+      for (let attempt = 0; attempt < 100 && pendingCount === 0; attempt += 1) {
+        try {
+          pendingCount = (await readdir(path.join(scriptQueueRoot, 'pending'))).filter((file) =>
+            file.endsWith('.json'),
+          ).length;
+        } catch {
+          // The first successful worker creates the directory.
+        }
+        if (pendingCount === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      expect(pendingCount).toBe(1);
+    } finally {
+      releaseSecondProposal();
+    }
+
+    const result = await production;
+    expect(result.preparedScriptCount).toBe(2);
+    expect(await readdir(path.join(scriptQueueRoot, 'pending'))).toHaveLength(2);
+  });
+
   it('quarantines a prepared script when every TTS endpoint returns permanent bad audio', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'elsewhere-script-quarantine-'));
     temporaryDirectories.push(root);

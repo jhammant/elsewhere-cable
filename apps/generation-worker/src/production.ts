@@ -1413,12 +1413,127 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         release();
       }
     };
+    const persistedPreparedScripts: PreparedScript[] = [];
+    const persistedPreparedDrafts = new Set<GeneratedSegmentDraft>();
+    const preparationRejectionReasons: string[] = [];
+
+    const persistPreparedDraft = async (index: number): Promise<void> => {
+      const draft = drafts[index];
+      if (
+        options.prepareScriptsOnly !== true ||
+        options.scriptQueueRoot === undefined ||
+        draft === undefined ||
+        persistedPreparedDrafts.has(draft)
+      ) {
+        return;
+      }
+      const generator = options.demo ? 'demo-library' : options.llm!.id;
+      const model = options.demo ? 'hand-authored-demo' : options.llm!.model;
+      const result = await writePreparedScripts(
+        options.scriptQueueRoot,
+        [draft],
+        generator,
+        model,
+        options.optimisationBrief ?? null,
+      );
+      preparationRejectionReasons.push(...result.rejectionReasons);
+      const preparedDraft = result.preparedDrafts[0];
+      const preparedScript = result.prepared[0];
+      if (preparedDraft === undefined || preparedScript === undefined) {
+        failures[index] =
+          result.rejectionReasons.join(' | ') || 'Prepared script failed its final safety gate';
+        drafts[index] = undefined;
+        return;
+      }
+      persistedPreparedDrafts.add(preparedDraft);
+      persistedPreparedScripts.push(preparedScript);
+      const queuedProposal = queuedProposalSources[index];
+      if (queuedProposal !== undefined) {
+        await removeApprovedProposal(queuedProposal);
+      }
+    };
+
+    const scriptProposal = async (index: number): Promise<void> => {
+      const proposal = proposals[index];
+      if (proposal === undefined) {
+        return;
+      }
+      // Approved premises survive across writer cycles. Carry the critic's bounded,
+      // inert defect labels into the first rewrite instead of accidentally giving the
+      // provider the same clean-slate prompt on every cycle.
+      let rejectionReasons = approvedProposalRetryReasons(
+        queuedProposalSources[index]?.lastFailure,
+      );
+      // Give a viable premise several complete rewrites, but do not spend an entire
+      // generation cycle polishing one concept the critic consistently rejects. The
+      // unattended writer will immediately start a fresh batch with new coordinates.
+      const maximumScriptAttempts = 4;
+      for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
+        try {
+          const scripted = await options.llm!.generateStructured({
+            systemPrompt,
+            userPrompt: scriptPrompt(proposal, rejectionReasons, options.optimisationBrief ?? null),
+          });
+          const candidate = repairDialogueArchitecture(
+            repairNetworkIdentityCollision({
+              ...scripted,
+              ...proposal,
+              dialogue: scripted.dialogue,
+            }),
+          );
+          rejectionReasons = [
+            ...proposalPreservationIssues(proposal, candidate),
+            ...proposalQualityIssues(candidate),
+            ...previewSafetyIssues(candidate),
+            ...dialogueArchitectureIssues(candidate),
+            ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
+            ...critiquePremise(candidate).reasons,
+          ];
+          if (rejectionReasons.length === 0 && options.llm!.critiqueDraft !== undefined) {
+            rejectionReasons = editorialCritiqueIssues(await options.llm!.critiqueDraft(candidate));
+          }
+          if (rejectionReasons.length === 0) {
+            drafts[index] = candidate;
+            const record = reservedRecords[index];
+            if (record !== undefined) {
+              record.dialogue = candidate.dialogue.map((line) => line.text);
+            }
+            break;
+          }
+        } catch (error) {
+          rejectionReasons = [error instanceof Error ? error.message : String(error)];
+        }
+      }
+      if (drafts[index] !== undefined) {
+        return;
+      }
+      const failure = `Could not script approved premise after ${maximumScriptAttempts} attempts: ${rejectionReasons.join('; ')}`;
+      failures[index] = failure;
+      if (
+        options.prepareScriptsOnly === true &&
+        options.scriptQueueRoot !== undefined &&
+        options.llm?.generateProposal !== undefined
+      ) {
+        await recordApprovedProposalFailure(
+          options.scriptQueueRoot,
+          proposal,
+          queuedProposalSources[index],
+          failure,
+        );
+      }
+    };
 
     const worker = async (): Promise<void> => {
       while (nextIndex < options.count) {
         const index = nextIndex;
         nextIndex += 1;
-        if (proposals[index] !== undefined || drafts[index] !== undefined) {
+        if (drafts[index] !== undefined) {
+          await persistPreparedDraft(index);
+          continue;
+        }
+        if (proposals[index] !== undefined) {
+          await scriptProposal(index);
+          await persistPreparedDraft(index);
           continue;
         }
         try {
@@ -1607,6 +1722,8 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               `Could not produce a novel premise after ${maximumProposalAttempts} attempts (${rejectionSummary || 'no categorised rejection'}): ${rejectionReasons.join('; ')}`,
             );
           }
+          await scriptProposal(index);
+          await persistPreparedDraft(index);
         } catch (error) {
           failures[index] = error instanceof Error ? error.message : String(error);
         }
@@ -1616,156 +1733,38 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
     await Promise.all(
       Array.from({ length: Math.min(options.concurrency, options.count) }, async () => worker()),
     );
-
-    let nextScriptIndex = 0;
-    const scriptWorker = async (): Promise<void> => {
-      while (nextScriptIndex < proposals.length) {
-        const index = nextScriptIndex;
-        nextScriptIndex += 1;
-        const proposal = proposals[index];
-        if (proposal === undefined) {
-          continue;
-        }
-        // Approved premises survive across writer cycles. Carry the critic's bounded,
-        // inert defect labels into the first rewrite instead of accidentally giving the
-        // provider the same clean-slate prompt on every cycle.
-        let rejectionReasons = approvedProposalRetryReasons(
-          queuedProposalSources[index]?.lastFailure,
-        );
-        // Give a viable premise several complete rewrites, but do not spend an entire
-        // generation cycle polishing one concept the critic consistently rejects. The
-        // unattended writer will immediately start a fresh batch with new coordinates.
-        const maximumScriptAttempts = 4;
-        for (let attempt = 0; attempt < maximumScriptAttempts; attempt += 1) {
-          try {
-            const scripted = await options.llm!.generateStructured({
-              systemPrompt,
-              userPrompt: scriptPrompt(
-                proposal,
-                rejectionReasons,
-                options.optimisationBrief ?? null,
-              ),
-            });
-            const candidate = repairDialogueArchitecture(
-              repairNetworkIdentityCollision({
-                ...scripted,
-                ...proposal,
-                dialogue: scripted.dialogue,
-              }),
-            );
-            rejectionReasons = [
-              ...proposalPreservationIssues(proposal, candidate),
-              ...proposalQualityIssues(candidate),
-              ...previewSafetyIssues(candidate),
-              ...dialogueArchitectureIssues(candidate),
-              ...dialogueNoveltyIssues(candidate.dialogue, creativeHistory),
-              ...critiquePremise(candidate).reasons,
-            ];
-            if (rejectionReasons.length === 0 && options.llm!.critiqueDraft !== undefined) {
-              rejectionReasons = editorialCritiqueIssues(
-                await options.llm!.critiqueDraft(candidate),
-              );
-            }
-            if (rejectionReasons.length === 0) {
-              drafts[index] = candidate;
-              const record = reservedRecords[index];
-              if (record !== undefined) {
-                record.dialogue = candidate.dialogue.map((line) => line.text);
-              }
-              break;
-            }
-          } catch (error) {
-            rejectionReasons = [error instanceof Error ? error.message : String(error)];
-          }
-        }
-        if (drafts[index] === undefined) {
-          failures[index] =
-            `Could not script approved premise after ${maximumScriptAttempts} attempts: ${rejectionReasons.join('; ')}`;
-        }
-      }
-    };
-    await Promise.all(
-      Array.from({ length: Math.min(options.concurrency, options.count) }, async () =>
-        scriptWorker(),
-      ),
-    );
-    if (
-      options.prepareScriptsOnly === true &&
-      options.scriptQueueRoot !== undefined &&
-      options.llm?.generateProposal !== undefined
-    ) {
-      for (const [index, proposal] of proposals.entries()) {
-        const failure = failures[index];
-        if (proposal === undefined || failure === undefined || drafts[index] !== undefined) {
-          continue;
-        }
-        await recordApprovedProposalFailure(
-          options.scriptQueueRoot,
-          proposal,
-          queuedProposalSources[index],
-          failure,
+    if (options.prepareScriptsOnly === true) {
+      if (persistedPreparedScripts.length === 0) {
+        const reasons = [
+          ...failures.filter((failure): failure is string => failure !== undefined),
+          ...preparationRejectionReasons,
+        ];
+        throw new Error(
+          `Batch produced no approved scripts${reasons.length === 0 ? '' : `: ${reasons.join(' | ')}`}`,
         );
       }
+      const wallTimeMs = performance.now() - startedAt;
+      return {
+        mode: 'prepare-scripts',
+        requestedSegmentCount: options.count,
+        segmentCount: 0,
+        preparedScriptCount: persistedPreparedScripts.length,
+        preparedScriptsPerMinute: Number(
+          (persistedPreparedScripts.length / (wallTimeMs / 60_000)).toFixed(2),
+        ),
+        rejectedSegmentCount: options.count - persistedPreparedScripts.length,
+        concurrency: options.concurrency,
+        addedDurationMs: 0,
+        wallTimeMs: Math.round(wallTimeMs),
+        realtimeFactor: 0,
+        rejectionReasons: [
+          ...failures.filter((failure): failure is string => failure !== undefined),
+          ...preparationRejectionReasons,
+        ],
+        outputRoot: options.scriptQueueRoot!,
+        ttsProvider: 'not-used',
+      };
     }
-  }
-
-  const completedDrafts = drafts.filter(
-    (draft): draft is GeneratedSegmentDraft => draft !== undefined,
-  );
-  if (options.prepareScriptsOnly === true) {
-    if (completedDrafts.length === 0) {
-      const reasons = failures.filter((failure): failure is string => failure !== undefined);
-      throw new Error(
-        `Batch produced no approved scripts${reasons.length === 0 ? '' : `: ${reasons.join(' | ')}`}`,
-      );
-    }
-    const generator = options.demo ? 'demo-library' : options.llm!.id;
-    const model = options.demo ? 'hand-authored-demo' : options.llm!.model;
-    const preparedResult = await writePreparedScripts(
-      options.scriptQueueRoot!,
-      completedDrafts,
-      generator,
-      model,
-      options.optimisationBrief ?? null,
-    );
-    const { prepared } = preparedResult;
-    const preparedDraftSet = new Set(preparedResult.preparedDrafts);
-    await Promise.all(
-      drafts.map(async (draft, index) => {
-        const queuedProposal = queuedProposalSources[index];
-        if (draft !== undefined && queuedProposal !== undefined && preparedDraftSet.has(draft)) {
-          await removeApprovedProposal(queuedProposal);
-        }
-      }),
-    );
-    if (prepared.length === 0) {
-      throw new Error(
-        `Batch produced no safely prepared scripts${
-          preparedResult.rejectionReasons.length === 0
-            ? ''
-            : `: ${preparedResult.rejectionReasons.join(' | ')}`
-        }`,
-      );
-    }
-    const wallTimeMs = performance.now() - startedAt;
-    return {
-      mode: 'prepare-scripts',
-      requestedSegmentCount: options.count,
-      segmentCount: 0,
-      preparedScriptCount: prepared.length,
-      preparedScriptsPerMinute: Number((prepared.length / (wallTimeMs / 60_000)).toFixed(2)),
-      rejectedSegmentCount: options.count - prepared.length,
-      concurrency: options.concurrency,
-      addedDurationMs: 0,
-      wallTimeMs: Math.round(wallTimeMs),
-      realtimeFactor: 0,
-      rejectionReasons: [
-        ...failures.filter((failure): failure is string => failure !== undefined),
-        ...preparedResult.rejectionReasons,
-      ],
-      outputRoot: options.scriptQueueRoot!,
-      ttsProvider: 'not-used',
-    };
   }
 
   const tts = options.tts!;
