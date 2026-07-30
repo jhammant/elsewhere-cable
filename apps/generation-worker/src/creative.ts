@@ -2173,6 +2173,7 @@ Mandatory creative coordinates for this attempt:
 - Story mode: ${storyMode}.
 - Comedy mechanism family: ${mechanismFamily.direction}.
 - Mechanism variant: ${mechanismVariant}. Treat this as the exact subtype of the comedy mechanism, not as a second rule.
+- Comedy-kernel contract: when the mechanism variant explicitly names protagonist goal, opposing goal and earned payoff, preserve those three relationships exactly. The premise must state both goals; endingBeat must realise that payoff using only the rule.
 - Story-mode acceptance contract: ${storyModeAcceptanceContract[storyMode]}.
 - Mechanism ownership: keep the participant named by the mechanism as its subject from premise through endingBeat. Do not make another role inherit its consequence unless this exact variant explicitly transfers it.
 - Relationship pressure: ${relationshipPressure}. Apply this only to the roles already present in the scene frame.

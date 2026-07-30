@@ -128,6 +128,31 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(proposal.premise).not.toContain('one spoken phrase');
   });
 
+  it('carries a generated comedy kernel into the proposal and ending examples', () => {
+    const proposal = JSON.parse(
+      proposalStructuralExample({
+        systemPrompt: 'Return JSON.',
+        userPrompt: `Create batch segment 73 using the shopping format.
+- Physical setting: a breakfast counter inside a repair shop.
+- Story mode: status_transfer.
+- Mechanism variant: Rule: Control of the kettle passes to the person whose biscuit breaks most quietly. | Protagonist goal: One flatmate wants to make tea before leaving for work. | Opposing goal: The other flatmate wants the kettle for a longer breakfast. | Earned payoff: The quietest biscuit holder serves one cup and keeps the kettle. Treat this as the exact subtype of the comedy mechanism.
+- Visual medium: stop_motion.
+- Pacing: conversational.`,
+      }),
+    ) as { premise: string; endingBeat: string };
+
+    expect(proposal.premise).toContain('One flatmate wants to make tea before leaving for work.');
+    expect(proposal.premise).toContain(
+      'The other flatmate wants the kettle for a longer breakfast.',
+    );
+    expect(proposal.premise).toContain(
+      'Control of the kettle passes to the person whose biscuit breaks most quietly.',
+    );
+    expect(proposal.endingBeat).toContain(
+      'The quietest biscuit holder serves one cup and keeps the kettle.',
+    );
+  });
+
   it('keeps a bounded local-server error detail when an LLM request is rejected', async () => {
     vi.stubGlobal(
       'fetch',
@@ -319,38 +344,62 @@ describe('OpenAiCompatibleTtsProvider', () => {
       {
         storyMode: 'social_protocol',
         mechanism: 'Touching the spare teaspoon requires its holder to introduce the next silence.',
+        protagonistGoal: 'The host wants to serve tea before the guest leaves.',
+        opposingGoal: 'The guest wants to leave before anyone begins another introduction.',
+        earnedPayoff: 'The host gives the final introduction to the untouched teaspoon.',
       },
       {
         storyMode: 'service_mismatch',
         mechanism:
           'A professional queuing service arrives early and occupies the customer’s reunion.',
+        protagonistGoal: 'The customer wants to greet a cousin privately at the doorway.',
+        opposingGoal: 'The queue worker wants to hold that exact doorway until the booking ends.',
+        earnedPayoff: 'The customer joins the queue and lets the cousin greet the worker first.',
       },
       {
         storyMode: 'status_transfer',
         mechanism: 'Control of the kettle passes to the person whose biscuit breaks most quietly.',
+        protagonistGoal: 'One flatmate wants to make tea before leaving for work.',
+        opposingGoal: 'The other flatmate wants the kettle for a longer breakfast.',
+        earnedPayoff: 'The quietest biscuit holder serves one shared cup and keeps the kettle.',
       },
       {
         storyMode: 'format_literalism',
         mechanism: 'Every lower third becomes the only permitted answer to a mundane question.',
+        protagonistGoal: 'The presenter wants to ask which sandwich belongs to the guest.',
+        opposingGoal: 'The guest wants to claim the sandwich without changing their caption.',
+        earnedPayoff: 'The presenter edits the caption to the sandwich and accepts that answer.',
       },
       {
         storyMode: 'object_agency',
         mechanism: 'The coat hook requests a window seat before it will hold anyone’s jacket.',
+        protagonistGoal: 'The visitor wants to hang a wet jacket before sitting down.',
+        opposingGoal: 'The coat hook wants the only window seat kept clear for itself.',
+        earnedPayoff: 'The visitor wears the jacket and carries the hook to the window.',
       },
       {
         storyMode: 'product_consequence',
         mechanism:
           'A compliment-sorting device reveals that two flatmates praise the same lamp differently.',
+        protagonistGoal: 'One flatmate wants the device to choose a truthful birthday compliment.',
+        opposingGoal: 'The other flatmate wants their favourite lamp excluded from the test.',
+        earnedPayoff: 'They give the lamp the birthday card and keep their own compliments.',
       },
       {
         storyMode: 'semantic_contract',
         mechanism:
           'Saying “nearly sorted” assigns the speaker responsibility for the smallest loose item.',
+        protagonistGoal: 'The tenant wants to finish tidying before a visitor arrives.',
+        opposingGoal: 'The flatmate wants the final loose button left for later.',
+        earnedPayoff: 'The tenant pockets the button and declares the larger mess unfinished.',
       },
       {
         storyMode: 'visual_physics',
         mechanism:
           'Closing one drawer slides every table sideways until its owner admits choosing it.',
+        protagonistGoal: 'The host wants one table centred for a formal interview.',
+        opposingGoal: 'The guest wants the same table beside the studio exit.',
+        earnedPayoff: 'The host admits choosing the table and lets it stop beside the guest.',
       },
     ] as const;
     vi.stubGlobal(

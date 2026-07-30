@@ -58,6 +58,9 @@ const mechanismSeedBatchSchema = z.object({
           'visual_physics',
         ]),
         mechanism: z.string().min(24).max(220),
+        protagonistGoal: z.string().min(12).max(140),
+        opposingGoal: z.string().min(12).max(140),
+        earnedPayoff: z.string().min(12).max(160),
       }),
     )
     .min(8)
@@ -164,6 +167,35 @@ function generatedCoordinate(
   return candidate !== undefined && values.includes(candidate) ? candidate : fallback;
 }
 
+interface ComedyKernel {
+  rule: string;
+  protagonistGoal: string;
+  opposingGoal: string;
+  earnedPayoff: string;
+}
+
+function comedyKernelFromMechanism(value: string | null): ComedyKernel | null {
+  if (value === null) {
+    return null;
+  }
+  const parts = Object.fromEntries(
+    value.split(' | ').flatMap((part) => {
+      const separator = part.indexOf(': ');
+      return separator <= 0 ? [] : [[part.slice(0, separator), part.slice(separator + 2)]];
+    }),
+  ) as Partial<Record<'Rule' | 'Protagonist goal' | 'Opposing goal' | 'Earned payoff', string>>;
+  const rule = parts.Rule?.trim();
+  const protagonistGoal = parts['Protagonist goal']?.trim();
+  const opposingGoal = parts['Opposing goal']?.trim();
+  const earnedPayoff = parts['Earned payoff']?.trim();
+  return rule === undefined ||
+    protagonistGoal === undefined ||
+    opposingGoal === undefined ||
+    earnedPayoff === undefined
+    ? null
+    : { rule, protagonistGoal, opposingGoal, earnedPayoff };
+}
+
 export function proposalStructuralExample(request: StructuredGenerationRequest): string {
   const format =
     request.userPrompt.match(
@@ -194,6 +226,7 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
     request.userPrompt.match(/Physical setting: ([^\n]+)\./u)?.[1] ?? 'an assigned studio set';
   const assignedMechanism =
     request.userPrompt.match(/Mechanism variant: ([^\n]+?)\. Treat this/u)?.[1] ?? null;
+  const assignedKernel = comedyKernelFromMechanism(assignedMechanism);
   const formatRole = {
     advert: 'spokesperson',
     public_access: 'civic host',
@@ -221,7 +254,9 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
     visual_physics:
       'wants a minor status advantage, but the assigned visible trigger changes one set element and transfers that advantage',
   }[storyMode];
-  const mechanismShape = assignedMechanism === null ? fallbackMechanismShape : assignedMechanism;
+  const mechanismShape =
+    assignedKernel?.rule ??
+    (assignedMechanism === null ? fallbackMechanismShape : assignedMechanism);
   return JSON.stringify({
     channelNumber: 700_000_001,
     channelName: 'REPLACE WITH ORIGINAL CHANNEL',
@@ -261,13 +296,17 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
     ),
     storyMode,
     premise:
-      assignedMechanism === null
-        ? `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved and ${mechanismShape}, causing one concrete harmless consequence.`
-        : `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved, but ${mechanismShape}.`,
+      assignedKernel !== null
+        ? `At ${physicalSetting}, a placeholder ${formatRole} wants this: ${assignedKernel.protagonistGoal}, but an opposing role wants this: ${assignedKernel.opposingGoal}; the only rule is ${assignedKernel.rule}.`
+        : assignedMechanism === null
+          ? `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved and ${mechanismShape}, causing one concrete harmless consequence.`
+          : `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved, but ${mechanismShape}.`,
     tone: ['original-tone', 'original-tone'],
     continuityFact: 'Replace with one original fictional fact established by the scene.',
     endingBeat:
-      'Replace with one concrete comic decision or status reversal using only established elements.',
+      assignedKernel === null
+        ? 'Replace with one concrete comic decision or status reversal using only established elements.'
+        : `Replace with this earned decision in natural programme language: ${assignedKernel.earnedPayoff}.`,
   });
 }
 
@@ -493,39 +532,65 @@ ${repairInstruction}`,
           {
             storyMode: 'social_protocol',
             mechanism: 'Replace with a new exact etiquette trigger and harmless social duty.',
+            protagonistGoal: 'Replace with one ordinary action the protagonist wants to finish.',
+            opposingGoal: 'Replace with one incompatible ordinary action another role wants.',
+            earnedPayoff: 'Replace with one decision caused only by the etiquette rule.',
           },
           {
             storyMode: 'service_mismatch',
             mechanism: 'Replace with a new exact service outcome that obstructs one ordinary want.',
+            protagonistGoal: 'Replace with the customer’s specific ordinary emotional goal.',
+            opposingGoal: 'Replace with the worker’s incompatible correct service goal.',
+            earnedPayoff: 'Replace with one choice caused by accepting the delivered service.',
           },
           {
             storyMode: 'status_transfer',
             mechanism: 'Replace with a new visible criterion that transfers one narrow privilege.',
+            protagonistGoal: 'Replace with the protagonist’s specific use for that privilege.',
+            opposingGoal: 'Replace with the rival’s incompatible use for that privilege.',
+            earnedPayoff: 'Replace with the decision made by the rule’s final privilege holder.',
           },
           {
             storyMode: 'format_literalism',
             mechanism: 'Replace with a new television convention governing one mundane choice.',
+            protagonistGoal: 'Replace with one ordinary broadcast task the protagonist wants done.',
+            opposingGoal: 'Replace with one incompatible task another participant wants done.',
+            earnedPayoff: 'Replace with one decision forced by the named television convention.',
           },
           {
             storyMode: 'object_agency',
             mechanism: 'Replace with a new ordinary object demand tied to one practical benefit.',
+            protagonistGoal:
+              'Replace with the protagonist’s specific practical use for the object.',
+            opposingGoal: 'Replace with the object’s incompatible but harmless practical request.',
+            earnedPayoff: 'Replace with one compromise using only the object’s stated request.',
           },
           {
             storyMode: 'product_consequence',
             mechanism:
               'Replace with a new working product and one harmless relationship consequence.',
+            protagonistGoal: 'Replace with the demonstrator’s specific reason to use the product.',
+            opposingGoal: 'Replace with another role’s incompatible relationship goal.',
+            earnedPayoff: 'Replace with one choice caused only by the advertised product effect.',
           },
           {
             storyMode: 'semantic_contract',
             mechanism: 'Replace with a new exact phrase assigning one concrete obligation.',
+            protagonistGoal:
+              'Replace with the speaker’s specific ordinary reason to use the phrase.',
+            opposingGoal: 'Replace with another role’s incompatible ordinary goal.',
+            earnedPayoff: 'Replace with one decision caused only by the assigned obligation.',
           },
           {
             storyMode: 'visual_physics',
             mechanism: 'Replace with a new visible trigger, transformation and social consequence.',
+            protagonistGoal: 'Replace with one narrow status advantage the protagonist wants.',
+            opposingGoal: 'Replace with the rival’s incompatible use of the changed set element.',
+            earnedPayoff: 'Replace with one decision caused only by the visible transformation.',
           },
         ],
       }),
-      1_536,
+      3_072,
       {
         temperature: 1,
         topP: 0.97,
@@ -534,8 +599,9 @@ ${repairInstruction}`,
       },
       this.proposalEndpoint ?? undefined,
       `The JSON below demonstrates only the required array envelope and storyMode enum labels.
-Return the full requested number of seeds. Replace every placeholder mechanism with a different
-bare causal rule. Do not add programme titles, settings, characters, dialogue or endings:`,
+Return the full requested number of kernels. Replace every placeholder mechanism, protagonistGoal,
+opposingGoal and earnedPayoff with one internally consistent comedy kernel. Do not add programme
+titles, settings, named characters or dialogue:`,
     );
     return result.seeds;
   }
