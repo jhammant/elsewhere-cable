@@ -1372,7 +1372,7 @@ export function scriptPrompt(
 ): string {
   const pacingRange = {
     frantic: '8–12 very short lines with rapid reversals',
-    staccato: '8–12 clipped lines with abrupt turns',
+    staccato: '6–12 clipped lines with abrupt turns',
     conversational: '6–10 responsive lines',
     slow_burn: '6–8 lines with room for awkward pauses',
     interrupted: '4–8 lines cut short by one earned interruption',

@@ -98,7 +98,7 @@ export function critiquePremise(draft: GeneratedSegmentDraft): PremiseCritique {
   const pacing = draft.pacing ?? 'conversational';
   const pacingRanges = {
     frantic: [8, 12],
-    staccato: [8, 12],
+    staccato: [6, 12],
     conversational: [6, 10],
     slow_burn: [6, 8],
     interrupted: [4, 8],

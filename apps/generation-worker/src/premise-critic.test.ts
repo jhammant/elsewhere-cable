@@ -76,6 +76,33 @@ describe('premise critic', () => {
     );
   });
 
+  it('accepts a six-beat staccato scene without weakening the frantic minimum', () => {
+    const staccato = demoDraft(0);
+    staccato.pacing = 'staccato';
+    staccato.storyMode = 'social_protocol';
+    staccato.dialogue = Array.from({ length: 6 }, (_, index) => ({
+      ...staccato.dialogue[index % staccato.dialogue.length]!,
+      text: `This clipped reply changes the practical disagreement at beat ${index + 1}.`,
+      action: 'REACTION_NEUTRAL',
+    }));
+
+    expect(critiquePremise(staccato).reasons).not.toContain(
+      'staccato pacing requires 6–12 dialogue beats',
+    );
+
+    const tooShort = structuredClone(staccato);
+    tooShort.dialogue = tooShort.dialogue.slice(0, 5);
+    expect(critiquePremise(tooShort).reasons).toContain(
+      'staccato pacing requires 6–12 dialogue beats',
+    );
+
+    const frantic = structuredClone(staccato);
+    frantic.pacing = 'frantic';
+    expect(critiquePremise(frantic).reasons).toContain(
+      'frantic pacing requires 8–12 dialogue beats',
+    );
+  });
+
   it('rejects rule exposition and tragedy shortcuts', () => {
     const exposition = demoDraft(0);
     exposition.dialogue[0]!.text = 'The rule forces me to surrender my chair immediately.';
