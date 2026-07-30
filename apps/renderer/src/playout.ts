@@ -441,7 +441,6 @@ export class PlayoutEngine {
     for (const soundCue of soundCuesForSegment(segment)) {
       this.timer(() => {
         this.soundDesigner.play(soundCue);
-        this.visuals.performStoryCue(soundCue);
       }, soundCue.atMs);
     }
   }

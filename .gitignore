@@ -25,6 +25,7 @@ data/segments-*/
 artifacts/
 
 # Editors
+.codex/
 .idea/
 .vscode/*
 !.vscode/extensions.json
