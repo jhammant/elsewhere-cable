@@ -13,6 +13,7 @@ import {
   maximumPlausibleSpeechDurationMs,
   speechAudioQualityIssue,
 } from '../../apps/generation-worker/src/providers.js';
+import { legacyPackageQualityIssues } from '../../apps/generation-worker/src/package-quality.js';
 import {
   diversifyRunway,
   type RunwayDescriptor,
@@ -121,7 +122,7 @@ const desiredSourceCount = Math.min(candidateSourcePool.length, count);
 const sourcePool: typeof candidates = [];
 for (const source of candidateSourcePool) {
   const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
-  let eligible = true;
+  let eligible = legacyPackageQualityIssues(source.segment).length === 0;
   for (const event of source.segment.events) {
     if (event.type !== 'speech.play') {
       continue;
