@@ -2035,6 +2035,13 @@ ${liveEditorialCorrections.map((correction) => `- ${correction}`).join('\n')}
 `;
   const retryCorrections = [
     rejectionReasons.some((reason) =>
+      /\b(?:unapproved automatic transformation|renderer cannot perform|narrates? an unapproved)\b/iu.test(
+        reason,
+      ),
+    )
+      ? 'Playable-action correction: remove every claim that a prop, set or body moves, folds, transforms or changes on its own. Characters may physically handle the established ordinary object only through their supported action fields; spoken lines must stay focused on the social negotiation.'
+      : null,
+    rejectionReasons.some((reason) =>
       /\b(?:contradict|inconsisten|new|second|unearned|unrelated)\w*\b.{0,80}\b(?:mechanism|rule|trigger|condition|power)\b|\b(?:mechanism|rule|trigger|condition|power)\b.{0,80}\b(?:contradict|inconsisten|new|second|unearned|unrelated)\w*\b/iu.test(
         reason,
       ),

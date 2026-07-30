@@ -736,9 +736,11 @@ describe('generation prompts', () => {
       'editorial critic: the scene fails to escalate or change leverage',
       'editorial critic: one speaker gives a meta system instruction instead of natural dialogue',
       'editorial critic: the ending adds an unearned repetition count',
+      'spoken dialogue narrates an unapproved automatic transformation the renderer cannot perform',
     ]);
 
     expect(prompt).toContain('Previous-review corrections');
+    expect(prompt).toContain('Playable-action correction');
     expect(prompt).toContain('Single-mechanism correction');
     expect(prompt).toContain('Escalation correction');
     expect(prompt).toContain('Natural-dialogue correction');
