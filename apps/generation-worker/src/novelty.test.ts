@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
 import {
   conceptNoveltyIssues,
+  dialogueNoveltyIssues,
   noveltyIssues,
   recordFromDraft,
   segmentNoveltyIssues,
@@ -67,6 +68,23 @@ describe('creative novelty', () => {
     });
 
     expect(noveltyIssues(fresh, [recordFromDraft(previous)])).toEqual([]);
+  });
+
+  it('does not mistake generic short reactions for repeated jokes', () => {
+    const history = [
+      {
+        title: 'Previous Programme',
+        premise: 'A previous premise.',
+        dialogue: ['No.', 'Yes!', 'Fine then.', 'Normality will not resume.'],
+      },
+    ];
+
+    expect(
+      dialogueNoveltyIssues([{ text: 'No!' }, { text: 'Yes.' }, { text: 'Fine, then.' }], history),
+    ).toEqual([]);
+    expect(dialogueNoveltyIssues([{ text: 'Normality will not resume!' }], history)).toEqual([
+      'dialogue resembles "Normality will not resume."',
+    ]);
   });
 
   it('rejects the same joke mechanism moved into a different setting', () => {

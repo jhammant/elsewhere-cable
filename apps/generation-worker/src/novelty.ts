@@ -206,10 +206,12 @@ export function dialogueNoveltyIssues(
 
   for (const previous of history) {
     for (const line of lines) {
+      const lineWordCount = line.split(' ').filter(Boolean).length;
       for (const previousLine of previous.dialogue) {
+        const normalisedPreviousLine = normalise(previousLine);
         if (
-          line === normalise(previousLine) ||
-          (line.split(' ').length >= 6 && similarity(line, previousLine) >= 0.76)
+          (lineWordCount >= 4 && line === normalisedPreviousLine) ||
+          (lineWordCount >= 6 && similarity(line, normalisedPreviousLine) >= 0.76)
         ) {
           issues.push(`dialogue resembles "${previousLine}"`);
         }
