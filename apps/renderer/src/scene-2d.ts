@@ -1,18 +1,36 @@
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import type { PlayoutVisuals } from './playout.js';
-import { resolveProductionDesign } from './production-design.js';
+import { resolveProductionDesign, type CastArchetype } from './production-design.js';
 import { flatVisualMedia, isFlatVisualMedium, type FlatVisualMedium } from './style-grammar.js';
 
 type CameraName = 'CAMERA_WIDE' | 'CAMERA_HOST' | 'CAMERA_GUEST';
 type CharacterAction = Parameters<PlayoutVisuals['performAction']>[1];
+type StructuralCastArchetype = Exclude<CastArchetype, 'mixed'>;
+type CharacterSilhouette =
+  'person' | 'faceted_alien' | 'household_object' | 'celestial_body' | 'jointed_puppet';
 
 interface DrawnCharacter {
   id: string;
   name: string;
   x: number;
+  index: number;
   seed: number;
+  design: Character2DDesign;
   action: CharacterAction;
   actionUntil: number;
+}
+
+export interface Character2DDesign {
+  archetype: StructuralCastArchetype;
+  silhouette: CharacterSilhouette;
+  scaleX: number;
+  scaleY: number;
+  baselineOffset: number;
+  headScale: number;
+  bodyScale: number;
+  eyeCount: number;
+  variant: number;
+  fingerprint: string;
 }
 
 export const twoDimensionalMedia = flatVisualMedia;
@@ -28,6 +46,92 @@ function stableHash(value: string): number {
     hash = Math.imul(hash, 16_777_619);
   }
   return hash >>> 0;
+}
+
+const structuralCastArchetypes: StructuralCastArchetype[] = [
+  'humanoid',
+  'geometric_aliens',
+  'talking_objects',
+  'celestial',
+  'paper_puppets',
+];
+
+export function resolve2DCharacterDesign(
+  castArchetype: CastArchetype,
+  seed: number,
+  index: number,
+): Character2DDesign {
+  const archetype =
+    castArchetype === 'mixed'
+      ? structuralCastArchetypes[(seed + index * 3) % structuralCastArchetypes.length]!
+      : castArchetype;
+  const variant = (seed + index * 11) % 7;
+  const variation = ((seed >>> 7) % 19) / 100;
+
+  const base =
+    archetype === 'geometric_aliens'
+      ? {
+          silhouette: 'faceted_alien' as const,
+          scaleX: 0.76 + variation,
+          scaleY: 1.07 + variation,
+          baselineOffset: -8 - variant * 2,
+          headScale: 1.28 + variation,
+          bodyScale: 0.7 + variation,
+          eyeCount: 1 + (variant % 4),
+        }
+      : archetype === 'talking_objects'
+        ? {
+            silhouette: 'household_object' as const,
+            scaleX: 1.02 + variation,
+            scaleY: 0.78 + variation,
+            baselineOffset: 22 + (variant % 3) * 9,
+            headScale: 0,
+            bodyScale: 1.18 + variation,
+            eyeCount: 2,
+          }
+        : archetype === 'celestial'
+          ? {
+              silhouette: 'celestial_body' as const,
+              scaleX: 1.12 + variation,
+              scaleY: 1.12 + variation,
+              baselineOffset: -40 - (variant % 3) * 16,
+              headScale: 1.5 + variation,
+              bodyScale: 0.48 + variation,
+              eyeCount: variant % 5 === 0 ? 1 : 2,
+            }
+          : archetype === 'paper_puppets'
+            ? {
+                silhouette: 'jointed_puppet' as const,
+                scaleX: 0.68 + variation,
+                scaleY: 1.04 + variation,
+                baselineOffset: -2,
+                headScale: 0.88 + variation,
+                bodyScale: 0.72 + variation,
+                eyeCount: 2,
+              }
+            : {
+                silhouette: 'person' as const,
+                scaleX: 0.88 + variation,
+                scaleY: 0.9 + variation,
+                baselineOffset: (variant % 3) * 8,
+                headScale: 0.92 + variation,
+                bodyScale: 0.9 + variation,
+                eyeCount: 2,
+              };
+
+  return {
+    archetype,
+    ...base,
+    variant,
+    fingerprint: [
+      archetype,
+      base.silhouette,
+      variant,
+      base.eyeCount,
+      base.scaleX.toFixed(2),
+      base.scaleY.toFixed(2),
+    ].join(':'),
+  };
 }
 
 function colour(seed: number, saturation = 58, lightness = 54): string {
@@ -50,6 +154,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private readonly context: CanvasRenderingContext2D;
   private segment: SegmentPackage | null = null;
   private medium: FlatVisualMedium = 'paper_cutout';
+  private castArchetype: CastArchetype = 'mixed';
   private characters: DrawnCharacter[] = [];
   private activeSpeaker = '';
   private activeSpeakerUntil = 0;
@@ -68,8 +173,10 @@ export class Broadcast2DScene implements PlayoutVisuals {
 
   loadSegment(segment: SegmentPackage): void {
     this.segment = segment;
-    const visualMedium = resolveProductionDesign(segment).visualMedium;
+    const productionDesign = resolveProductionDesign(segment);
+    const visualMedium = productionDesign.visualMedium;
     this.medium = isFlatVisualMedium(visualMedium) ? visualMedium : 'paper_cutout';
+    this.castArchetype = productionDesign.castArchetype;
     this.startedAt = performance.now();
     const speakers = new Map<string, string>();
     for (const event of segment.events) {
@@ -78,15 +185,35 @@ export class Broadcast2DScene implements PlayoutVisuals {
       }
     }
     const entries = [...speakers.entries()].slice(0, 6);
-    const spacing = 760 / Math.max(1, entries.length - 1);
+    const fullFrame = this.usesFullFrame(segment);
+    const stageLeft = fullFrame ? 145 : 120;
+    const stageRight = fullFrame ? 1_135 : 815;
+    const spacing = (stageRight - stageLeft) / Math.max(1, entries.length - 1);
     this.characters = entries.map(([id, name], index) => ({
       id,
       name,
-      x: entries.length === 1 ? 640 : 260 + spacing * index,
+      x:
+        entries.length === 1
+          ? (stageLeft + stageRight) / 2
+          : stageLeft +
+            spacing * index +
+            (((stableHash(`${segment.segmentId}:${id}:layout`) >>> 4) % 37) - 18),
+      index,
       seed: stableHash(`${segment.programme.id}:${id}`),
+      design: resolve2DCharacterDesign(
+        productionDesign.castArchetype,
+        stableHash(`${segment.programme.id}:${id}`),
+        index,
+      ),
       action: 'IDLE',
       actionUntil: 0,
     }));
+    if (this.characters.length >= 5) {
+      for (const character of this.characters) {
+        character.design.scaleX *= 0.72;
+        character.design.scaleY *= 0.78;
+      }
+    }
     this.camera = 'CAMERA_WIDE';
     this.render();
   }
@@ -119,6 +246,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const context = this.context;
     context.save();
     this.drawBackdrop(segment, elapsed);
+    this.drawSetDressing(segment, elapsed);
     this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed);
 
     const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
@@ -133,6 +261,16 @@ export class Broadcast2DScene implements PlayoutVisuals {
     });
     this.drawMediumTexture(elapsed);
     context.restore();
+  }
+
+  private usesFullFrame(segment: SegmentPackage): boolean {
+    return ['news', 'shopping', 'advert', 'sitcom', 'ident', 'emergency'].includes(
+      segment.programme.format,
+    );
+  }
+
+  private stageCentre(): number {
+    return this.segment !== null && this.usesFullFrame(this.segment) ? 640 : 465;
   }
 
   private drawBackdrop(segment: SegmentPackage, elapsed: number): void {
@@ -444,6 +582,163 @@ export class Broadcast2DScene implements PlayoutVisuals {
     }
   }
 
+  private drawSetDressing(segment: SegmentPackage, elapsed: number): void {
+    const context = this.context;
+    const premise = segment.programme.premise.toLowerCase();
+    const seed = stableHash(`${segment.channel.id}:${segment.programme.id}:set`);
+    const centre = this.stageCentre();
+    const stageWidth = this.usesFullFrame(segment) ? 1_040 : 760;
+    const left = centre - stageWidth / 2;
+    const right = centre + stageWidth / 2;
+    const pixel = this.medium === 'pixel_broadcast';
+    const unit = pixel ? 16 : 1;
+    const snap = (value: number): number => (pixel ? Math.round(value / unit) * unit : value);
+
+    context.save();
+    context.globalAlpha =
+      this.medium === 'shadow_theatre' ? 0.88 : this.medium === 'archive_film' ? 0.52 : 0.72;
+    context.strokeStyle =
+      this.medium === 'ink_monochrome'
+        ? '#171612'
+        : this.medium === 'shadow_theatre'
+          ? '#21130f'
+          : this.medium === 'blueprint_schematic'
+            ? '#d8f4ff'
+            : colour(seed >>> 4, 42, 25);
+    context.fillStyle =
+      this.medium === 'shadow_theatre'
+        ? '#21130f'
+        : this.medium === 'ink_monochrome'
+          ? '#d9d2bf'
+          : colour(seed, 44, 46);
+    context.lineWidth = pixel ? 8 : this.medium === 'ink_monochrome' ? 7 : 4;
+
+    if (/\b(?:cook|kitchen|recipe|ingredient|meal|food|restaurant)\b/u.test(premise)) {
+      context.fillRect(snap(left + 20), 430, snap(stageWidth - 40), 110);
+      context.strokeRect(snap(left + 20), 430, snap(stageWidth - 40), 110);
+      for (let index = 0; index < 4; index += 1) {
+        const x = snap(left + 85 + index * (stageWidth / 4));
+        context.beginPath();
+        context.arc(x, 420 - (index % 2) * 22, 35 + (index % 3) * 8, Math.PI, 0);
+        context.fill();
+        context.stroke();
+        context.strokeRect(x - 3, 184 + (index % 2) * 30, 6, 155);
+      }
+      context.fillStyle = colour(seed + 87, 64, 62);
+      for (let index = 0; index < 6; index += 1) {
+        context.fillRect(snap(left + 32 + index * 58), 390 - (index % 3) * 20, 34, 40);
+      }
+    } else if (/\b(?:sand|desert|dune|dust|oasis)\b/u.test(premise)) {
+      for (let index = 0; index < 4; index += 1) {
+        context.beginPath();
+        context.ellipse(
+          snap(left + 100 + index * (stageWidth / 3.6)),
+          468 - (index % 2) * 42,
+          180,
+          78,
+          -0.12 + index * 0.08,
+          Math.PI,
+          0,
+        );
+        context.fill();
+      }
+      context.fillRect(snap(left + 42), 338, 20, 128);
+      context.fillRect(snap(left + 16), 370, 74, 17);
+      context.fillStyle = colour(seed + 109, 68, 65);
+      context.beginPath();
+      context.arc(snap(right - 100), 130, 62, 0, Math.PI * 2);
+      context.fill();
+    } else if (
+      /\b(?:news|report|headline|election|forecast|weather|bulletin)\b/u.test(premise) ||
+      segment.programme.format === 'news'
+    ) {
+      for (let index = 0; index < 3; index += 1) {
+        const x = snap(left + 34 + index * (stageWidth / 3));
+        context.fillRect(x, 96 + (index % 2) * 30, snap(stageWidth / 3 - 48), 132);
+        context.strokeRect(x, 96 + (index % 2) * 30, snap(stageWidth / 3 - 48), 132);
+        context.fillStyle = colour(seed + index * 111, 58, 60);
+        context.fillRect(x + 18, 122 + (index % 2) * 30, snap(stageWidth / 3 - 84), 18);
+        context.fillRect(x + 18, 158 + (index % 2) * 30, snap(stageWidth / 5), 42);
+        context.fillStyle = colour(seed, 44, 46);
+      }
+      context.fillRect(snap(left + 10), 456, snap(stageWidth - 20), 92);
+      context.strokeRect(snap(left + 10), 456, snap(stageWidth - 20), 92);
+    } else if (
+      /\b(?:shop|sale|buy|product|customer|subscription|price)\b/u.test(premise) ||
+      segment.programme.format === 'shopping' ||
+      segment.programme.format === 'advert'
+    ) {
+      for (let index = 0; index < 4; index += 1) {
+        const width = 88 + (index % 2) * 34;
+        const x = snap(left + 80 + index * (stageWidth / 4));
+        const top = 260 - (index % 3) * 46;
+        context.fillRect(x - width / 2, top, width, 220 - top + 250);
+        context.strokeRect(x - width / 2, top, width, 220 - top + 250);
+        context.fillStyle = colour(seed + index * 91, 74, 62);
+        context.beginPath();
+        context.arc(x, top - 26, 34 + (index % 2) * 10, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = colour(seed, 44, 46);
+      }
+    } else if (
+      /\b(?:municipal|appeal|court|bureau|permit|council|official|office)\b/u.test(premise) ||
+      segment.programme.format === 'public_access'
+    ) {
+      context.fillRect(snap(left + 20), 455, snap(stageWidth - 40), 92);
+      context.strokeRect(snap(left + 20), 455, snap(stageWidth - 40), 92);
+      for (let stack = 0; stack < 4; stack += 1) {
+        const x = snap(left + 52 + stack * (stageWidth / 4.2));
+        const count = 2 + ((seed >>> stack) % 4);
+        for (let page = 0; page < count; page += 1) {
+          context.fillStyle =
+            page % 2 === 0 ? colour(seed + stack * 71, 34, 70) : colour(seed + 180, 48, 58);
+          context.fillRect(x + page * 5, 430 - page * 22, 96 + stack * 8, 18);
+          context.strokeRect(x + page * 5, 430 - page * 22, 96 + stack * 8, 18);
+        }
+      }
+      context.fillStyle = colour(seed + 203, 52, 54);
+      context.fillRect(snap(right - 154), 92, 128, 214);
+      context.strokeRect(snap(right - 154), 92, 128, 214);
+    } else {
+      const motif = seed % 3;
+      for (let index = 0; index < 5; index += 1) {
+        const x = snap(left + 54 + index * (stageWidth / 5.2));
+        if (motif === 0) {
+          context.beginPath();
+          context.arc(x, 176 + (index % 2) * 62, 30 + (index % 3) * 16, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+          context.strokeRect(x - 3, 0, 6, 126 + (index % 2) * 42);
+        } else if (motif === 1) {
+          context.fillRect(x - 46, 104 + (index % 2) * 54, 92, 138);
+          context.strokeRect(x - 46, 104 + (index % 2) * 54, 92, 138);
+        } else {
+          context.beginPath();
+          context.moveTo(x, 78 + (index % 2) * 40);
+          context.lineTo(x + 58, 248);
+          context.lineTo(x - 58, 248);
+          context.closePath();
+          context.fill();
+          context.stroke();
+        }
+      }
+    }
+
+    if (this.castArchetype === 'celestial') {
+      context.fillStyle = this.medium === 'shadow_theatre' ? '#21130f' : colour(seed + 241, 64, 72);
+      for (let index = 0; index < 9; index += 1) {
+        const x = snap(left + 30 + ((seed + index * 157) % Math.max(1, stageWidth - 60)));
+        const y = 62 + ((seed + index * 83) % 190);
+        context.beginPath();
+        context.arc(x, y, 4 + (index % 3) * 3, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+
+    context.globalAlpha *= 0.35 + Math.sin(elapsed * 0.18 + seed) * 0.025;
+    context.restore();
+  }
+
   private drawPremiseProp(premise: string, elapsed: number): void {
     const context = this.context;
     context.save();
@@ -451,8 +746,9 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const shadow = this.medium === 'shadow_theatre';
     const thermal = this.medium === 'thermal_camera';
     const signal = this.medium === 'signal_corruption';
+    const centre = this.stageCentre();
     context.translate(
-      pixel ? Math.round(640 / 16) * 16 : 640,
+      pixel ? Math.round(centre / 16) * 16 : centre,
       pixel
         ? Math.round((370 + Math.sin(elapsed * 3) * 4) / 16) * 16
         : 370 + Math.sin(elapsed * 0.8) * 3,
@@ -578,12 +874,13 @@ export class Broadcast2DScene implements PlayoutVisuals {
         : this.medium === 'collage_zine'
           ? Math.round(Math.sin(elapsed * 7 + character.seed)) * 2
           : 0;
+    const design = character.design;
     const scale = closeUp ? 1.28 : 1;
-    const x = closeUp ? 640 : character.x;
-    const y = closeUp ? 420 : 500;
+    const x = closeUp ? this.stageCentre() : character.x;
+    const y = (closeUp ? 420 : 500) + design.baselineOffset;
     context.save();
     context.translate(x + jitter, y);
-    context.scale(scale, scale);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     if (character.action === 'REACTION_SHOCKED' && acting) {
       context.scale(1.08, 1.08);
     }
@@ -595,9 +892,52 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.lineWidth = ink ? 8 : 4;
     context.strokeStyle = '#172027';
     context.fillStyle = ink ? '#f2eddf' : colour(character.seed, 58, 53);
-    const bodyWidth = 120 + (character.seed % 55);
+    const bodyWidth = (120 + (character.seed % 55)) * design.bodyScale;
     context.beginPath();
-    if (this.medium === 'paper_cutout') {
+    if (design.silhouette === 'household_object') {
+      if (design.variant % 3 === 0) {
+        context.roundRect(-bodyWidth / 2, -210, bodyWidth, 300, 18);
+      } else if (design.variant % 3 === 1) {
+        context.moveTo(-bodyWidth * 0.62, 88);
+        context.lineTo(-bodyWidth * 0.48, -190);
+        context.lineTo(bodyWidth * 0.48, -190);
+        context.lineTo(bodyWidth * 0.62, 88);
+        context.closePath();
+      } else {
+        context.ellipse(0, -55, bodyWidth * 0.62, 150, 0, 0, Math.PI * 2);
+      }
+    } else if (design.silhouette === 'celestial_body') {
+      if (design.variant % 3 === 0) {
+        const points = 18;
+        const radius = 126;
+        for (let point = 0; point < points; point += 1) {
+          const angle = (point / points) * Math.PI * 2;
+          const distance = point % 2 === 0 ? radius * 1.34 : radius;
+          const px = Math.cos(angle) * distance;
+          const py = -155 + Math.sin(angle) * distance;
+          if (point === 0) context.moveTo(px, py);
+          else context.lineTo(px, py);
+        }
+        context.closePath();
+      } else if (design.variant % 3 === 1) {
+        context.arc(0, -155, 138, 0, Math.PI * 2);
+      } else {
+        context.arc(-70, -145, 92, Math.PI * 0.55, Math.PI * 1.75);
+        context.arc(0, -205, 102, Math.PI * 0.95, Math.PI * 1.95);
+        context.arc(80, -142, 88, Math.PI * 1.2, Math.PI * 0.45);
+        context.quadraticCurveTo(0, 36, -70, -92);
+        context.closePath();
+      }
+    } else if (design.silhouette === 'faceted_alien') {
+      context.moveTo(-bodyWidth * 0.42, 90);
+      context.lineTo(-bodyWidth * 0.64, -55);
+      context.lineTo(-bodyWidth * 0.3, -140);
+      context.lineTo(0, -170);
+      context.lineTo(bodyWidth * 0.3, -140);
+      context.lineTo(bodyWidth * 0.64, -55);
+      context.lineTo(bodyWidth * 0.42, 90);
+      context.closePath();
+    } else if (this.medium === 'paper_cutout' || design.silhouette === 'jointed_puppet') {
       context.moveTo(-bodyWidth / 2, 90);
       context.lineTo(-bodyWidth * 0.42, -120);
       context.lineTo(bodyWidth * 0.42, -120);
@@ -623,34 +963,97 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.fill();
     context.stroke();
 
-    const headShape = character.seed % 3;
-    context.fillStyle = ink ? '#f2eddf' : colour(character.seed >>> 5, 38, 68);
-    context.beginPath();
-    if (headShape === 0) {
-      context.arc(0, -190, 84, 0, Math.PI * 2);
-    } else if (headShape === 1) {
-      context.roundRect(-78, -272, 156, 156, 18);
-    } else {
-      context.moveTo(0, -292);
-      context.lineTo(92, -172);
-      context.lineTo(0, -112);
-      context.lineTo(-92, -172);
-      context.closePath();
+    const faceY =
+      design.silhouette === 'household_object'
+        ? -85
+        : design.silhouette === 'celestial_body'
+          ? -155
+          : -205;
+    if (design.silhouette !== 'household_object' && design.silhouette !== 'celestial_body') {
+      const headShape =
+        design.silhouette === 'faceted_alien' ? design.variant % 3 : character.seed % 3;
+      const headRadius = 84 * design.headScale;
+      context.fillStyle = ink ? '#f2eddf' : colour(character.seed >>> 5, 38, 68);
+      context.beginPath();
+      if (headShape === 0) {
+        context.arc(0, -190, headRadius, 0, Math.PI * 2);
+      } else if (headShape === 1) {
+        context.roundRect(
+          -headRadius,
+          -190 - headRadius,
+          headRadius * 2,
+          headRadius * 2,
+          design.silhouette === 'jointed_puppet' ? 2 : 18,
+        );
+      } else {
+        context.moveTo(0, -190 - headRadius * 1.18);
+        context.lineTo(headRadius * 1.08, -190);
+        context.lineTo(0, -190 + headRadius * 0.92);
+        context.lineTo(-headRadius * 1.08, -190);
+        context.closePath();
+      }
+      context.fill();
+      context.stroke();
     }
-    context.fill();
-    context.stroke();
+
+    if (design.silhouette === 'household_object') {
+      context.strokeStyle = '#172027';
+      context.lineWidth = 7;
+      if (design.variant % 3 === 0) {
+        context.beginPath();
+        context.arc(bodyWidth / 2 + 22, -86, 34, -Math.PI / 2, Math.PI / 2);
+        context.stroke();
+      } else if (design.variant % 3 === 1) {
+        context.strokeRect(-bodyWidth * 0.3, -184, bodyWidth * 0.6, 28);
+      } else {
+        context.beginPath();
+        context.moveTo(-bodyWidth * 0.3, -196);
+        context.lineTo(0, -246);
+        context.lineTo(bodyWidth * 0.3, -196);
+        context.stroke();
+      }
+    } else if (design.silhouette === 'faceted_alien') {
+      context.strokeStyle = '#172027';
+      context.lineWidth = 7;
+      context.beginPath();
+      context.moveTo(0, -305);
+      context.lineTo((design.variant % 2 === 0 ? -1 : 1) * 44, -354);
+      context.stroke();
+      context.beginPath();
+      context.arc((design.variant % 2 === 0 ? -1 : 1) * 44, -354, 12, 0, Math.PI * 2);
+      context.fillStyle = colour(character.seed + 153, 72, 64);
+      context.fill();
+    } else if (design.silhouette === 'celestial_body') {
+      context.strokeStyle = '#172027';
+      context.lineWidth = 11;
+      if (design.variant % 3 === 1) {
+        context.beginPath();
+        context.ellipse(0, -155, 196, 54, -0.18, 0, Math.PI * 2);
+        context.stroke();
+        context.fillStyle = colour(character.seed + 191, 72, 68);
+        context.beginPath();
+        context.arc(174, -198, 18, 0, Math.PI * 2);
+        context.fill();
+      } else if (design.variant % 3 === 2) {
+        context.beginPath();
+        context.moveTo(-112, -48);
+        context.quadraticCurveTo(-54, -12, 0, -46);
+        context.quadraticCurveTo(56, -10, 116, -50);
+        context.stroke();
+      }
+    }
 
     context.fillStyle = '#172027';
-    const eyeCount = character.seed % 7 === 0 ? 3 : character.seed % 5 === 0 ? 1 : 2;
+    const eyeCount = design.eyeCount;
     for (let index = 0; index < eyeCount; index += 1) {
       const eyeX = eyeCount === 1 ? 0 : (index - (eyeCount - 1) / 2) * 42;
       context.beginPath();
-      context.arc(eyeX, -205 - (eyeCount === 3 && index === 1 ? 24 : 0), 8, 0, Math.PI * 2);
+      context.arc(eyeX, faceY - (eyeCount === 3 && index === 1 ? 24 : 0), 8, 0, Math.PI * 2);
       context.fill();
     }
 
     const mouthHeight = speaking ? 10 + Math.abs(Math.sin(elapsed * 13)) * 24 : 5;
-    context.fillRect(-27, -158 - mouthHeight / 2, 54, mouthHeight);
+    context.fillRect(-27, faceY + 44 - mouthHeight / 2, 54, mouthHeight);
 
     context.strokeStyle = ink ? '#172027' : colour(character.seed, 58, 43);
     context.lineWidth = 20;
@@ -664,6 +1067,14 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.moveTo(bodyWidth / 2 - 10, -75);
     context.lineTo(bodyWidth / 2 + 45, acting ? -10 : 15);
     context.stroke();
+    if (design.silhouette === 'jointed_puppet') {
+      context.fillStyle = '#172027';
+      for (const jointX of [-bodyWidth / 2 - 12, bodyWidth / 2 + 12]) {
+        context.beginPath();
+        context.arc(jointX, -70, 11, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
     context.restore();
   }
 
@@ -675,29 +1086,143 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
+    const design = character.design;
     const scale = closeUp ? 1.45 : 1;
-    const x = closeUp ? 640 : Math.round(character.x / 16) * 16;
-    const y = closeUp ? 450 : 512;
+    const x = closeUp ? this.stageCentre() : Math.round(character.x / 16) * 16;
+    const y = (closeUp ? 450 : 512) + design.baselineOffset;
     const step = Math.floor(elapsed * 6 + character.seed) % 2;
     context.save();
     context.translate(x, y + step * 5);
-    context.scale(scale, scale);
-    context.fillStyle = '#10182f';
-    context.fillRect(-66, -260, 132, 92);
-    context.fillStyle = colour(character.seed, 70, 58);
-    context.fillRect(-82, -162, 164, 188);
-    context.fillStyle = colour(character.seed >>> 4, 70, 72);
-    context.fillRect(-58, -244, 116, 76);
-    context.fillStyle = '#10182f';
-    context.fillRect(-34, -220, 16, 16);
-    context.fillRect(18, -220, 16, 16);
-    context.fillRect(-30, -190, 60, speaking ? 24 : 8);
-    const leftReach = character.action === 'POINT_AT' && acting ? -150 : -110;
-    context.fillStyle = colour(character.seed, 70, 48);
-    context.fillRect(leftReach, -132, Math.abs(leftReach) - 70, 24);
-    context.fillRect(82, -132, 42, 24);
-    context.fillRect(-64, 26, 42, 64);
-    context.fillRect(22, 26, 42, 64);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
+    const dark = '#10182f';
+    const body = colour(character.seed, 70, 58);
+    const face = colour(character.seed >>> 4, 70, 72);
+    const accent = colour(character.seed + 137, 76, 62);
+
+    if (design.silhouette === 'household_object') {
+      context.fillStyle = body;
+      if (design.variant % 3 === 0) {
+        context.fillRect(-96, -238, 192, 264);
+        context.fillStyle = accent;
+        context.fillRect(-64, -270, 128, 32);
+        context.fillRect(96, -186, 32, 112);
+        context.fillRect(128, -154, 32, 48);
+      } else if (design.variant % 3 === 1) {
+        context.fillRect(-112, -206, 224, 208);
+        context.fillStyle = accent;
+        context.fillRect(-80, -254, 160, 48);
+        context.fillRect(-64, -286, 128, 32);
+      } else {
+        context.fillRect(-96, -174, 192, 176);
+        context.fillStyle = accent;
+        context.fillRect(-128, -206, 256, 48);
+        context.fillRect(-48, -270, 96, 64);
+      }
+      context.fillStyle = dark;
+      context.fillRect(-48, -154, 16, 16);
+      context.fillRect(32, -154, 16, 16);
+      context.fillRect(-40, -112, 80, speaking ? 32 : 8);
+      context.fillStyle = accent;
+      context.fillRect(-70, 2, 44, 48);
+      context.fillRect(26, 2, 44, 48);
+    } else if (design.silhouette === 'celestial_body') {
+      context.fillStyle = accent;
+      for (const [rayX, rayY, width, height] of [
+        [-24, -330, 48, 64],
+        [-24, 4, 48, 64],
+        [-192, -174, 64, 48],
+        [128, -174, 64, 48],
+        [-144, -286, 48, 48],
+        [96, -286, 48, 48],
+        [-144, -54, 48, 48],
+        [96, -54, 48, 48],
+      ] as const) {
+        context.fillRect(rayX, rayY, width, height);
+      }
+      context.fillStyle = body;
+      context.fillRect(-128, -250, 256, 160);
+      context.fillRect(-96, -282, 192, 224);
+      context.fillStyle = face;
+      context.fillRect(-80, -266, 160, 192);
+      context.fillStyle = dark;
+      const eyeOffset = design.eyeCount === 1 ? 0 : 42;
+      context.fillRect(-eyeOffset - 8, -194, 16, 16);
+      if (design.eyeCount > 1) context.fillRect(eyeOffset - 8, -194, 16, 16);
+      context.fillRect(-40, -146, 80, speaking ? 32 : 8);
+    } else if (design.silhouette === 'faceted_alien') {
+      context.fillStyle = body;
+      if (design.variant % 3 === 0) {
+        context.fillRect(-70, -142, 140, 168);
+        context.fillRect(-48, 26, 32, 64);
+        context.fillRect(16, 26, 32, 64);
+        context.fillStyle = face;
+        context.fillRect(-112, -254, 224, 96);
+        context.fillRect(-80, -286, 160, 160);
+      } else if (design.variant % 3 === 1) {
+        context.fillRect(-52, -174, 104, 216);
+        context.fillRect(-32, 42, 24, 64);
+        context.fillRect(8, 42, 24, 64);
+        context.fillStyle = face;
+        context.fillRect(-64, -302, 128, 144);
+        context.fillRect(-96, -270, 192, 80);
+      } else {
+        context.fillRect(-116, -126, 232, 152);
+        context.fillRect(-82, 26, 42, 54);
+        context.fillRect(40, 26, 42, 54);
+        context.fillStyle = face;
+        context.fillRect(-144, -246, 288, 80);
+        context.fillRect(-96, -278, 192, 144);
+      }
+      context.fillStyle = accent;
+      context.fillRect(-8, -334, 16, 48);
+      context.fillRect(design.variant % 2 === 0 ? -24 : 8, -350, 32, 16);
+      context.fillStyle = dark;
+      for (let eye = 0; eye < design.eyeCount; eye += 1) {
+        const eyeX = (eye - (design.eyeCount - 1) / 2) * 38;
+        context.fillRect(Math.round(eyeX / 8) * 8 - 8, -220, 16, 24);
+      }
+      context.fillRect(-32, -174, 64, speaking ? 24 : 8);
+    } else if (design.silhouette === 'jointed_puppet') {
+      context.fillStyle = body;
+      context.fillRect(-54, -164, 108, 190);
+      context.fillStyle = face;
+      context.fillRect(-72, -278, 144, 112);
+      context.fillStyle = dark;
+      context.fillRect(-40, -238, 16, 16);
+      context.fillRect(24, -238, 16, 16);
+      context.fillRect(-32, -198, 64, speaking ? 24 : 8);
+      context.fillStyle = accent;
+      context.fillRect(-102, -126, 32, 32);
+      context.fillRect(70, -126, 32, 32);
+      context.fillRect(-118, -94, 24, 134);
+      context.fillRect(94, -94, 24, 134);
+      context.fillRect(-42, 26, 24, 80);
+      context.fillRect(18, 26, 24, 80);
+      context.fillStyle = dark;
+      context.fillRect(-90, -114, 12, 12);
+      context.fillRect(78, -114, 12, 12);
+    } else {
+      context.fillStyle = dark;
+      context.fillRect(-66, -260, 132, 92);
+      context.fillStyle = body;
+      context.fillRect(-82, -162, 164, 188);
+      context.fillStyle = face;
+      context.fillRect(-58, -244, 116, 76);
+      context.fillStyle = dark;
+      context.fillRect(-34, -220, 16, 16);
+      context.fillRect(18, -220, 16, 16);
+      context.fillRect(-30, -190, 60, speaking ? 24 : 8);
+      context.fillStyle = accent;
+      context.fillRect(-64, 26, 42, 64);
+      context.fillRect(22, 26, 42, 64);
+    }
+
+    if (design.silhouette !== 'celestial_body') {
+      const leftReach = character.action === 'POINT_AT' && acting ? -150 : -110;
+      context.fillStyle = colour(character.seed, 70, 48);
+      context.fillRect(leftReach, -132, Math.max(24, Math.abs(leftReach) - 70), 24);
+      context.fillRect(82, -132, 42, 24);
+    }
     context.restore();
   }
 
@@ -709,18 +1234,29 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
+    const design = character.design;
     const scale = closeUp ? 1.3 : 1;
-    const x = closeUp ? 640 : character.x;
+    const x = closeUp ? this.stageCentre() : character.x;
     const sway = Math.sin(elapsed * 1.7 + character.seed) * 0.035;
     context.save();
-    context.translate(x, closeUp ? 445 : 505);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 445 : 505) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     context.rotate(sway);
     context.fillStyle = '#1c110e';
     context.strokeStyle = '#1c110e';
     context.lineWidth = 18;
     context.beginPath();
-    context.arc(0, -210, 70, 0, Math.PI * 2);
+    if (design.silhouette === 'faceted_alien') {
+      context.moveTo(0, -300);
+      context.lineTo(94, -210);
+      context.lineTo(0, -120);
+      context.lineTo(-94, -210);
+      context.closePath();
+    } else if (design.silhouette === 'household_object') {
+      context.rect(-94, -284, 188, 154);
+    } else {
+      context.arc(0, -210, design.silhouette === 'celestial_body' ? 128 : 70, 0, Math.PI * 2);
+    }
     context.fill();
     context.beginPath();
     context.moveTo(-56, -138);
@@ -754,11 +1290,12 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
+    const design = character.design;
     const scale = closeUp ? 1.28 : 1;
-    const x = closeUp ? 640 : character.x;
+    const x = closeUp ? this.stageCentre() : character.x;
     context.save();
-    context.translate(x, closeUp ? 438 : 500);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 438 : 500) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     const pulse = 1 + Math.sin(elapsed * 2.4 + character.seed) * 0.025;
     context.scale(pulse, pulse);
     for (const [radius, fill] of [
@@ -801,12 +1338,13 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
+    const design = character.design;
     const scale = closeUp ? 1.3 : 1;
-    const x = closeUp ? 640 : character.x;
+    const x = closeUp ? this.stageCentre() : character.x;
     const glitch = Math.round(Math.sin(elapsed * 31 + character.seed) * 12);
     context.save();
-    context.translate(x + glitch, closeUp ? 440 : 500);
-    context.scale(scale, scale);
+    context.translate(x + glitch, (closeUp ? 440 : 500) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     const colours = ['#ff2e88', '#28e7d5', '#6b5cff'];
     for (let layer = 0; layer < 3; layer += 1) {
       context.globalAlpha = 0.48;
@@ -841,19 +1379,35 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
-    const x = closeUp ? 640 : character.x;
+    const design = character.design;
+    const x = closeUp ? this.stageCentre() : character.x;
     const scale = closeUp ? 1.35 : 1;
     const frame = Math.floor(elapsed * 4 + character.seed) % 2;
     context.save();
-    context.translate(x, closeUp ? 440 : 500);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 440 : 500) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     context.fillStyle = 'rgba(1, 12, 6, 0.9)';
     context.strokeStyle = '#48ff9d';
     context.lineWidth = 3;
     context.strokeRect(-108, -300, 216, 374);
     context.fillStyle = '#48ff9d';
     context.font = '30px monospace';
-    const head = frame === 0 ? ' /O_O\\ ' : ' |o_o| ';
+    const head =
+      design.silhouette === 'household_object'
+        ? frame === 0
+          ? ' [o_o] '
+          : ' {o_o} '
+        : design.silhouette === 'celestial_body'
+          ? frame === 0
+            ? '*<O_O>*'
+            : '+(o_o)+'
+          : design.silhouette === 'faceted_alien'
+            ? frame === 0
+              ? ' /0|0\\ '
+              : ' <o|o> '
+            : frame === 0
+              ? ' /O_O\\ '
+              : ' |o_o| ';
     context.fillText(head, -92, -218);
     context.fillText(' /|_|\\ ', -92, -142);
     context.fillText(
@@ -875,12 +1429,13 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
-    const x = closeUp ? 640 : character.x;
+    const design = character.design;
+    const x = closeUp ? this.stageCentre() : character.x;
     const scale = closeUp ? 1.3 : 1;
     const reach = character.action === 'POINT_AT' && acting ? -175 : -112;
     context.save();
-    context.translate(x, closeUp ? 444 : 505);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 444 : 505) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     context.strokeStyle = '#e5f8ff';
     context.fillStyle = 'rgba(116, 206, 255, 0.12)';
     context.lineWidth = 5;
@@ -918,11 +1473,12 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
-    const x = closeUp ? 640 : character.x;
+    const design = character.design;
+    const x = closeUp ? this.stageCentre() : character.x;
     const scale = closeUp ? 1.25 : 1;
     context.save();
-    context.translate(x, closeUp ? 444 : 505);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 444 : 505) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     context.rotate(Math.sin(elapsed * 0.7 + character.seed) * 0.012);
     context.strokeStyle = '#1b1532';
     context.lineWidth = 11;
@@ -976,12 +1532,13 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
-    const x = closeUp ? 640 : character.x;
+    const design = character.design;
+    const x = closeUp ? this.stageCentre() : character.x;
     const scale = closeUp ? 1.28 : 1;
     const jump = Math.round(Math.sin(elapsed * 7 + character.seed)) * 3;
     context.save();
-    context.translate(x + jump, closeUp ? 442 : 503);
-    context.scale(scale, scale);
+    context.translate(x + jump, (closeUp ? 442 : 503) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     for (let copy = 1; copy >= 0; copy -= 1) {
       context.save();
       context.translate(copy * 11, -copy * 7);
@@ -1015,11 +1572,12 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
-    const x = closeUp ? 640 : character.x;
+    const design = character.design;
+    const x = closeUp ? this.stageCentre() : character.x;
     const scale = closeUp ? 1.25 : 1;
     context.save();
-    context.translate(x, closeUp ? 444 : 505);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 444 : 505) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     context.rotate(Math.sin(elapsed * 0.6 + character.seed) * 0.018);
     context.globalAlpha = 0.84;
     context.fillStyle = colour(character.seed, 38, 58);
@@ -1067,12 +1625,13 @@ export class Broadcast2DScene implements PlayoutVisuals {
     closeUp: boolean,
   ): void {
     const context = this.context;
-    const x = closeUp ? 640 : character.x;
+    const design = character.design;
+    const x = closeUp ? this.stageCentre() : character.x;
     const scale = closeUp ? 1.3 : 1;
     const explode = acting ? 16 : 6;
     context.save();
-    context.translate(x, closeUp ? 446 : 506);
-    context.scale(scale, scale);
+    context.translate(x, (closeUp ? 446 : 506) + design.baselineOffset);
+    context.scale(scale * design.scaleX, scale * design.scaleY);
     context.strokeStyle = '#274d5b';
     context.lineWidth = 5;
     const parts = [

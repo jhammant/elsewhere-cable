@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
-import { usesTwoDimensionalRenderer } from './scene-2d.js';
+import { resolve2DCharacterDesign, usesTwoDimensionalRenderer } from './scene-2d.js';
 import { flatStyleFingerprint, flatStyleGrammars, type FlatVisualMedium } from './style-grammar.js';
 
 function segment(visualMedium: SegmentPackage['visualMedium']): SegmentPackage {
@@ -63,5 +63,41 @@ describe('hybrid renderer selection', () => {
     const fingerprints = media.map((medium) => flatStyleFingerprint(medium));
 
     expect(new Set(fingerprints).size).toBe(media.length);
+  });
+});
+
+describe('2D cast construction', () => {
+  it('gives every explicit cast family its own structural silhouette', () => {
+    const designs = [
+      resolve2DCharacterDesign('humanoid', 101, 0),
+      resolve2DCharacterDesign('geometric_aliens', 202, 0),
+      resolve2DCharacterDesign('talking_objects', 303, 0),
+      resolve2DCharacterDesign('celestial', 404, 0),
+      resolve2DCharacterDesign('paper_puppets', 505, 0),
+    ];
+
+    expect(new Set(designs.map((design) => design.silhouette)).size).toBe(designs.length);
+    expect(new Set(designs.map((design) => design.fingerprint)).size).toBe(designs.length);
+  });
+
+  it('turns a mixed cast into a deterministic variety of structural families', () => {
+    const firstPass = Array.from({ length: 5 }, (_, index) =>
+      resolve2DCharacterDesign('mixed', 73, index),
+    );
+    const secondPass = Array.from({ length: 5 }, (_, index) =>
+      resolve2DCharacterDesign('mixed', 73, index),
+    );
+
+    expect(new Set(firstPass.map((design) => design.archetype)).size).toBe(5);
+    expect(firstPass).toEqual(secondPass);
+  });
+
+  it('varies two actors inside the same cast family without changing the family', () => {
+    const first = resolve2DCharacterDesign('talking_objects', 601, 0);
+    const second = resolve2DCharacterDesign('talking_objects', 947, 1);
+
+    expect(first.archetype).toBe('talking_objects');
+    expect(second.archetype).toBe('talking_objects');
+    expect(first.fingerprint).not.toBe(second.fingerprint);
   });
 });
