@@ -120,9 +120,7 @@ const mixedCandidateSourcePool = mixedRecoveryCatalogue(
   demoCandidates,
   existingRecoverySegments,
 );
-const recentlyUsedProgrammeIds = new Set(
-  manifestProgrammeIds.slice(-compatibleCandidates.length),
-);
+const recentlyUsedProgrammeIds = new Set(manifestProgrammeIds.slice(-compatibleCandidates.length));
 const unseenCandidateSourcePool = mixedCandidateSourcePool.filter(
   ({ segment }) => !recentlyUsedProgrammeIds.has(segment.programme.id),
 );
@@ -155,31 +153,48 @@ function recoveryDescriptor(source: (typeof candidates)[number]): RecoverySource
 
 const precedingSource = candidates.at(-1);
 const preceding = precedingSource === undefined ? null : recoveryDescriptor(precedingSource);
-const candidateEvaluationPool = diversifyRunway(
-  candidateSourcePool.map((source) => recoveryDescriptor(source)),
-  preceding,
+const candidateEvaluationPools = [
+  candidateSourcePool,
+  ...(recentlyUsedSourcesExcluded ? [mixedCandidateSourcePool] : []),
+].map((pool) =>
+  diversifyRunway(
+    pool.map((source) => recoveryDescriptor(source)),
+    preceding,
+  ),
 );
-const desiredSourceCount = Math.min(candidateSourcePool.length, count * 4);
+const desiredSourceCount = Math.min(mixedCandidateSourcePool.length, count * 4);
 const sourcePool: RecoverySource[] = [];
-for (const source of candidateEvaluationPool) {
-  const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
-  let eligible = legacyPackageQualityIssues(source.segment).length === 0;
-  for (const event of source.segment.events) {
-    if (event.type !== 'speech.play') {
+const evaluatedSourceIds = new Set<string>();
+let fallbackCatalogueUsed = false;
+for (const [poolIndex, candidateEvaluationPool] of candidateEvaluationPools.entries()) {
+  for (const source of candidateEvaluationPool) {
+    if (evaluatedSourceIds.has(source.segmentId)) {
       continue;
     }
-    if (
-      containsSpokenStageDirection(event.subtitle) ||
-      event.durationMs < minimumPlausibleSpeechDurationMs(event.subtitle, 1.5) ||
-      event.durationMs > maximumPlausibleSpeechDurationMs(event.subtitle) ||
-      (await audioQualityIssue(path.join(path.dirname(segmentPath), event.audioFile))) !== null
-    ) {
-      eligible = false;
+    evaluatedSourceIds.add(source.segmentId);
+    const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
+    let eligible = legacyPackageQualityIssues(source.segment).length === 0;
+    for (const event of source.segment.events) {
+      if (event.type !== 'speech.play') {
+        continue;
+      }
+      if (
+        containsSpokenStageDirection(event.subtitle) ||
+        event.durationMs < minimumPlausibleSpeechDurationMs(event.subtitle, 1.5) ||
+        event.durationMs > maximumPlausibleSpeechDurationMs(event.subtitle) ||
+        (await audioQualityIssue(path.join(path.dirname(segmentPath), event.audioFile))) !== null
+      ) {
+        eligible = false;
+        break;
+      }
+    }
+    if (eligible) {
+      sourcePool.push(source);
+      fallbackCatalogueUsed ||= poolIndex > 0;
+    }
+    if (sourcePool.length >= desiredSourceCount) {
       break;
     }
-  }
-  if (eligible) {
-    sourcePool.push(source);
   }
   if (sourcePool.length >= desiredSourceCount) {
     break;
@@ -297,6 +312,7 @@ process.stdout.write(
       source:
         requestedSourceIds !== null ? 'requested-approved-catalogue' : 'mixed-approved-catalogue',
       recentlyUsedSourcesExcluded,
+      fallbackCatalogueUsed,
       compatibilityTarget: compatibilityTarget ?? null,
       totalSegments: nextManifest.segments.length,
     },
