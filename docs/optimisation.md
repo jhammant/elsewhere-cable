@@ -57,7 +57,10 @@ Safety, schema validity and originality remain pre-broadcast gates rather than s
 7. Compare the candidate with the baseline using the frozen scorecard.
 8. `keep` only when all guardrails pass and the experience index improves by at least one point.
 9. Otherwise record `discard`, or `inconclusive` when evidence coverage is below 80%.
-10. Preserve the result and move to a different hypothesis.
+10. For a discarded renderer experiment, revert the tested commit and deploy it with
+    `pnpm endor:renderer:refresh -- rollback`. This performs the same guarded A/B handover without
+    registering the rollback commit as a new experiment.
+11. Preserve the result and move to a different hypothesis.
 
 Generation experiments take effect only when tagged candidate material actually airs. Their
 observation clock starts at first broadcast, not at code deployment.

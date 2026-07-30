@@ -9,12 +9,12 @@ if [ "${1:-}" = "--" ]; then
 fi
 mode=${1:-live}
 
-if [ "$mode" != "live" ] && [ "$mode" != "preflight" ]; then
-  echo "Usage: $0 [live|preflight]" >&2
+if [ "$mode" != "live" ] && [ "$mode" != "preflight" ] && [ "$mode" != "rollback" ]; then
+  echo "Usage: $0 [live|preflight|rollback]" >&2
   exit 64
 fi
 
-if [ "$mode" = "live" ] && [ -n "$(git status --short)" ]; then
+if [ "$mode" != "preflight" ] && [ -n "$(git status --short)" ]; then
   echo "Refusing a live renderer refresh from a dirty worktree. Commit and push first." >&2
   exit 65
 fi
@@ -241,12 +241,14 @@ docker inspect \
   "$container"
 REMOTE
 
-experiment_hypothesis="$(git log -1 --format=%s)"
-if ! pnpm optimise:experiment -- \
-  --build "$build_id" \
-  --surface renderer \
-  --hypothesis "$experiment_hypothesis"; then
-  echo "Renderer is live, but experiment registration failed." >&2
+if [ "$mode" = "live" ]; then
+  experiment_hypothesis="$(git log -1 --format=%s)"
+  if ! pnpm optimise:experiment -- \
+    --build "$build_id" \
+    --surface renderer \
+    --hypothesis "$experiment_hypothesis"; then
+    echo "Renderer is live, but experiment registration failed." >&2
+  fi
 fi
 if ! pnpm optimise:scorecard -- --quiet; then
   echo "Renderer is live, but scorecard refresh failed." >&2

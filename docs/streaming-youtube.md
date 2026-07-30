@@ -138,5 +138,14 @@ successful refresh, verify the health endpoint still reports `ready`, the contai
 is unchanged, telemetry records a new `segment.started`, and speech is audible before making
 further visual changes.
 
+When a measured renderer candidate is discarded, first revert its commit and then use:
+
+```bash
+pnpm endor:renderer:refresh -- rollback
+```
+
+Rollback mode performs the identical guarded handover but deliberately skips experiment
+registration, so a restoration commit cannot be mistaken for a new renderer hypothesis.
+
 Do not use this command for playout-controller, schema, FFmpeg, PulseAudio, operating-system or
 dependency changes. Those need a maintenance deployment with an explicit fallback plan.
