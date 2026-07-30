@@ -194,6 +194,9 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(requests[0]?.systemPrompt).toContain(
       "Trace the premise's single cause and effect through every dialogue line",
     );
+    expect(requests[0]?.systemPrompt).toContain(
+      'Audit every declarative dialogue line for a newly invented exemption',
+    );
   });
 
   it('can route premise proposals to a smaller independent model', async () => {
