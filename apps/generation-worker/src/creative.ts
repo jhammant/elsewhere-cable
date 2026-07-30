@@ -497,10 +497,7 @@ const performanceDynamics = [
   'two rivals discover a shared preference, then compete to prove who disliked it first',
 ] as const;
 
-const formatPresentationGrammars: Record<
-  GeneratedSegmentProposal['format'],
-  readonly string[]
-> = {
+const formatPresentationGrammars: Record<GeneratedSegmentProposal['format'], readonly string[]> = {
   advert: [
     'a breathless tabletop demonstration with oversized labels and abrupt proof shots',
     'a solemn filmed testimonial repeatedly contradicted by the product visible beside it',
@@ -806,6 +803,24 @@ const requestedMediums = [
   'thermal_camera',
 ] as const;
 
+const requestedCastArchetypes = [
+  'humanoid',
+  'geometric_aliens',
+  'talking_objects',
+  'celestial',
+  'paper_puppets',
+  'mixed',
+] as const;
+
+const threeDimensionalMediums = new Set<GeneratedSegmentDraft['visualMedium']>([
+  'cel_shaded',
+  'neon_wireframe',
+  'public_access_vhs',
+  'stop_motion',
+  'miniature_diorama',
+  'claymation',
+]);
+
 const requestedPacing = [
   'frantic',
   'slow_burn',
@@ -970,6 +985,35 @@ export function assignedPacing(
   return optimisationBrief.increasePacing[
     axisIndex(serial, 0x1038a4d, optimisationBrief.increasePacing.length)
   ]!;
+}
+
+export function assignedVisualMedium(
+  serial: number,
+  recentMediums: readonly GeneratedSegmentDraft['visualMedium'][] = [],
+): (typeof requestedMediums)[number] {
+  const recent = recentMediums.slice(-4);
+  const latest = recent.at(-1);
+  const latestIsThreeDimensional =
+    latest === undefined ? null : threeDimensionalMediums.has(latest);
+  const contrastPool =
+    latestIsThreeDimensional === null
+      ? requestedMediums
+      : requestedMediums.filter(
+          (medium) => threeDimensionalMediums.has(medium) !== latestIsThreeDimensional,
+        );
+  const freshPool = contrastPool.filter((medium) => !recent.includes(medium));
+  const pool = freshPool.length > 0 ? freshPool : contrastPool;
+  return pool[axisIndex(serial, 0x7c4bf89, pool.length)]!;
+}
+
+export function assignedCastArchetype(
+  serial: number,
+  recentArchetypes: readonly GeneratedSegmentDraft['castArchetype'][] = [],
+): GeneratedSegmentDraft['castArchetype'] {
+  const recent = recentArchetypes.slice(-3);
+  const freshPool = requestedCastArchetypes.filter((archetype) => !recent.includes(archetype));
+  const pool = freshPool.length > 0 ? freshPool : requestedCastArchetypes;
+  return pool[axisIndex(serial, 0x4a761d3, pool.length)]!;
 }
 
 export function assignedDialogueShape(serial: number): string {
@@ -1189,6 +1233,10 @@ export function userPrompt(
   recentPremises: readonly string[] = [],
   rejectionReasons: readonly string[] = [],
   optimisationBrief: OptimisationBrief | null = null,
+  recentCreativeCoordinates: {
+    visualMediums?: readonly GeneratedSegmentDraft['visualMedium'][];
+    castArchetypes?: readonly GeneratedSegmentDraft['castArchetype'][];
+  } = {},
 ): string {
   const serial = Math.abs(index);
   const format = assignedFormat(serial, optimisationBrief);
@@ -1219,7 +1267,11 @@ export function userPrompt(
   const presentationPool = formatPresentationGrammars[format];
   const presentationGrammar =
     presentationPool[axisIndex(serial, 0x75a34c1, presentationPool.length)]!;
-  const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
+  const visualMedium = assignedVisualMedium(serial, recentCreativeCoordinates.visualMediums ?? []);
+  const castArchetype = assignedCastArchetype(
+    serial,
+    recentCreativeCoordinates.castArchetypes ?? [],
+  );
   const pacing = assignedPacing(serial, optimisationBrief);
   const dialogueShape = assignedDialogueShapeForCoordinates({
     format,
@@ -1298,6 +1350,7 @@ Mandatory creative coordinates for this attempt:
 - Comedy mechanism family: ${mechanismFamily.direction}.
 ${physicalMechanismBlock}
 - Cast structure: ${cast}.
+- Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast structure and readable role differences.
 - Performance dynamic: ${performanceDynamic}. This shapes the acting and relationship beats, not the surreal mechanism.
 - Broadcast presentation: ${presentationGrammar}. Treat this as camera and graphic grammar only; it cannot add a second story mechanism, an unseen narrator or extra cast.
 - Dialogue architecture: ${dialogueShape}

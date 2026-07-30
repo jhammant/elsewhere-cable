@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assignedCastArchetype,
   assignedDialogueShape,
   assignedDialogueShapeForCoordinates,
   assignedPacing,
   assignedStoryMode,
+  assignedVisualMedium,
   demoDraft,
   dialogueArchitectureIssues,
   dialogueSpeakerPattern,
@@ -67,6 +69,52 @@ describe('generation prompts', () => {
 
     expect(new Set(locations).size).toBeGreaterThan(28);
     expect(new Set(casts).size).toBeGreaterThan(30);
+  });
+
+  it('uses every Endor-compatible visual renderer and alternates 2D against 3D history', () => {
+    const allMedia = Array.from({ length: 2_000 }, (_, serial) => assignedVisualMedium(serial));
+    expect(new Set(allMedia).size).toBe(16);
+
+    const afterFlat = assignedVisualMedium(81, ['paper_cutout', 'pixel_broadcast']);
+    expect([
+      'cel_shaded',
+      'neon_wireframe',
+      'public_access_vhs',
+      'stop_motion',
+      'miniature_diorama',
+      'claymation',
+    ]).toContain(afterFlat);
+
+    const afterThreeDimensional = assignedVisualMedium(82, ['cel_shaded', 'claymation']);
+    expect([
+      'paper_cutout',
+      'pixel_broadcast',
+      'archive_film',
+      'signal_corruption',
+      'collage_zine',
+      'ink_monochrome',
+      'corporate_vector',
+      'shadow_theatre',
+      'hand_drawn',
+      'thermal_camera',
+    ]).toContain(afterThreeDimensional);
+  });
+
+  it('rotates cast body families away from recent segments', () => {
+    const allArchetypes = Array.from({ length: 500 }, (_, serial) => assignedCastArchetype(serial));
+    expect(new Set(allArchetypes).size).toBe(6);
+
+    const assigned = assignedCastArchetype(409, [
+      'humanoid',
+      'geometric_aliens',
+      'talking_objects',
+    ]);
+    expect(['celestial', 'paper_puppets', 'mixed']).toContain(assigned);
+    expect(
+      userPrompt(409, [], [], [], null, {
+        castArchetypes: ['humanoid', 'geometric_aliens', 'talking_objects'],
+      }),
+    ).toContain(`Cast archetype: ${assigned}.`);
   });
 
   it('varies recognisable broadcast presentation independently of the comedy rule', () => {

@@ -21,9 +21,11 @@ import type {
   TtsProvider,
 } from './providers.js';
 import {
+  assignedCastArchetype,
   assignedFormat,
   assignedPacing,
   assignedStoryMode,
+  assignedVisualMedium,
   demoDraft,
   dialogueArchitectureIssues,
   proposalSystemPrompt,
@@ -1109,12 +1111,27 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
             const creativeSerial = creativeSerialBase + index + attempt * options.count;
             const recent = creativeHistory.slice(-24);
+            const recentMediums = recent
+              .map((record) => record.visualMedium)
+              .filter(
+                (medium): medium is GeneratedSegmentDraft['visualMedium'] => medium !== undefined,
+              );
+            const recentCastArchetypes = recent
+              .map((record) => record.castArchetype)
+              .filter(
+                (archetype): archetype is GeneratedSegmentDraft['castArchetype'] =>
+                  archetype !== undefined,
+              );
             const prompt = userPrompt(
               creativeSerial,
               recent.map((record) => record.title),
               recent.map((record) => record.premise),
               rejectionReasons,
               options.optimisationBrief ?? null,
+              {
+                visualMediums: recentMediums,
+                castArchetypes: recentCastArchetypes,
+              },
             );
             const useProposalStage = !options.demo && options.llm!.generateProposal !== undefined;
             const rawGenerated = options.demo
@@ -1133,6 +1150,8 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               format: assignedFormat(creativeSerial, options.optimisationBrief ?? null),
               pacing: assignedPacing(creativeSerial, options.optimisationBrief ?? null),
               storyMode: assignedStoryMode(creativeSerial, options.optimisationBrief ?? null),
+              visualMedium: assignedVisualMedium(creativeSerial, recentMediums),
+              castArchetype: assignedCastArchetype(creativeSerial, recentCastArchetypes),
             });
             const candidateEmbedding =
               options.embeddingProvider === null

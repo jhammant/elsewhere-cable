@@ -8,6 +8,10 @@ export interface CreativeRecord {
   title: string;
   premise: string;
   dialogue: string[];
+  format?: GeneratedSegmentDraft['format'];
+  visualMedium?: GeneratedSegmentDraft['visualMedium'];
+  castArchetype?: GeneratedSegmentDraft['castArchetype'];
+  pacing?: GeneratedSegmentDraft['pacing'];
 }
 
 function normalise(value: string): string {
@@ -99,6 +103,10 @@ export function recordFromDraft(draft: GeneratedSegmentDraft): CreativeRecord {
     title: draft.programmeTitle,
     premise: draft.premise,
     dialogue: draft.dialogue.map((line) => line.text),
+    format: draft.format,
+    visualMedium: draft.visualMedium,
+    castArchetype: draft.castArchetype,
+    pacing: draft.pacing,
   };
 }
 
@@ -109,6 +117,10 @@ export function recordFromSegment(segment: SegmentPackage): CreativeRecord {
     dialogue: segment.events
       .filter((event) => event.type === 'speech.play')
       .map((event) => event.subtitle),
+    format: segment.programme.format,
+    ...(segment.visualMedium === undefined ? {} : { visualMedium: segment.visualMedium }),
+    ...(segment.castArchetype === undefined ? {} : { castArchetype: segment.castArchetype }),
+    ...(segment.pacing === undefined ? {} : { pacing: segment.pacing }),
   };
 }
 
