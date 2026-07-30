@@ -1799,6 +1799,8 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           const semanticRejectedAttemptHistory: CreativeRecord[] = [];
           const rejectedAttemptEmbeddings: number[][] = [];
           const noveltyCollisionPremises: string[] = [];
+          let dynamicKernelProposalAttempts = 0;
+          let fixedMechanismProposalAttempts = 0;
           let creativeCoordinateAttempt = 0;
           let structuralRetryUsed = false;
           let structuralRepairProposal: GeneratedSegmentProposal | null = null;
@@ -1835,6 +1837,14 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               mechanismRanking[(creativeCoordinateAttempt + index) % mechanismCandidateCount];
             if (mechanismVariant === undefined) {
               throw new Error(`No mechanism variant is available for ${storyMode}`);
+            }
+            const mechanismSource = mechanismVariant.startsWith('Rule: ')
+              ? 'dynamic-kernel'
+              : 'fixed-mechanism';
+            if (mechanismSource === 'dynamic-kernel') {
+              dynamicKernelProposalAttempts += 1;
+            } else {
+              fixedMechanismProposalAttempts += 1;
             }
             const prompt = userPrompt(
               creativeSerial,
@@ -1987,6 +1997,16 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               return true;
             });
             if (accepted) {
+              process.stderr.write(
+                `${JSON.stringify({
+                  timestamp: new Date().toISOString(),
+                  service: 'generation-worker',
+                  level: 'info',
+                  event: 'proposal_accepted',
+                  source: mechanismSource,
+                  proposalAttempt: attempt + 1,
+                })}\n`,
+              );
               break;
             }
             const rejectedForNovelty = rejectionReasons.some((reason) => {
@@ -2011,7 +2031,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               .map(([category, count]) => `${category}=${count}`)
               .join(', ');
             throw new Error(
-              `Could not produce a novel premise after ${maximumProposalAttempts} attempts (${rejectionSummary || 'no categorised rejection'}): ${rejectionReasons.join('; ')}`,
+              `Could not produce a novel premise after ${maximumProposalAttempts} attempts (dynamic-kernel=${dynamicKernelProposalAttempts}, fixed-mechanism=${fixedMechanismProposalAttempts}; ${rejectionSummary || 'no categorised rejection'}): ${rejectionReasons.join('; ')}`,
             );
           }
           await scriptProposal(index);
