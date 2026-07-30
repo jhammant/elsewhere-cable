@@ -85,15 +85,14 @@ describe('soundCuesForSegment', () => {
   it('keeps every decorative cue outside prepared speech intervals', () => {
     const candidate = segment();
     const speech = candidate.events.filter(
-      (
-        event,
-      ): event is Extract<SegmentPackage['events'][number], { type: 'speech.play' }> =>
+      (event): event is Extract<SegmentPackage['events'][number], { type: 'speech.play' }> =>
         event.type === 'speech.play',
     );
 
     for (const cue of soundCuesForSegment(candidate)) {
       for (const line of speech) {
-        const overlaps = cue.atMs < line.atMs + line.durationMs && cue.atMs + cue.durationMs > line.atMs;
+        const overlaps =
+          cue.atMs < line.atMs + line.durationMs && cue.atMs + cue.durationMs > line.atMs;
         expect(overlaps, `${cue.cue} overlaps ${line.speechId}`).toBe(false);
       }
     }
@@ -112,5 +111,34 @@ describe('soundCuesForSegment', () => {
       cue: 'domestic_sting',
       reason: 'format',
     });
+  });
+
+  it('uses story-specific mechanisms for weather, frozen evidence and civic rulings', () => {
+    const weather = segment();
+    weather.programme.premise = 'A cloud opens a tiny weather hatch during the forecast.';
+    weather.events = weather.events.map((event, index) =>
+      event.type === 'speech.play' && index === 0
+        ? { ...event, subtitle: 'Cloud Three has opened its staff entrance.' }
+        : event,
+    );
+    expect(soundCuesForSegment(weather).some(({ cue }) => cue === 'cloud_hatch')).toBe(true);
+
+    const freezer = segment();
+    freezer.programme.premise = 'A frozen complaint begins to melt inside a civic freezer.';
+    freezer.events = freezer.events.map((event, index) =>
+      event.type === 'speech.play' && index === 0
+        ? { ...event, subtitle: 'The frozen complaint was solid when it arrived.' }
+        : event,
+    );
+    expect(soundCuesForSegment(freezer).some(({ cue }) => cue === 'freezer_latch')).toBe(true);
+
+    const civic = segment();
+    civic.programme.premise = 'An official stamps a refused appeal.';
+    civic.events = civic.events.map((event, index) =>
+      event.type === 'speech.play' && index === 0
+        ? { ...event, subtitle: 'Your appeal has been refused by the chair.' }
+        : event,
+    );
+    expect(soundCuesForSegment(civic).some(({ cue }) => cue === 'bureaucratic_stamp')).toBe(true);
   });
 });

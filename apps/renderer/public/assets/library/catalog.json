@@ -453,6 +453,25 @@
       }
     },
     {
+      "id": "asset_sfx_domestic_mechanism_bank_v1",
+      "kind": "sound_effect",
+      "role": "domestic_mechanism",
+      "version": 1,
+      "status": "ready",
+      "uri": "procedure://audio/sfx/domestic-mechanism-bank-v1",
+      "tags": ["bureaucratic-stamp", "cloud-hatch", "freezer-latch", "story-synchronised"],
+      "programmeIds": [],
+      "compatibleVisualMedia": [],
+      "provenance": {
+        "source": "procedural_original",
+        "createdAt": "2026-07-30T15:05:00.000Z",
+        "generator": "web-audio-sound-designer",
+        "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
       "id": "asset_audio_format_sting_bank_v1",
       "kind": "audio",
       "role": "music_sting_bank",

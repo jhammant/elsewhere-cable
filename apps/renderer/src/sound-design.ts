@@ -4,11 +4,14 @@ export type BroadcastSoundCue =
   | 'advisory_chime'
   | 'applause'
   | 'bell'
+  | 'bureaucratic_stamp'
   | 'buzzer'
   | 'cash_register'
   | 'clink'
+  | 'cloud_hatch'
   | 'continuity_blip'
   | 'domestic_sting'
+  | 'freezer_latch'
   | 'knock'
   | 'mechanical_click'
   | 'paper_rustle'
@@ -32,11 +35,14 @@ const cueDurationMs: Record<BroadcastSoundCue, number> = {
   advisory_chime: 260,
   applause: 280,
   bell: 220,
+  bureaucratic_stamp: 180,
   buzzer: 170,
   cash_register: 220,
   clink: 120,
+  cloud_hatch: 260,
   continuity_blip: 160,
   domestic_sting: 240,
+  freezer_latch: 240,
   knock: 190,
   mechanical_click: 120,
   paper_rustle: 170,
@@ -59,6 +65,18 @@ const formatCue: Record<SegmentPackage['programme']['format'], BroadcastSoundCue
 };
 
 const lexicalCues: ReadonlyArray<{ pattern: RegExp; cue: BroadcastSoundCue }> = [
+  {
+    pattern: /\b(?:cloud|forecast|rain|weather)\b/iu,
+    cue: 'cloud_hatch',
+  },
+  {
+    pattern: /\b(?:cold|freezer|frozen|melted|thaw)\b/iu,
+    cue: 'freezer_latch',
+  },
+  {
+    pattern: /\b(?:appeal|approve|authority|complaint|official|refused|stamp)\b/iu,
+    cue: 'bureaucratic_stamp',
+  },
   { pattern: /\b(?:doorbell|handbell|tiny silver bell)\b/iu, cue: 'bell' },
   { pattern: /\b(?:telephone|phone|hotline|call-in)\b/iu, cue: 'phone_chirp' },
   { pattern: /\b(?:buzzer|wrong-answer tone)\b/iu, cue: 'buzzer' },
@@ -116,9 +134,7 @@ function cue(
 }
 
 function firstSafeCueTime(
-  speech: ReadonlyArray<
-    Extract<SegmentPackage['events'][number], { type: 'speech.play' }>
-  >,
+  speech: ReadonlyArray<Extract<SegmentPackage['events'][number], { type: 'speech.play' }>>,
   durationMs: number,
   preferredAtMs: number,
   latestEndMs: number,
@@ -144,9 +160,7 @@ function firstSafeCueTime(
 export function soundCuesForSegment(segment: SegmentPackage): ScheduledSoundCue[] {
   const speech = segment.events
     .filter(
-      (
-        event,
-      ): event is Extract<SegmentPackage['events'][number], { type: 'speech.play' }> =>
+      (event): event is Extract<SegmentPackage['events'][number], { type: 'speech.play' }> =>
         event.type === 'speech.play',
     )
     .sort((left, right) => left.atMs - right.atMs);
@@ -178,9 +192,7 @@ export function soundCuesForSegment(segment: SegmentPackage): ScheduledSoundCue[
     previousSpeechEnd = Math.max(previousSpeechEnd, event.atMs + event.durationMs);
   }
 
-  const endingSound = cueForText(
-    `${speech.at(-1)?.subtitle ?? ''} ${segment.programme.premise}`,
-  );
+  const endingSound = cueForText(`${speech.at(-1)?.subtitle ?? ''} ${segment.programme.premise}`);
   if (endingSound !== null) {
     const durationMs = cueDurationMs[endingSound];
     const atMs = previousSpeechEnd + 120;
@@ -189,16 +201,7 @@ export function soundCuesForSegment(segment: SegmentPackage): ScheduledSoundCue[
       atMs + durationMs <= segment.durationMs - 260 &&
       (cues.at(-1)?.atMs ?? 0) + 300 < atMs
     ) {
-      cues.push(
-        cue(
-          segment.segmentId,
-          cues.length,
-          atMs,
-          endingSound,
-          0.028,
-          'ending-prop',
-        ),
-      );
+      cues.push(cue(segment.segmentId, cues.length, atMs, endingSound, 0.028, 'ending-prop'));
     }
   }
 
@@ -329,6 +332,11 @@ export class BroadcastSoundDesigner {
         this.tone(context, 920, 210, gain, 'sine');
         this.tone(context, 1_380, 190, gain * 0.62, 'sine', 8);
         break;
+      case 'bureaucratic_stamp':
+        this.tone(context, 96, 95, gain, 'triangle', 0, 62);
+        this.noise(context, 58, gain * 0.78, scheduled.seed, 920, 34);
+        this.noise(context, 72, gain * 0.42, scheduled.seed + 1, 2_100, 102);
+        break;
       case 'buzzer':
         this.tone(context, 190, 160, gain, 'sawtooth', 0, 160);
         break;
@@ -340,6 +348,11 @@ export class BroadcastSoundDesigner {
         this.tone(context, 1_320, 105, gain, 'sine');
         this.tone(context, 2_040, 85, gain * 0.55, 'sine', 6);
         break;
+      case 'cloud_hatch':
+        this.noise(context, 230, gain * 0.65, scheduled.seed, 720);
+        this.tone(context, 310, 210, gain * 0.55, 'sine', 20, 760);
+        this.tone(context, 1_180, 115, gain * 0.38, 'sine', 118, 1_520);
+        break;
       case 'continuity_blip':
         this.tone(context, 440, 70, gain, 'sine');
         this.tone(context, 660, 85, gain, 'sine', 72);
@@ -347,6 +360,11 @@ export class BroadcastSoundDesigner {
       case 'domestic_sting':
         this.tone(context, 330, 190, gain, 'triangle');
         this.tone(context, 495, 180, gain * 0.75, 'triangle', 50);
+        break;
+      case 'freezer_latch':
+        this.tone(context, 78, 220, gain * 0.65, 'sine', 0, 64);
+        this.noise(context, 62, gain, scheduled.seed, 1_600, 72);
+        this.tone(context, 410, 105, gain * 0.56, 'triangle', 95, 270);
         break;
       case 'knock':
         this.tone(context, 120, 55, gain, 'triangle');

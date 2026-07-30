@@ -56,6 +56,19 @@ Anticipatory doorbell prompt:
 > late-1980s catalogue product photograph on uniform green chroma; no text, brands,
 > people, shadow or watermark.
 
+## domestic-mechanism-bank-v1
+
+The Web Audio renderer synthesises three original, story-synchronised mechanisms rather
+than playing stock recordings:
+
+- `bureaucratic_stamp`: a low rubber impact, desk clack and short paper tail.
+- `cloud_hatch`: filtered air, a rising latch tone and a small glassy release.
+- `freezer_latch`: compressor hum, insulated door catch and a damped metal return.
+
+The scheduler derives these only from concrete story words, places them outside prepared
+speech intervals, keeps their gain deliberately low, and falls back to silence if Web
+Audio cannot create a cue. They contain no sampled or third-party media.
+
 ## Growth rules
 
 - Add new IDs; never silently replace an existing ID.
