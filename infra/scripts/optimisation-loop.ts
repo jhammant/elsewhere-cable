@@ -21,7 +21,10 @@ import {
   type SegmentPackage,
   type VisualQualityObservation,
 } from '../../packages/schemas/src/index.js';
-import type { AudienceResearchBrief } from '../../apps/generation-worker/src/audience-research.js';
+import {
+  selectAudienceResearchCandidate,
+  type AudienceResearchBrief,
+} from '../../apps/generation-worker/src/audience-research.js';
 import {
   categoryDiversityScore,
   concreteMotifPhrases,
@@ -887,7 +890,10 @@ async function activeAudienceHypothesis(): Promise<
     ) {
       return undefined;
     }
-    const candidate = research.candidates[0];
+    const candidate = selectAudienceResearchCandidate(
+      research,
+      Math.floor(Date.now() / (intervalMinutes * 60_000)),
+    );
     const pattern = audiencePatternSchema.safeParse(candidate?.pattern);
     if (
       candidate === undefined ||

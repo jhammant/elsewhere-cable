@@ -4,6 +4,7 @@ import {
   createSanitizedAudienceResearchBrief,
   deriveAudienceResearchBrief,
   parseIso8601Duration,
+  selectAudienceResearchCandidate,
   type PopularVideoSignal,
 } from './audience-research.js';
 
@@ -124,5 +125,8 @@ describe('audience research', () => {
     );
     expect(JSON.stringify(brief)).not.toContain('title');
     expect(brief.privacy.rawTextAllowedInPrompts).toBe(false);
+    expect(selectAudienceResearchCandidate(brief, 0)?.pattern).toBe('live_occasion');
+    expect(selectAudienceResearchCandidate(brief, 1)?.pattern).toBe('explanation');
+    expect(selectAudienceResearchCandidate(brief, 2)?.pattern).toBe('live_occasion');
   });
 });

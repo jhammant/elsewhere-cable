@@ -1514,6 +1514,25 @@ export function assignedPacing(
   ]!;
 }
 
+export function storyTemperatureForPacing(
+  pacing: NonNullable<GeneratedSegmentDraft['pacing']>,
+): string {
+  return {
+    frantic:
+      'begin with the one surreal rule already active and drive rapid visible choices without adding another idea',
+    staccato:
+      'make the comic conflict immediate, clipped and punchy, with each short beat changing leverage',
+    conversational:
+      'stage a recognisable everyday disagreement whose single odd rule produces steady comic escalation',
+    slow_burn:
+      'begin plausibly normal, mildly tedious and patient; reveal the one odd rule gradually through social discomfort, then land a quiet payoff',
+    interrupted:
+      'build one clear comic action toward its payoff, then let the approved consequence interrupt it at the most useful moment',
+    near_silent:
+      'show a mostly normal routine and tiny awkward social discomfort with sparse speech; one subtle surreal detail should earn a visual ending',
+  }[pacing];
+}
+
 export function assignedVisualMedium(
   serial: number,
   recentMediums: readonly GeneratedSegmentDraft['visualMedium'][] = [],
@@ -1982,6 +2001,7 @@ export function userPrompt(
     recentCreativeCoordinates.castArchetypes ?? [],
   );
   const pacing = assignedPacing(serial, optimisationBrief);
+  const storyTemperature = storyTemperatureForPacing(pacing);
   const dialogueShape = assignedDialogueShapeForCoordinates({
     format,
     visualMedium,
@@ -2227,6 +2247,7 @@ ${physicalMechanismBlock}
 - Visual medium: ${visualMedium}. It changes presentation only, never story physics.
 - Cast archetype: ${castArchetype}.
 - Pacing: ${pacing}.
+- Story temperature: ${storyTemperature}.
 - Graphic package: ${graphicPackage}. It is presentation metadata only.
 ${assetCapabilityBlock ?? ''}
 
@@ -2271,6 +2292,7 @@ ${ordinaryVisualAnchorBlock}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
+- Story temperature: ${storyTemperature}.
 ${assetCapabilityBlock ?? ''}
 ${storyAssemblyBlock}
 Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
@@ -2295,6 +2317,7 @@ export function scriptPrompt(
     interrupted: '4–8 lines cut short by one earned interruption',
     near_silent: '4–6 sparse lines separated by visible reactions and pauses',
   }[proposal.pacing ?? 'conversational'];
+  const storyTemperature = storyTemperatureForPacing(proposal.pacing ?? 'conversational');
   const boundedEditorialDefects = rejectionReasons.slice(0, 4).map((reason) =>
     [...reason]
       .map((character) => {
@@ -2378,7 +2401,7 @@ ${retryCorrections.map((correction) => `- ${correction}`).join('\n')}
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
-Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
+Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Story temperature: ${storyTemperature}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
 Immutable story contract:
 - The approved premise is the whole fiction for this fragment, not a starting point for another invention.
 - Lines one and two make the established roles' incompatible immediate wants clear through natural disagreement.

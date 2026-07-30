@@ -295,6 +295,17 @@ export function createSanitizedAudienceResearchBrief(
   };
 }
 
+export function selectAudienceResearchCandidate(
+  brief: AudienceResearchBrief,
+  windowIndex: number,
+): AudienceResearchCandidate | undefined {
+  if (brief.candidates.length === 0) {
+    return undefined;
+  }
+  const safeWindow = Number.isFinite(windowIndex) ? Math.abs(Math.trunc(windowIndex)) : 0;
+  return brief.candidates[safeWindow % brief.candidates.length];
+}
+
 export function parseIso8601Duration(value: string): number {
   const match =
     /^P(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/u.exec(

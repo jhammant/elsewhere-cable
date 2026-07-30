@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-30T15:25:00.000Z",
+  "generatedAt": "2026-07-30T15:55:00.000Z",
   "libraryId": "elsewhere-cable",
   "appendOnly": true,
   "assets": [
@@ -200,6 +200,138 @@
         "generator": "openai-imagegen",
         "rights": "original-project-generation",
         "promptRef": "/assets/library/README.md#impossible-products-v1",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_midnight_signal_newsroom_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/generated-backgrounds/midnight-signal-newsroom-v1.png",
+      "collectionId": "reusable-midnight-signal-newsroom-v1",
+      "mimeType": "image/png",
+      "sha256": "40947356231144c4b3ecc3f5f997411626baa577dfc0fd4e29a2ba5e5b1a28d6",
+      "bytes": 2528051,
+      "dimensions": { "width": 1672, "height": 941 },
+      "tags": [
+        "newsroom",
+        "railway",
+        "signal-box",
+        "transit",
+        "night",
+        "route-map",
+        "public-access"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["collage_zine", "archive_film"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-30T15:55:00.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/generated-backgrounds/README.md#midnight-signal-newsroom-v1",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_boring_community_hall_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/generated-backgrounds/boring-community-hall-v1.png",
+      "collectionId": "reusable-boring-community-hall-v1",
+      "mimeType": "image/png",
+      "sha256": "cb757620eebf38a3ecb93a27af9c807f7b5951c81a0024299b9ed48af0f00af5",
+      "bytes": 2108270,
+      "dimensions": { "width": 1672, "height": 941 },
+      "tags": [
+        "community-hall",
+        "committee",
+        "meeting",
+        "tea",
+        "chairs",
+        "domestic",
+        "slow"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["hand_drawn", "storybook_wash", "archive_film"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-30T15:55:00.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/generated-backgrounds/README.md#boring-community-hall-v1",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_cosmic_orange_kitchen_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/generated-backgrounds/cosmic-orange-kitchen-v1.png",
+      "collectionId": "reusable-cosmic-orange-kitchen-v1",
+      "mimeType": "image/png",
+      "sha256": "a5b5906b59585976f7523d3efda4d83fcd69a098e5aeb4f25a118899988d3bc9",
+      "bytes": 2256122,
+      "dimensions": { "width": 1672, "height": 941 },
+      "tags": [
+        "kitchen",
+        "culinary",
+        "moon",
+        "cosmic",
+        "space",
+        "bright",
+        "surreal"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["hand_drawn", "storybook_wash", "paper_cutout"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-30T15:55:00.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/generated-backgrounds/README.md#cosmic-orange-kitchen-v1",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_aquarium_discount_studio_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/generated-backgrounds/aquarium-discount-studio-v1.png",
+      "collectionId": "reusable-aquarium-discount-studio-v1",
+      "mimeType": "image/png",
+      "sha256": "b682ba8882f186bf12a442103ff6306cffba3ccbbd098bf481e141e4b2f734ee",
+      "bytes": 3463005,
+      "dimensions": { "width": 1672, "height": 941 },
+      "tags": [
+        "aquarium",
+        "shopping",
+        "showroom",
+        "product",
+        "fish",
+        "discount",
+        "xerox"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["xerox_punk", "collage_zine"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-30T15:55:00.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/generated-backgrounds/README.md#aquarium-discount-studio-v1",
         "containsFictionalPeople": false,
         "containsRealPeople": false
       }

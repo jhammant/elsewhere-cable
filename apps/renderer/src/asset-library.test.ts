@@ -85,6 +85,21 @@ const manifest: AssetLibraryManifest = assetLibraryManifestSchema.parse({
       provenance: { ...provenance, containsFictionalPeople: true },
     },
     {
+      id: 'asset_bg_generic_newsroom',
+      kind: 'image_2d',
+      role: 'background_plate',
+      version: 1,
+      status: 'ready',
+      uri: '/assets/test/generic-newsroom.png',
+      collectionId: 'generic-newsroom',
+      sha256: 'd'.repeat(64),
+      bytes: 10,
+      tags: ['newsroom', 'railway', 'signal-box'],
+      programmeIds: [],
+      compatibleVisualMedia: ['collage_zine'],
+      provenance,
+    },
+    {
       id: 'asset_prop_test_doorbell',
       kind: 'image_2d',
       role: 'prop_cutout',
@@ -109,8 +124,13 @@ describe('asset library selection', () => {
     expect(matchingCharacterAsset(collection, 'Mara Vale', 0)?.id).toBe('asset_actor_test');
   });
 
-  it('does not leak a programme-bound collection into other shows', () => {
-    expect(visualAssetCollection(manifest, segment('another_programme'))).toBeNull();
+  it('uses a reusable image background without leaking programme-bound characters', () => {
+    const collection = visualAssetCollection(
+      manifest,
+      segment('another_programme', 'A railway newsroom debates a signal.'),
+    );
+    expect(collection?.id).toBe('generic-newsroom');
+    expect(collection?.characters).toEqual([]);
   });
 
   it('matches reusable props from concrete premise nouns', () => {

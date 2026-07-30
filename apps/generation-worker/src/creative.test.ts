@@ -5,6 +5,7 @@ import {
   assignedDialogueShapeForCoordinates,
   assignedPacing,
   assignedStoryMode,
+  storyTemperatureForPacing,
   assignedVisualMedium,
   demoDraft,
   dialogueArchitectureIssues,
@@ -21,6 +22,13 @@ import {
 } from './creative.js';
 
 describe('generation prompts', () => {
+  it('uses pacing to span surreal, comic and deliberately ordinary story temperatures', () => {
+    expect(storyTemperatureForPacing('frantic')).toContain('surreal rule');
+    expect(storyTemperatureForPacing('conversational')).toContain('comic escalation');
+    expect(storyTemperatureForPacing('slow_burn')).toContain('plausibly normal');
+    expect(storyTemperatureForPacing('near_silent')).toContain('mostly normal routine');
+  });
+
   it('moves retries through different mandatory creative coordinates', () => {
     const prompts = [0, 4, 8, 12, 16, 20].map((index) =>
       userPrompt(

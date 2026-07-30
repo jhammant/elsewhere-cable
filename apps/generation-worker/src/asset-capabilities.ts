@@ -48,8 +48,8 @@ export function generationAssetCapabilities(
   const assets = manifest.assets.filter((asset) => applicable(asset, medium));
   const backgrounds = tagsFor(
     assets,
-    new Set(['fictional_background_bank', 'studio_set_kit']),
-    new Set(['model_2d', 'model_3d']),
+    new Set(['background_plate', 'fictional_background_bank', 'studio_set_kit']),
+    new Set(['image_2d', 'model_2d', 'model_3d']),
     16,
   );
   const props = tagsFor(

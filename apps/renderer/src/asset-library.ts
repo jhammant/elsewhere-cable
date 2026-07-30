@@ -21,6 +21,42 @@ function isCompatible(entry: AssetLibraryEntry, segment: SegmentPackage): boolea
   );
 }
 
+function stableHash(value: string): number {
+  let hash = 2_166_136_261;
+  for (const character of value) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function backgroundRelevance(entry: AssetLibraryEntry, segment: SegmentPackage): number {
+  const haystack = [
+    segment.channel.name,
+    segment.programme.title,
+    segment.programme.format,
+    segment.programme.premise,
+  ]
+    .join(' ')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, ' ');
+  const genericTags = new Set([
+    'background',
+    'broadcast',
+    'fictional',
+    'original',
+    'plate',
+    'studio',
+    'television',
+  ]);
+  return entry.tags.reduce((score, tag) => {
+    const token = tag.toLowerCase().replace(/[^a-z0-9]+/gu, ' ').trim();
+    return token.length >= 3 && !genericTags.has(token) && haystack.includes(token)
+      ? score + 1
+      : score;
+  }, 0);
+}
+
 export async function loadAssetLibrary(
   source = '/assets/library/catalog.json',
 ): Promise<AssetLibraryManifest> {
@@ -38,7 +74,7 @@ export function visualAssetCollection(
   manifest: AssetLibraryManifest,
   segment: SegmentPackage,
 ): VisualAssetCollection | null {
-  const matchingBackgrounds = manifest.assets.filter(
+  const programmeBackgrounds = manifest.assets.filter(
     (entry) =>
       entry.kind === 'image_2d' &&
       entry.role === 'background_plate' &&
@@ -46,7 +82,26 @@ export function visualAssetCollection(
       entry.programmeIds.includes(segment.programme.id) &&
       isCompatible(entry, segment),
   );
-  const background = matchingBackgrounds[0];
+  const reusableBackgrounds = manifest.assets.filter(
+    (entry) =>
+      entry.kind === 'image_2d' &&
+      entry.role === 'background_plate' &&
+      entry.collectionId !== undefined &&
+      entry.programmeIds.length === 0 &&
+      isCompatible(entry, segment),
+  );
+  const scoredReusable = reusableBackgrounds
+    .map((entry) => ({ entry, score: backgroundRelevance(entry, segment) }))
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        stableHash(`${segment.programme.id}:${left.entry.id}`) -
+          stableHash(`${segment.programme.id}:${right.entry.id}`),
+    );
+  const background =
+    programmeBackgrounds[0] ??
+    scoredReusable[0]?.entry ??
+    reusableBackgrounds[stableHash(segment.programme.id) % reusableBackgrounds.length];
   if (background?.collectionId === undefined) {
     return null;
   }
