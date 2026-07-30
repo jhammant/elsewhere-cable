@@ -43,6 +43,7 @@
     "generate:scripts": "sh infra/scripts/generate-ghost-scripts.sh once",
     "generate:scripts:loop": "sh infra/scripts/generate-ghost-scripts.sh loop",
     "seed:curated-launch": "tsx infra/scripts/seed-curated-launch-pack.ts",
+    "seed:signal-surf": "tsx infra/scripts/seed-signal-surf-pack.ts",
     "llm:bulk:start": "sh infra/scripts/start-ghost-bulk-llm.sh",
     "tts:qwen:setup": "sh infra/scripts/setup-ghost-tts.sh",
     "tts:qwen:start": ".venv-tts/bin/python services/tts/qwen_mlx_server.py",

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
-import { resolve2DCharacterDesign, usesTwoDimensionalRenderer } from './scene-2d.js';
+import {
+  premisePropKind,
+  resolve2DCharacterDesign,
+  usesTwoDimensionalRenderer,
+} from './scene-2d.js';
 import { flatStyleFingerprint, flatStyleGrammars, type FlatVisualMedium } from './style-grammar.js';
 
 function segment(visualMedium: SegmentPackage['visualMedium']): SegmentPackage {
@@ -99,5 +103,36 @@ describe('2D cast construction', () => {
     expect(first.archetype).toBe('talking_objects');
     expect(second.archetype).toBe('talking_objects');
     expect(first.fingerprint).not.toBe(second.fingerprint);
+  });
+});
+
+describe('2D premise props', () => {
+  it('matches programme nouns to visibly distinct props', () => {
+    const premises = [
+      ['A refrigerator wants an introduction.', 'fridge'],
+      ['The umbrella refuses to close.', 'umbrella'],
+      ['A fish files a complaint.', 'fish'],
+      ['The letter requests a larger margin.', 'letter'],
+      ['A concert ticket demands its own seat.', 'letter'],
+      ['The bin wants a formal collection.', 'bin'],
+      ['The staircase skips step four.', 'staircase'],
+      ['A telephone calls its own advert.', 'phone'],
+      ['An empty chair demands a speaking turn.', 'chair'],
+      ['The Escape key has left the keyboard.', 'key'],
+      ['A spotlight requests a supervisor.', 'lamp'],
+    ] as const;
+
+    for (const [premise, expected] of premises) {
+      expect(premisePropKind(premise)).toBe(expected);
+    }
+  });
+
+  it('prefers the concrete prop over broader setting words', () => {
+    expect(premisePropKind('In a family kitchen, the refrigerator refuses service.')).toBe(
+      'fridge',
+    );
+    expect(premisePropKind('During a weather report, one umbrella requests credit.')).toBe(
+      'umbrella',
+    );
   });
 });

@@ -9,6 +9,24 @@ type StructuralCastArchetype = Exclude<CastArchetype, 'mixed'>;
 type CharacterSilhouette =
   'person' | 'faceted_alien' | 'household_object' | 'celestial_body' | 'jointed_puppet';
 
+export type PremisePropKind =
+  | 'bin'
+  | 'chair'
+  | 'clock'
+  | 'cloud'
+  | 'cup'
+  | 'door'
+  | 'fish'
+  | 'fridge'
+  | 'house'
+  | 'key'
+  | 'lamp'
+  | 'letter'
+  | 'phone'
+  | 'staircase'
+  | 'umbrella'
+  | 'none';
+
 interface DrawnCharacter {
   id: string;
   name: string;
@@ -46,6 +64,28 @@ function stableHash(value: string): number {
     hash = Math.imul(hash, 16_777_619);
   }
   return hash >>> 0;
+}
+
+export function premisePropKind(premise: string): PremisePropKind {
+  const normalised = premise.toLowerCase();
+  const candidates: Array<readonly [PremisePropKind, RegExp]> = [
+    ['fridge', /\b(?:freezer|fridge|refrigerator)\b/u],
+    ['umbrella', /\bumbrella\b/u],
+    ['fish', /\b(?:fish|trout|salmon)\b/u],
+    ['letter', /\b(?:envelope|letter|mail|postcard|receipt|ticket)\b/u],
+    ['bin', /\b(?:bin|rubbish|trash)\b/u],
+    ['staircase', /\b(?:staircase|stairs?|steps?)\b/u],
+    ['phone', /\b(?:phone|telephone|handset)\b/u],
+    ['chair', /\b(?:chair|seat|stool)\b/u],
+    ['key', /\b(?:keyboard|keycap|key)\b/u],
+    ['lamp', /\b(?:lamp|light|spotlight)\b/u],
+    ['door', /\b(?:door|doorbell|entrance|threshold)\b/u],
+    ['clock', /\b(?:clock|time|minute|day|thursday)\b/u],
+    ['house', /\b(?:house|home|property|family)\b/u],
+    ['cup', /\b(?:cup|kettle|kitchen|ingredient|mug)\b/u],
+    ['cloud', /\b(?:cloud|weather|rain|sky|sun|moon)\b/u],
+  ];
+  return candidates.find(([, pattern]) => pattern.test(normalised))?.[0] ?? 'none';
 }
 
 const structuralCastArchetypes: StructuralCastArchetype[] = [
@@ -792,14 +832,121 @@ export class Broadcast2DScene implements PlayoutVisuals {
       context.globalAlpha = 0.62 + Math.sin(elapsed * 23) * 0.18;
     }
 
-    if (/\b(?:door|entrance|threshold)\b/u.test(premise)) {
+    const prop = premisePropKind(premise);
+    if (prop === 'fridge') {
+      roundedRect(context, -100, -210, 200, 350, 18);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(-100, -45);
+      context.lineTo(100, -45);
+      context.stroke();
+      context.fillStyle = context.strokeStyle;
+      context.fillRect(64, -170, 10, 82);
+      context.fillRect(64, -10, 10, 62);
+    } else if (prop === 'umbrella') {
+      context.beginPath();
+      context.arc(0, -62, 150, Math.PI, 0);
+      context.lineTo(0, -62);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(0, -62);
+      context.lineTo(0, 128);
+      context.quadraticCurveTo(0, 178, 54, 154);
+      context.stroke();
+    } else if (prop === 'fish') {
+      context.beginPath();
+      context.ellipse(-12, -20, 126, 76, 0, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(-128, -20);
+      context.lineTo(-214, -92);
+      context.lineTo(-214, 52);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillStyle = context.strokeStyle;
+      context.beginPath();
+      context.arc(62, -40, 10, 0, Math.PI * 2);
+      context.fill();
+    } else if (prop === 'letter') {
+      context.fillRect(-150, -105, 300, 205);
+      context.strokeRect(-150, -105, 300, 205);
+      context.beginPath();
+      context.moveTo(-150, -105);
+      context.lineTo(0, 20);
+      context.lineTo(150, -105);
+      context.moveTo(-150, 100);
+      context.lineTo(-30, -2);
+      context.moveTo(150, 100);
+      context.lineTo(30, -2);
+      context.stroke();
+    } else if (prop === 'bin') {
+      context.beginPath();
+      context.moveTo(-105, -105);
+      context.lineTo(105, -105);
+      context.lineTo(78, 138);
+      context.lineTo(-78, 138);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillRect(-130, -132, 260, 32);
+      context.strokeRect(-130, -132, 260, 32);
+    } else if (prop === 'staircase') {
+      for (let index = 0; index < 6; index += 1) {
+        context.fillRect(-175 + index * 54, 84 - index * 44, 58, 44 + index * 44);
+        context.strokeRect(-175 + index * 54, 84 - index * 44, 58, 44 + index * 44);
+      }
+    } else if (prop === 'phone') {
+      roundedRect(context, -86, -196, 172, 330, 28);
+      context.fill();
+      context.stroke();
+      context.fillStyle = context.strokeStyle;
+      context.fillRect(-42, -162, 84, 9);
+      context.beginPath();
+      context.arc(0, 94, 22, 0, Math.PI * 2);
+      context.fill();
+    } else if (prop === 'chair') {
+      context.fillRect(-104, -188, 208, 154);
+      context.strokeRect(-104, -188, 208, 154);
+      context.fillRect(-126, -34, 252, 54);
+      context.strokeRect(-126, -34, 252, 54);
+      context.fillRect(-92, 20, 22, 144);
+      context.fillRect(70, 20, 22, 144);
+    } else if (prop === 'key') {
+      context.beginPath();
+      context.arc(-98, -16, 76, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.arc(-98, -16, 28, 0, Math.PI * 2);
+      context.stroke();
+      context.fillRect(-22, -34, 194, 38);
+      context.strokeRect(-22, -34, 194, 38);
+      context.fillRect(112, 4, 30, 48);
+      context.fillRect(158, 4, 30, 70);
+    } else if (prop === 'lamp') {
+      context.beginPath();
+      context.moveTo(-118, -54);
+      context.lineTo(-68, -190);
+      context.lineTo(68, -190);
+      context.lineTo(118, -54);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillRect(-12, -54, 24, 188);
+      context.fillRect(-82, 134, 164, 24);
+    } else if (prop === 'door') {
       context.fillRect(-95, -190, 190, 310);
       context.strokeRect(-95, -190, 190, 310);
       context.beginPath();
       context.arc(52, -25, 11, 0, Math.PI * 2);
       context.fillStyle = '#182129';
       context.fill();
-    } else if (/\b(?:clock|time|minute|day|thursday)\b/u.test(premise)) {
+    } else if (prop === 'clock') {
       context.beginPath();
       context.arc(0, -25, 115, 0, Math.PI * 2);
       context.fill();
@@ -810,7 +957,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
       context.moveTo(0, -25);
       context.lineTo(-28, 36);
       context.stroke();
-    } else if (/\b(?:house|home|property|family)\b/u.test(premise)) {
+    } else if (prop === 'house') {
       context.fillRect(-125, -80, 250, 190);
       context.strokeRect(-125, -80, 250, 190);
       context.beginPath();
@@ -820,14 +967,14 @@ export class Broadcast2DScene implements PlayoutVisuals {
       context.closePath();
       context.fill();
       context.stroke();
-    } else if (/\b(?:cup|kettle|kitchen|ingredient)\b/u.test(premise)) {
+    } else if (prop === 'cup') {
       roundedRect(context, -85, -80, 170, 170, 28);
       context.fill();
       context.stroke();
       context.beginPath();
       context.arc(92, 0, 55, -Math.PI / 2, Math.PI / 2);
       context.stroke();
-    } else if (/\b(?:cloud|weather|rain|sky)\b/u.test(premise)) {
+    } else if (prop === 'cloud') {
       for (const [x, y, radius] of [
         [-70, 0, 65],
         [0, -45, 85],
