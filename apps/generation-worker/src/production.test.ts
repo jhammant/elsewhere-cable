@@ -1567,8 +1567,8 @@ describe('produceBatch', () => {
       ]),
     ).toEqual([
       'Rule: generated kernel one',
-      'Rule: generated kernel two',
       'fixed mechanism one',
+      'Rule: generated kernel two',
       'fixed mechanism two',
     ]);
     expect(preferGeneratedMechanismVariants(['fixed one', 'fixed two'])).toEqual([

@@ -506,6 +506,7 @@ ${repairInstruction}`,
   }
 
   generateProposal(request: StructuredGenerationRequest): Promise<GeneratedSegmentProposal> {
+    const kernelFirst = request.userPrompt.includes('This is a kernel-first proposal.');
     return this.generateWithSchema(
       request,
       generatedSegmentProposalSchema,
@@ -513,10 +514,10 @@ ${repairInstruction}`,
       proposalStructuralExample(request),
       1_024,
       {
-        temperature: 0.92,
-        topP: 0.95,
-        presencePenalty: 0.3,
-        frequencyPenalty: 0.15,
+        temperature: kernelFirst ? 0.68 : 0.78,
+        topP: kernelFirst ? 0.88 : 0.92,
+        presencePenalty: kernelFirst ? 0.05 : 0.15,
+        frequencyPenalty: 0.05,
       },
       this.proposalEndpoint ?? undefined,
     );

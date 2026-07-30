@@ -321,13 +321,23 @@ describe('OpenAiCompatibleTtsProvider', () => {
       systemPrompt: 'system',
       userPrompt: 'Create a public_access segment.',
     });
+    await provider.generateProposal({
+      systemPrompt: 'system',
+      userPrompt: 'This is a kernel-first proposal.',
+    });
 
     expect(requests).toEqual([
       {
         url: 'http://proposal.test/v1/chat/completions',
         model: 'proposal-model',
-        temperature: 0.92,
-        presencePenalty: 0.3,
+        temperature: 0.78,
+        presencePenalty: 0.15,
+      },
+      {
+        url: 'http://proposal.test/v1/chat/completions',
+        model: 'proposal-model',
+        temperature: 0.68,
+        presencePenalty: 0.05,
       },
     ]);
   });

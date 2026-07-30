@@ -1184,7 +1184,22 @@ export function mechanismVariantsWithSeeds(
 export function preferGeneratedMechanismVariants(variants: readonly string[]): string[] {
   const generated = variants.filter((variant) => variant.startsWith('Rule: '));
   const fixed = variants.filter((variant) => !variant.startsWith('Rule: '));
-  return generated.length > 0 ? [...generated, ...fixed] : fixed;
+  if (generated.length === 0) {
+    return fixed;
+  }
+  const interleaved: string[] = [];
+  const pairCount = Math.max(generated.length, fixed.length);
+  for (let index = 0; index < pairCount; index += 1) {
+    const generatedVariant = generated[index];
+    if (generatedVariant !== undefined) {
+      interleaved.push(generatedVariant);
+    }
+    const fixedVariant = fixed[index];
+    if (fixedVariant !== undefined) {
+      interleaved.push(fixedVariant);
+    }
+  }
+  return interleaved;
 }
 
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
@@ -1853,6 +1868,11 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           let creativeCoordinateAttempt = 0;
           let structuralRetryUsed = false;
           let structuralRepairProposal: GeneratedSegmentProposal | null = null;
+          const mechanismVariantByCoordinate = new Map<number, string>();
+          const storyModeCoordinateCounts = new Map<
+            NonNullable<GeneratedSegmentProposal['storyMode']>,
+            number
+          >();
           // A mature catalogue occupies much more of the obvious premise space than a fresh
           // installation. Search longer rather than weakening the semantic novelty gate.
           const maximumProposalAttempts = options.proposalAttempts ?? 16;
@@ -1883,8 +1903,16 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 : mechanismVariantsForStoryMode(storyMode);
             const mechanismCandidates = preferGeneratedMechanismVariants(mechanismRanking);
             const mechanismCandidateCount = Math.min(12, mechanismCandidates.length);
-            const mechanismVariant =
-              mechanismCandidates[(creativeCoordinateAttempt + index) % mechanismCandidateCount];
+            let mechanismVariant = mechanismVariantByCoordinate.get(creativeCoordinateAttempt);
+            if (mechanismVariant === undefined) {
+              const storyModeCoordinateCount = storyModeCoordinateCounts.get(storyMode) ?? 0;
+              mechanismVariant =
+                mechanismCandidates[(storyModeCoordinateCount + index) % mechanismCandidateCount];
+              if (mechanismVariant !== undefined) {
+                mechanismVariantByCoordinate.set(creativeCoordinateAttempt, mechanismVariant);
+                storyModeCoordinateCounts.set(storyMode, storyModeCoordinateCount + 1);
+              }
+            }
             if (mechanismVariant === undefined) {
               throw new Error(`No mechanism variant is available for ${storyMode}`);
             }
