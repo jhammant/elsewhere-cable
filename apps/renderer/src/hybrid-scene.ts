@@ -38,6 +38,10 @@ export class HybridBroadcastScene implements PlayoutVisuals {
     this.active.performAction(characterId, action);
   }
 
+  performStoryCue(cue: Parameters<PlayoutVisuals['performStoryCue']>[0]): void {
+    this.active.performStoryCue(cue);
+  }
+
   render(): void {
     if (this.isTwoDimensional) {
       this.twoDimensional.render();

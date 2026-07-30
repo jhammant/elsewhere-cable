@@ -2,6 +2,8 @@ import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import type { PlayoutVisuals } from './playout.js';
 import { pacingMotionFrame, type PacingMode, type PacingMotionFrame } from './motion-grammar.js';
 import { resolveProductionDesign, type CastArchetype } from './production-design.js';
+import type { ScheduledSoundCue } from './sound-design.js';
+import { storyCueMotion, type StoryCueMotion } from './story-cue-motion.js';
 import { flatVisualMedia, isFlatVisualMedium, type FlatVisualMedium } from './style-grammar.js';
 
 type CameraName = 'CAMERA_WIDE' | 'CAMERA_HOST' | 'CAMERA_GUEST';
@@ -369,6 +371,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private pacing: PacingMode = 'conversational';
   private motionSeed = 0;
   private startedAt = 0;
+  private activeStoryCue: ScheduledSoundCue | null = null;
+  private activeStoryCueStartedAt = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d');
@@ -398,6 +402,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
     this.motionSeed =
       (stableHash(`${segment.channel.id}:${segment.programme.id}:motion`) % 10_000) / 10_000;
     this.startedAt = performance.now();
+    this.activeStoryCue = null;
+    this.activeStoryCueStartedAt = 0;
     const speakers = new Map<string, string>();
     for (const event of segment.events) {
       if (event.type === 'speech.play') {
@@ -452,6 +458,11 @@ export class Broadcast2DScene implements PlayoutVisuals {
     }
   }
 
+  performStoryCue(cue: ScheduledSoundCue): void {
+    this.activeStoryCue = cue;
+    this.activeStoryCueStartedAt = performance.now();
+  }
+
   render(): void {
     const segment = this.segment;
     if (segment === null) {
@@ -461,6 +472,10 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const now = performance.now();
     const elapsed = (now - this.startedAt) / 1_000;
     const motion = pacingMotionFrame(this.pacing, elapsed, this.motionSeed);
+    const cueMotion = storyCueMotion(
+      this.activeStoryCue,
+      now - this.activeStoryCueStartedAt,
+    );
     const context = this.context;
     context.save();
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -469,7 +484,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.translate(-640, -360);
     context.drawImage(this.staticCanvas, 0, 0);
     this.drawCompositionFrame(elapsed);
-    this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed, motion);
+    this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed, motion, cueMotion);
 
     const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
     this.characters.forEach((character, index) => {
@@ -1050,7 +1065,12 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.restore();
   }
 
-  private drawPremiseProp(premise: string, elapsed: number, motion: PacingMotionFrame): void {
+  private drawPremiseProp(
+    premise: string,
+    elapsed: number,
+    motion: PacingMotionFrame,
+    cueMotion: StoryCueMotion,
+  ): void {
     const context = this.context;
     context.save();
     const pixel = this.medium === 'pixel_broadcast';
@@ -1059,11 +1079,19 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const signal = this.medium === 'signal_corruption';
     const centre = this.stageCentre();
     context.translate(
-      (pixel ? Math.round(centre / 16) * 16 : centre) + motion.propX,
+      (pixel ? Math.round(centre / 16) * 16 : centre) + motion.propX + cueMotion.x,
       pixel
-        ? Math.round((370 + Math.sin(elapsed * 3) * 4 + motion.propY) / 16) * 16
-        : 370 + Math.sin(elapsed * 0.8) * 3 + motion.propY,
+        ? Math.round(
+            (370 + Math.sin(elapsed * 3) * 4 + motion.propY + cueMotion.y) / 16,
+          ) * 16
+        : 370 + Math.sin(elapsed * 0.8) * 3 + motion.propY + cueMotion.y,
     );
+    context.rotate(cueMotion.rotation);
+    context.scale(cueMotion.scaleX, cueMotion.scaleY);
+    if (cueMotion.flash > 0) {
+      context.shadowColor = `rgb(255 244 176 / ${Math.min(0.8, cueMotion.flash)})`;
+      context.shadowBlur = 10 + cueMotion.flash * 34;
+    }
     context.lineWidth = this.medium === 'ink_monochrome' ? 9 : pixel ? 12 : 4;
     context.strokeStyle = shadow ? '#21130f' : thermal ? '#ffec62' : signal ? '#57ffe1' : '#182129';
     context.fillStyle =

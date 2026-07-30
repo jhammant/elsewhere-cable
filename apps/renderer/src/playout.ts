@@ -9,7 +9,11 @@ import {
 import { continuityCopyForSegment, type ContinuityCopy } from './continuity-copy.js';
 import { resolveBroadcastPackage } from './broadcast-package.js';
 import { resolveProductionDesign } from './production-design.js';
-import { BroadcastSoundDesigner, soundCuesForSegment } from './sound-design.js';
+import {
+  BroadcastSoundDesigner,
+  soundCuesForSegment,
+  type ScheduledSoundCue,
+} from './sound-design.js';
 
 interface PlayoutElements {
   broadcast: HTMLElement;
@@ -55,6 +59,7 @@ export interface PlayoutVisuals {
       | 'PAUSE'
       | 'FREEZE',
   ): void;
+  performStoryCue(cue: ScheduledSoundCue): void;
 }
 
 export function applyVisualEvent(event: SegmentEvent, visuals: PlayoutVisuals): void {
@@ -434,7 +439,10 @@ export class PlayoutEngine {
       this.timer(() => this.runEvent(event, baseDirectory), event.atMs);
     }
     for (const soundCue of soundCuesForSegment(segment)) {
-      this.timer(() => this.soundDesigner.play(soundCue), soundCue.atMs);
+      this.timer(() => {
+        this.soundDesigner.play(soundCue);
+        this.visuals.performStoryCue(soundCue);
+      }, soundCue.atMs);
     }
   }
 

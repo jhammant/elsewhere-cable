@@ -6,6 +6,8 @@ import {
   type CastArchetype,
   type VisualMedium,
 } from './production-design.js';
+import type { ScheduledSoundCue } from './sound-design.js';
+import { storyCueMotion } from './story-cue-motion.js';
 
 const streamWidth = 1280;
 const streamHeight = 720;
@@ -768,6 +770,8 @@ export class BroadcastScene {
   private segmentStartedAt = 0;
   private renderScale = 1;
   private displayScale = 1;
+  private activeStoryCue: ScheduledSoundCue | null = null;
+  private activeStoryCueStartedAt = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -849,6 +853,8 @@ export class BroadcastScene {
     this.renderScale = productionDesign.visualMedium === 'pixel_broadcast' ? 0.25 : 1;
     this.updateRenderResolution();
     this.segmentStartedAt = this.clock.getElapsedTime();
+    this.activeStoryCue = null;
+    this.activeStoryCueStartedAt = 0;
     this.profile = segment.programme.format;
     this.pacing = segment.pacing ?? 'conversational';
     this.motionSeed =
@@ -1101,6 +1107,11 @@ export class BroadcastScene {
     }
   }
 
+  performStoryCue(cue: ScheduledSoundCue): void {
+    this.activeStoryCue = cue;
+    this.activeStoryCueStartedAt = this.clock.getElapsedTime();
+  }
+
   private applyPalette(background: number, floor: number, accent: number): void {
     this.scene.background = new THREE.Color(background);
     if (this.scene.fog instanceof THREE.Fog) {
@@ -1162,6 +1173,10 @@ export class BroadcastScene {
     const elapsed = this.clock.getElapsedTime();
     const segmentElapsed = Math.max(0, elapsed - this.segmentStartedAt);
     const motion = pacingMotionFrame(this.pacing, segmentElapsed, this.motionSeed);
+    const cueMotion = storyCueMotion(
+      this.activeStoryCue,
+      (elapsed - this.activeStoryCueStartedAt) * 1_000,
+    );
 
     this.characters.forEach((character, index) => {
       const speech =
@@ -1205,21 +1220,47 @@ export class BroadcastScene {
     });
 
     this.dreamModel.rotation.y = -0.35 + Math.sin(elapsed * 0.45) * 0.12;
-    this.dreamModel.position.y = 1.72 + Math.sin(elapsed * 0.8) * 0.025;
-    this.newsModel.rotation.z = Math.sin(elapsed * 0.35) * 0.025;
+    this.dreamModel.rotation.z = cueMotion.rotation;
+    this.dreamModel.position.x = -1.1 + cueMotion.x * 0.012;
+    this.dreamModel.position.y =
+      1.72 + Math.sin(elapsed * 0.8) * 0.025 - cueMotion.y * 0.012;
+    this.dreamModel.scale.set(
+      0.68 * cueMotion.scaleX,
+      0.68 * cueMotion.scaleY,
+      0.68,
+    );
+    this.newsModel.rotation.z = Math.sin(elapsed * 0.35) * 0.025 + cueMotion.rotation;
+    this.newsModel.position.x = cueMotion.x * 0.012;
+    this.newsModel.position.y = -cueMotion.y * 0.012;
+    this.newsModel.scale.set(cueMotion.scaleX, cueMotion.scaleY, 1);
     this.shoppingModel.group.rotation.y = Math.sin(elapsed * 0.85) * 0.18;
+    this.shoppingModel.group.rotation.z = cueMotion.rotation;
+    this.shoppingModel.group.position.x = cueMotion.x * 0.012;
+    this.shoppingModel.group.position.y = -cueMotion.y * 0.012;
+    this.shoppingModel.group.scale.set(cueMotion.scaleX, cueMotion.scaleY, 1);
     this.shoppingModel.doorbell.scale.setScalar(1 + Math.max(0, Math.sin(elapsed * 3)) * 0.025);
     this.shoppingModel.mug.position.y = -Math.min(0.28, (elapsed - this.segmentStartedAt) * 0.009);
-    this.lettersModel.position.y = Math.sin(elapsed * 0.7) * 0.025;
+    this.lettersModel.position.x = cueMotion.x * 0.012;
+    this.lettersModel.position.y =
+      Math.sin(elapsed * 0.7) * 0.025 - cueMotion.y * 0.012;
+    this.lettersModel.rotation.z = cueMotion.rotation;
+    this.lettersModel.scale.set(cueMotion.scaleX, cueMotion.scaleY, 1);
     this.moon.group.rotation.z = Math.sin(elapsed * 0.22) * 0.035;
     this.moon.mouth.scale.y =
       elapsed < this.moonSpeakerUntil ? 0.5 + Math.abs(Math.sin(elapsed * 10)) * 5 : 1;
     this.cloud.group.position.y = 3 + Math.sin(elapsed * 0.8) * 0.18;
     this.cloud.mouth.scale.y =
       elapsed < this.cloudSpeakerUntil ? 0.6 + Math.abs(Math.sin(elapsed * 12)) * 4 : 1;
-    this.premiseProps.group.position.x = motion.propX * 0.012;
-    this.premiseProps.group.position.y = 3.35 + motion.propY * 0.009;
+    this.premiseProps.group.position.x = (motion.propX + cueMotion.x) * 0.012;
+    this.premiseProps.group.position.y =
+      3.35 + motion.propY * 0.009 - cueMotion.y * 0.012;
     this.premiseProps.group.rotation.y = motion.propX * 0.002;
+    this.premiseProps.group.rotation.z = cueMotion.rotation;
+    this.premiseProps.group.scale.set(
+      0.68 * cueMotion.scaleX,
+      0.68 * cueMotion.scaleY,
+      0.68,
+    );
     this.stripes.forEach((stripe, index) => {
       stripe.rotation.z =
         (index % 2 === 0 ? 0.08 : -0.08) +
@@ -1230,6 +1271,7 @@ export class BroadcastScene {
     this.warningLight.intensity = Math.max(
       Math.floor(elapsed) % 17 === 14 ? Math.max(0, Math.sin(elapsed * 18)) * 2.5 : 0,
       this.pacing === 'interrupted' ? motion.graphicPulse * 1.8 : 0,
+      cueMotion.flash * 2.4,
     );
     this.camera.position.copy(this.cameraPosition);
     this.camera.position.x +=

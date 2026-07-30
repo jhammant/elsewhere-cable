@@ -12,19 +12,23 @@ function visuals(): {
   cameras: string[];
   speakers: Array<[string, number]>;
   actions: Array<[string, string]>;
+  storyCues: string[];
 } {
   const cameras: string[] = [];
   const speakers: Array<[string, number]> = [];
   const actions: Array<[string, string]> = [];
+  const storyCues: string[] = [];
   return {
     cameras,
     speakers,
     actions,
+    storyCues,
     target: {
       loadSegment: () => undefined,
       cutCamera: (camera) => cameras.push(camera),
       speak: (characterId, durationMs) => speakers.push([characterId, durationMs]),
       performAction: (characterId, action) => actions.push([characterId, action]),
+      performStoryCue: (cue) => storyCues.push(cue.cue),
     },
   };
 }
