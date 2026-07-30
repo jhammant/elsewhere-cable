@@ -7,6 +7,7 @@ import {
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
 import { continuityCopyForSegment, type ContinuityCopy } from './continuity-copy.js';
+import { resolveBroadcastPackage } from './broadcast-package.js';
 import { resolveProductionDesign } from './production-design.js';
 
 interface PlayoutElements {
@@ -411,6 +412,10 @@ export class PlayoutEngine {
     this.ui.broadcast.dataset.medium = productionDesign.visualMedium;
     this.ui.broadcast.dataset.cast = productionDesign.castArchetype;
     this.ui.broadcast.dataset.pacing = segment.pacing ?? 'conversational';
+    this.ui.broadcast.dataset.package = resolveBroadcastPackage({
+      ...segment,
+      visualMedium: productionDesign.visualMedium,
+    });
     this.ui.formatBug.textContent =
       segment.channel.number === 113
         ? "CHILDREN'S TELEVISION"

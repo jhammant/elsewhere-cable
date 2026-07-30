@@ -2131,6 +2131,274 @@ h1 {
   transform: translateX(0.35%);
 }
 
+/*
+ * Channel-native packages are a second visual axis independent of renderer
+ * medium. These selectors intentionally come last so a programme can change
+ * the entire screen silhouette, not just inherit a different colour grade.
+ */
+.broadcast[data-package] .format-bug {
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.broadcast[data-package] .format-bug::after {
+  content: ' · CH ' attr(data-channel);
+  opacity: 0.72;
+}
+
+.broadcast[data-package='full_bleed'] .network-header,
+.broadcast[data-package='full_bleed'] .channel-panel,
+.broadcast[data-package='full_bleed'] .lower-third,
+.broadcast[data-package='full_bleed'] .broadcast-clock,
+.broadcast[data-package='full_bleed'] .news-ticker {
+  display: none;
+}
+
+.broadcast[data-package='full_bleed'] #programme-canvas,
+.broadcast[data-package='full_bleed'] #programme-2d-canvas {
+  clip-path: none;
+}
+
+.broadcast[data-package='full_bleed'] .programme-mask {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 4rem rgba(0, 0, 0, 0.16);
+}
+
+.broadcast[data-package='full_bleed'] .format-bug {
+  top: 4%;
+  right: auto;
+  left: 4%;
+}
+
+.broadcast[data-package='full_bleed'] .subtitle {
+  right: 9%;
+  bottom: 4%;
+  left: 9%;
+  border-radius: 0;
+}
+
+.broadcast[data-package='full_bleed'] .programme-graphic {
+  inset: 13% 12% auto;
+  width: auto;
+  min-height: 34%;
+}
+
+.broadcast[data-package='boxed_43'] .network-header,
+.broadcast[data-package='boxed_43'] .channel-panel,
+.broadcast[data-package='boxed_43'] .broadcast-clock,
+.broadcast[data-package='boxed_43'] .news-ticker {
+  display: none;
+}
+
+.broadcast[data-package='boxed_43'] #programme-canvas,
+.broadcast[data-package='boxed_43'] #programme-2d-canvas {
+  clip-path: inset(3% 20%);
+}
+
+.broadcast[data-package='boxed_43'] .programme-mask {
+  inset: 3% 20%;
+  width: auto;
+  height: auto;
+  border: 0.55rem solid currentColor;
+  border-radius: 0;
+  box-shadow:
+    0 0 0 0.28rem rgba(0, 0, 0, 0.82),
+    inset 0 0 3rem rgba(0, 0, 0, 0.2);
+}
+
+.broadcast[data-package='boxed_43'] .format-bug {
+  top: 6%;
+  right: auto;
+  left: 22%;
+}
+
+.broadcast[data-package='boxed_43'] .lower-third {
+  bottom: 6%;
+  left: 22%;
+  width: 28%;
+}
+
+.broadcast[data-package='boxed_43'] .subtitle {
+  right: 22%;
+  bottom: 6%;
+  left: 52%;
+  font-size: clamp(0.34rem, 0.74vw, 0.7rem);
+  text-align: left;
+}
+
+.broadcast[data-package='boxed_43'] .programme-graphic {
+  inset: 16% 26% auto;
+  width: auto;
+}
+
+.broadcast[data-package='letterbox'] .channel-panel,
+.broadcast[data-package='letterbox'] .broadcast-clock,
+.broadcast[data-package='letterbox'] .news-ticker {
+  display: none;
+}
+
+.broadcast[data-package='letterbox'] #programme-canvas,
+.broadcast[data-package='letterbox'] #programme-2d-canvas {
+  clip-path: inset(11% 2%);
+}
+
+.broadcast[data-package='letterbox'] .programme-mask {
+  inset: 11% 2%;
+  width: auto;
+  height: auto;
+  border-width: 0.18rem 0;
+  border-radius: 0;
+  box-shadow:
+    0 -3rem 0 #030708,
+    0 3rem 0 #030708;
+}
+
+.broadcast[data-package='letterbox'] .network-header {
+  top: 3.2%;
+  right: 4%;
+  left: 4%;
+}
+
+.broadcast[data-package='letterbox'] .format-bug {
+  top: 12.5%;
+  right: auto;
+  left: 4%;
+}
+
+.broadcast[data-package='letterbox'] .lower-third {
+  bottom: 12%;
+  left: 4%;
+  width: 36%;
+}
+
+.broadcast[data-package='letterbox'] .subtitle {
+  right: 4%;
+  bottom: 12%;
+  left: 43%;
+  text-align: left;
+}
+
+.broadcast[data-package='letterbox'] .programme-graphic {
+  top: 19%;
+  left: 8%;
+  width: 52%;
+}
+
+.broadcast[data-package='side_stack'] #programme-canvas,
+.broadcast[data-package='side_stack'] #programme-2d-canvas {
+  clip-path: inset(3% 27% 3% 3%);
+}
+
+.broadcast[data-package='side_stack'] .programme-mask {
+  inset: 3% 27% 3% 3%;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+}
+
+.broadcast[data-package='side_stack'] .channel-panel {
+  top: 3%;
+  right: 3%;
+  bottom: 3%;
+  display: flex;
+  width: 22%;
+}
+
+.broadcast[data-package='side_stack'] .network-header {
+  top: 5%;
+  right: 30%;
+  left: 5%;
+}
+
+.broadcast[data-package='side_stack'] .format-bug {
+  top: 14%;
+  right: auto;
+  left: 5%;
+}
+
+.broadcast[data-package='side_stack'] .lower-third {
+  bottom: 15%;
+  left: 5%;
+  width: 36%;
+}
+
+.broadcast[data-package='side_stack'] .subtitle {
+  right: 30%;
+  bottom: 5%;
+  left: 8%;
+}
+
+.broadcast[data-package='side_stack'] .broadcast-clock,
+.broadcast[data-package='side_stack'] .news-ticker {
+  display: none;
+}
+
+.broadcast[data-package='tabloid'] .network-header,
+.broadcast[data-package='tabloid'] .channel-panel,
+.broadcast[data-package='tabloid'] .broadcast-clock,
+.broadcast[data-package='tabloid'] .news-ticker {
+  display: none;
+}
+
+.broadcast[data-package='tabloid'] #programme-canvas,
+.broadcast[data-package='tabloid'] #programme-2d-canvas {
+  clip-path: none;
+}
+
+.broadcast[data-package='tabloid'] .programme-mask {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+}
+
+.broadcast[data-package='tabloid'] .format-bug {
+  top: 4%;
+  right: auto;
+  left: 4%;
+  transform: rotate(-1.5deg);
+}
+
+.broadcast[data-package='tabloid'] .lower-third {
+  top: 5%;
+  right: 4%;
+  bottom: auto;
+  left: 35%;
+  width: auto;
+  min-height: 10%;
+  transform: rotate(0.7deg);
+}
+
+.broadcast[data-package='tabloid'] .subtitle {
+  right: 5%;
+  bottom: 5%;
+  left: 5%;
+  border: 0.22rem solid currentColor;
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: clamp(0.42rem, 0.9vw, 0.84rem);
+  text-align: left;
+  transform: rotate(-0.35deg);
+}
+
+.broadcast[data-package='tabloid'] .programme-graphic {
+  top: 24%;
+  left: 5%;
+  width: 64%;
+  min-height: 36%;
+  transform: rotate(-2deg) translateX(-7%);
+}
+
+.broadcast[data-package='tabloid'] .programme-graphic.is-visible {
+  transform: rotate(-2deg) translateX(0);
+}
+
 .tracking-line {
   top: -5%;
   height: 5%;
