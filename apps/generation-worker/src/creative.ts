@@ -1208,6 +1208,7 @@ Select a very high, memorable channel number. Make the scene unlike the immediat
 export function scriptPrompt(
   proposal: GeneratedSegmentProposal,
   rejectionReasons: readonly string[] = [],
+  optimisationBrief: OptimisationBrief | null = null,
 ): string {
   const pacingRange = {
     frantic: '10–12 very short lines with rapid reversals',
@@ -1230,11 +1231,34 @@ export function scriptPrompt(
   );
   const dialogueShape = assignedDialogueShapeForCoordinates(proposal);
   const speakerPattern = dialogueSpeakerPattern(dialogueShape);
+  const liveEditorialCorrections =
+    optimisationBrief === null
+      ? []
+      : [
+          optimisationBrief.scores.dialogueCoherence <= 6
+            ? 'Dialogue coherence correction: every reply must answer, challenge or redirect one concrete claim from the preceding spoken line. Do not explain or summarise the premise. Include at least two bargains, choices or interruptions that change who has leverage.'
+            : null,
+          optimisationBrief.scores.premiseClarity <= 6
+            ? 'Premise clarity correction: by the end of the second spoken line, make both incompatible wants and the immediate obstacle understandable through disagreement, without reciting the premise.'
+            : null,
+          optimisationBrief.scores.comedyEscalation <= 6
+            ? 'Comedy escalation correction: every later beat must change a consequence, decision or status relationship instead of restating the comic rule.'
+            : null,
+          optimisationBrief.scores.shareability <= 5
+            ? 'Ending correction: finish on one concise decision, status reversal or visible payoff that could stand alone; never finish with a summary.'
+            : null,
+        ].filter((correction): correction is string => correction !== null);
+  const liveEditorialBlock =
+    liveEditorialCorrections.length === 0
+      ? ''
+      : `Live thirty-minute dialogue corrections (mandatory, subordinate to the approved proposal and every safety rule):
+${liveEditorialCorrections.map((correction) => `- ${correction}`).join('\n')}
+`;
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
-Dialogue architecture: ${dialogueShape}
+${liveEditorialBlock}Dialogue architecture: ${dialogueShape}
 Required speaker rhythm: ${speakerPattern}. Map A, B and C only to roles already established in the premise. Preserve consecutive turns exactly where shown; a second turn by one role must advance or revise their goal rather than repeat their previous line.
 Follow that architecture exactly using only roles already present in the premise. Do not invent a narrator, unseen speaker or new participant merely to satisfy the architecture.
 Characters must never say "the rule forces", "the law takes effect" or narrate a visible transformation merely to explain it. Let them bargain, conceal, accuse, boast, misunderstand and change decisions while the renderer shows physical action. Visual medium is a rendering style, not permission to invent new story physics. Do not introduce tragedy, trauma, dead relatives or an unrelated spectacle. Never include word counts, drafting notes or model commentary in programme fields. The ending may only use characters, objects and mechanisms already established by the approved premise. Never end with somebody screaming, trembling or staring in horror; end on a comic decision, loss of status, reluctant agreement or earned visual consequence.

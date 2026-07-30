@@ -763,6 +763,7 @@ describe('produceBatch', () => {
     const draft = demoDraft(0);
     let proposalCalls = 0;
     let scriptCalls = 0;
+    let observedScriptPrompt = '';
     const llm: LlmProvider = {
       id: 'two-stage-test-llm',
       model: 'test-model',
@@ -772,6 +773,7 @@ describe('produceBatch', () => {
       },
       generateStructured(request) {
         scriptCalls += 1;
+        observedScriptPrompt = request.userPrompt;
         const proposalJson = request.userPrompt.match(
           /Turn this already approved proposal into a complete comedy segment:\n(\{.*\})\n\nPreserve/u,
         )?.[1];
@@ -801,10 +803,40 @@ describe('produceBatch', () => {
       llm,
       tts,
       embeddingProvider: null,
+      optimisationBrief: {
+        schemaVersion: 1,
+        generatedAt: '2026-07-30T02:00:00.000Z',
+        windowMinutes: 30,
+        sampleSize: 30,
+        scores: {
+          premiseClarity: 6,
+          comedyEscalation: 9,
+          dialogueCoherence: 5,
+          visualMatch: 8,
+          paceVariety: 10,
+          originality: 9,
+          shareability: 7,
+        },
+        increaseFormats: ['sitcom'],
+        increasePacing: ['interrupted'],
+        avoidMotifs: [],
+        preserveStrengths: ['surreal visual layering'],
+        editorialDirection: 'Make character conflict more immediate.',
+        delivery: {
+          isLive: true,
+          concurrentViewers: 1,
+          silenceRatio: 0.18,
+          freezeRatio: 0,
+          fallbackOccurrences: 0,
+        },
+      },
     });
 
     expect(proposalCalls).toBe(1);
     expect(scriptCalls).toBe(1);
+    expect(observedScriptPrompt).toContain('Live thirty-minute dialogue corrections');
+    expect(observedScriptPrompt).toContain('every reply must answer, challenge or redirect');
+    expect(observedScriptPrompt).toContain('by the end of the second spoken line');
     expect(result.segmentCount).toBe(1);
   });
 

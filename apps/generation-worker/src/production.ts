@@ -1162,7 +1162,11 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           try {
             const scripted = await options.llm!.generateStructured({
               systemPrompt,
-              userPrompt: scriptPrompt(proposal, rejectionReasons),
+              userPrompt: scriptPrompt(
+                proposal,
+                rejectionReasons,
+                options.optimisationBrief ?? null,
+              ),
             });
             const candidate = repairDialogueArchitecture(
               repairNetworkIdentityCollision({
