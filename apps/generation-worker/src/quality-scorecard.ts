@@ -151,6 +151,7 @@ export function decideExperiment(
   baseline: QualityScorecard,
   candidate: QualityScorecard,
   minimumGain = 1,
+  surface = 'general',
 ): ExperimentDecision {
   if (!candidate.guardrails.passed) {
     return 'discard';
@@ -161,6 +162,16 @@ export function decideExperiment(
     candidate.evidenceCoverage < 80
   ) {
     return 'inconclusive';
+  }
+  // Editorial, novelty and diversity naturally drift with each playout window.
+  // They cannot establish whether a renderer-only change improved the pictures.
+  // Until a direct visual judge is available, renderer experiments only enforce
+  // delivery non-regression and otherwise remain explicitly inconclusive.
+  if (surface === 'renderer') {
+    if (baseline.reliability === null || candidate.reliability === null) {
+      return 'inconclusive';
+    }
+    return candidate.reliability < baseline.reliability - minimumGain ? 'discard' : 'inconclusive';
   }
   return candidate.experienceIndex >= baseline.experienceIndex + minimumGain ? 'keep' : 'discard';
 }

@@ -19,6 +19,7 @@ import {
   proposalCritiqueIssues,
   proposalQualityIssues,
   repairNetworkIdentityCollision,
+  semanticNoveltyCollisionPremise,
   semanticNoveltyIssue,
   speechTurnsForTts,
   storyGraphicForFormat,
@@ -1505,6 +1506,20 @@ describe('produceBatch', () => {
     );
 
     expect(issue).toContain('semantically repeats');
+  });
+
+  it('round-trips the nearest semantic collision as bounded retry data', () => {
+    const premise = 'At the archive, "ordinary" labels assign tea duty to their readers.';
+    const issue = semanticNoveltyIssue(
+      'Archive labels make readers responsible for serving tea.',
+      [1, 0, 0],
+      [{ title: 'Label Tea', premise, dialogue: [] }],
+      [[1, 0, 0]],
+    );
+
+    expect(issue).not.toBeNull();
+    expect(semanticNoveltyCollisionPremise(issue!)).toBe(premise);
+    expect(semanticNoveltyCollisionPremise('proposal critic: unrelated')).toBeNull();
   });
 
   it('allows thematic overlap when the comic mechanism is not a close paraphrase', () => {

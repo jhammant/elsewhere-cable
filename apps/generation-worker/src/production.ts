@@ -1062,7 +1062,24 @@ export function semanticNoveltyIssue(
   if (closestSimilarity < semanticSimilarityLimit || closestIndex < 0) {
     return null;
   }
-  return `premise semantically repeats "${history[closestIndex]?.premise ?? premise}" (${closestSimilarity.toFixed(3)})`;
+  return `premise semantically repeats ${JSON.stringify(history[closestIndex]?.premise ?? premise)} (${closestSimilarity.toFixed(3)})`;
+}
+
+export function semanticNoveltyCollisionPremise(reason: string): string | null {
+  const prefix = 'premise semantically repeats ';
+  if (!reason.startsWith(prefix)) {
+    return null;
+  }
+  const scoreIndex = reason.lastIndexOf(' (');
+  if (scoreIndex <= prefix.length) {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(reason.slice(prefix.length, scoreIndex));
+    return typeof parsed === 'string' && parsed.trim().length > 0 ? parsed.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface BatchResult {
@@ -1547,6 +1564,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           const rejectedAttemptHistory: CreativeRecord[] = [];
           const semanticRejectedAttemptHistory: CreativeRecord[] = [];
           const rejectedAttemptEmbeddings: number[][] = [];
+          const noveltyCollisionPremises: string[] = [];
           let creativeCoordinateAttempt = 0;
           let structuralRetryUsed = false;
           let structuralRepairProposal: GeneratedSegmentProposal | null = null;
@@ -1583,6 +1601,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 visualMediums: recentMediums,
                 castArchetypes: recentCastArchetypes,
                 catalogueSize: creativeHistory.length,
+                noveltyExclusions: noveltyCollisionPremises,
               },
               structuralRepairProposal,
             );
@@ -1672,6 +1691,13 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                     category,
                     (proposalRejectionCounts.get(category) ?? 0) + 1,
                   );
+                  const collision = semanticNoveltyCollisionPremise(reason);
+                  if (collision !== null && !noveltyCollisionPremises.includes(collision)) {
+                    noveltyCollisionPremises.push(collision);
+                    if (noveltyCollisionPremises.length > 6) {
+                      noveltyCollisionPremises.shift();
+                    }
+                  }
                 }
                 const rejectedRecord: CreativeRecord = {
                   title: generated.programmeTitle,

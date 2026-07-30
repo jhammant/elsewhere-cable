@@ -107,4 +107,29 @@ describe('channel quality scorecard', () => {
     const candidate = qualityScorecard(brief());
     expect(decideExperiment(baseline, candidate)).toBe('inconclusive');
   });
+
+  it('does not attribute unrelated editorial drift to a renderer experiment', () => {
+    const baseline = qualityScorecard(brief());
+    const editorialDrift = qualityScorecard(
+      brief({
+        scores: {
+          ...brief().scores,
+          comedyEscalation: 6,
+          shareability: 5,
+        },
+      }),
+    );
+    const deliveryRegression = qualityScorecard(
+      brief({
+        delivery: {
+          ...brief().delivery,
+          silenceRatio: 0.25,
+          freezeRatio: 0.25,
+        },
+      }),
+    );
+
+    expect(decideExperiment(baseline, editorialDrift, 1, 'renderer')).toBe('inconclusive');
+    expect(decideExperiment(baseline, deliveryRegression, 1, 'renderer')).toBe('discard');
+  });
 });

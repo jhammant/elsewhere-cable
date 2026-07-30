@@ -181,7 +181,9 @@ function experimentEvaluation(
     baseline,
     candidate,
     decision:
-      baseline === null || candidate === null ? 'waiting' : decideExperiment(baseline, candidate),
+      baseline === null || candidate === null
+        ? 'waiting'
+        : decideExperiment(baseline, candidate, 1, experiment.surface),
   };
 }
 
