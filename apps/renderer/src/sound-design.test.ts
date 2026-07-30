@@ -1,0 +1,116 @@
+import type { SegmentPackage } from '@elsewhere-cable/schemas';
+import { describe, expect, it } from 'vitest';
+import { soundCuesForSegment } from './sound-design.js';
+
+function segment(): SegmentPackage {
+  return {
+    schemaVersion: 1,
+    segmentId: 'seg_sound_test',
+    channel: {
+      id: 'channel_88001122',
+      number: 88_001_122,
+      name: 'Domestic Object Review',
+      realityId: 'SOUND-4',
+    },
+    programme: {
+      id: 'the_doorbell_review',
+      title: 'The Doorbell Review',
+      format: 'sitcom',
+      premise: 'At a family table, two neighbours dispute who must return a tiny silver bell.',
+    },
+    durationMs: 13_000,
+    visualStyle: 'paper domestic comedy',
+    visualMedium: 'paper_cutout',
+    castArchetype: 'paper_puppets',
+    pacing: 'slow_burn',
+    tone: ['dry'],
+    events: [
+      {
+        atMs: 1_000,
+        type: 'speech.play',
+        speechId: 'speech_1',
+        characterId: 'neighbour_a',
+        characterName: 'Neighbour A',
+        voiceId: 'voice_a',
+        subtitle: 'Your doorbell rang before I had decided to visit.',
+        audioFile: 'audio/speech_1.m4a',
+        durationMs: 1_800,
+      },
+      {
+        atMs: 5_000,
+        type: 'speech.play',
+        speechId: 'speech_2',
+        characterId: 'neighbour_b',
+        characterName: 'Neighbour B',
+        voiceId: 'voice_b',
+        subtitle: 'Then the telephone has misunderstood the appointment.',
+        audioFile: 'audio/speech_2.m4a',
+        durationMs: 1_900,
+      },
+    ],
+    continuityUpdates: [],
+    suggestedExit: {
+      earliestMs: 10_000,
+      preferredMs: 12_500,
+      transition: 'STATIC_BURST',
+    },
+    production: {
+      generatedAt: '2026-07-30T11:00:00.000Z',
+      generator: 'test',
+      model: 'test',
+      safetyStatus: 'approved-for-local-preview',
+      audioPrepared: true,
+    },
+  };
+}
+
+describe('soundCuesForSegment', () => {
+  it('adds restrained format, spoken-prop and ending-prop cues deterministically', () => {
+    const first = soundCuesForSegment(segment());
+    const second = soundCuesForSegment(segment());
+
+    expect(first).toEqual(second);
+    expect(first[0]).toMatchObject({
+      atMs: 80,
+      cue: 'domestic_sting',
+      reason: 'format',
+    });
+    expect(first.some(({ cue, reason }) => cue === 'bell' && reason === 'spoken-prop')).toBe(true);
+    expect(first.some(({ cue, reason }) => cue === 'phone_chirp' && reason === 'spoken-prop')).toBe(
+      true,
+    );
+    expect(first.some(({ cue, reason }) => cue === 'bell' && reason === 'ending-prop')).toBe(true);
+  });
+
+  it('keeps every decorative cue outside prepared speech intervals', () => {
+    const candidate = segment();
+    const speech = candidate.events.filter(
+      (
+        event,
+      ): event is Extract<SegmentPackage['events'][number], { type: 'speech.play' }> =>
+        event.type === 'speech.play',
+    );
+
+    for (const cue of soundCuesForSegment(candidate)) {
+      for (const line of speech) {
+        const overlaps = cue.atMs < line.atMs + line.durationMs && cue.atMs + cue.durationMs > line.atMs;
+        expect(overlaps, `${cue.cue} overlaps ${line.speechId}`).toBe(false);
+      }
+    }
+  });
+
+  it('moves the format cue after unusually early speech', () => {
+    const candidate = segment();
+    const firstSpeech = candidate.events[0];
+    if (firstSpeech?.type !== 'speech.play') {
+      throw new Error('Expected the test fixture to begin with speech');
+    }
+    firstSpeech.atMs = 100;
+
+    expect(soundCuesForSegment(candidate)[0]).toMatchObject({
+      atMs: 1_945,
+      cue: 'domestic_sting',
+      reason: 'format',
+    });
+  });
+});

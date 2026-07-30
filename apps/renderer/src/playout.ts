@@ -9,6 +9,7 @@ import {
 import { continuityCopyForSegment, type ContinuityCopy } from './continuity-copy.js';
 import { resolveBroadcastPackage } from './broadcast-package.js';
 import { resolveProductionDesign } from './production-design.js';
+import { BroadcastSoundDesigner, soundCuesForSegment } from './sound-design.js';
 
 interface PlayoutElements {
   broadcast: HTMLElement;
@@ -162,6 +163,7 @@ export class PlayoutEngine {
   private timers: Array<ReturnType<typeof setTimeout>> = [];
   private activeAudio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
+  private readonly soundDesigner: BroadcastSoundDesigner;
   private persistPlaybackHistory = false;
   private graphicKickers: ContinuityCopy['graphicKickers'] = {
     lowerThird: 'Programme already in progress',
@@ -170,6 +172,7 @@ export class PlayoutEngine {
   };
 
   constructor(private readonly visuals: PlayoutVisuals) {
+    this.soundDesigner = new BroadcastSoundDesigner(() => this.audioUnlocked);
     const parameters = new URLSearchParams(window.location.search);
     const requestedStart = Number(parameters.get('start') ?? 0);
     if (Number.isInteger(requestedStart) && requestedStart >= 0) {
@@ -259,6 +262,7 @@ export class PlayoutEngine {
     this.timers = [];
     this.activeAudio?.pause();
     this.activeAudio = null;
+    this.soundDesigner.reset();
   }
 
   private async playCurrent(): Promise<void> {
@@ -428,6 +432,9 @@ export class PlayoutEngine {
     const baseDirectory = segmentDirectory(packagePath);
     for (const event of segment.events) {
       this.timer(() => this.runEvent(event, baseDirectory), event.atMs);
+    }
+    for (const soundCue of soundCuesForSegment(segment)) {
+      this.timer(() => this.soundDesigner.play(soundCue), soundCue.atMs);
     }
   }
 
