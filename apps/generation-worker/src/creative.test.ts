@@ -397,6 +397,32 @@ describe('generation prompts', () => {
     expect(repairDialogueArchitecture(rigid)).toBe(rigid);
   });
 
+  it('repairs a short unequal exchange before spending another LLM rewrite', () => {
+    const base = Array.from({ length: 5_000 }, (_, serial) => demoDraft(serial)).find((draft) =>
+      assignedDialogueShapeForCoordinates(draft).startsWith('Unequal exchange:'),
+    );
+    expect(base).toBeDefined();
+    const rigid = {
+      ...base!,
+      dialogue: Array.from({ length: 6 }, (_, index) => ({
+        speaker: index % 2 === 0 ? 'Host' : 'Guest',
+        text: `This deliberately detailed response number ${index + 1} changes the negotiation today.`,
+        action: 'REACTION_NEUTRAL' as const,
+      })),
+    };
+    const spokenWords = rigid.dialogue.flatMap((line) =>
+      line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu),
+    );
+
+    const repaired = repairDialogueArchitecture(rigid);
+
+    expect(repaired.dialogue).toHaveLength(8);
+    expect(dialogueArchitectureIssues(repaired)).toEqual([]);
+    expect(
+      repaired.dialogue.flatMap((line) => line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)),
+    ).toEqual(spokenWords);
+  });
+
   it('fully applies corrective pacing while the delivered feed is too silent', () => {
     const brief: NonNullable<Parameters<typeof assignedPacing>[1]> = {
       schemaVersion: 1,

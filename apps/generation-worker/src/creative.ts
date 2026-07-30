@@ -1281,6 +1281,9 @@ function splitDialogueTurn(
 export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): GeneratedSegmentDraft {
   const architecture = assignedDialogueShapeForCoordinates(draft);
   const speakers = draft.dialogue.map((line) => line.speaker.trim().toLowerCase());
+  const consecutiveRuns = speakers
+    .slice(1)
+    .filter((speaker, index) => speaker === speakers[index]).length;
   const strictlyAlternating =
     draft.dialogue.length >= 8 &&
     new Set(speakers).size === 2 &&
@@ -1288,11 +1291,14 @@ export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): Genera
   const requiresBrokenAlternation = architecturesThatRequireBrokenAlternation.some((prefix) =>
     architecture.startsWith(prefix),
   );
-  if (!strictlyAlternating || !requiresBrokenAlternation) {
+  const unequalExchangeDeficit = architecture.startsWith('Unequal exchange:')
+    ? Math.max(0, 2 - consecutiveRuns)
+    : 0;
+  if (!requiresBrokenAlternation || (!strictlyAlternating && unequalExchangeDeficit === 0)) {
     return draft;
   }
 
-  const requiredSplits = architecture.startsWith('Unequal exchange:') ? 2 : 1;
+  const requiredSplits = unequalExchangeDeficit > 0 ? unequalExchangeDeficit : 1;
   if (draft.dialogue.length + requiredSplits > 12) {
     return draft;
   }
