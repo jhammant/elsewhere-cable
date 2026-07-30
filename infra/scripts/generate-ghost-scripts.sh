@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 
+script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+workspace_root=$(dirname "$(dirname "$script_directory")")
+cd "$workspace_root"
+
 mode=${1:-once}
 batch_count=${ELSEWHERE_SCRIPT_BATCH_COUNT:-16}
 generation_concurrency=${ELSEWHERE_GENERATION_CONCURRENCY:-4}

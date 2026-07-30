@@ -17,8 +17,10 @@ import {
   diversifyRunway,
   type RunwayDescriptor,
 } from '../../apps/generation-worker/src/runway-diversity.js';
+import { mixedRecoveryCatalogue } from '../../apps/generation-worker/src/recovery-catalogue.js';
 import { energiseVisualTimeline } from '../../apps/generation-worker/src/visual-energiser.js';
 import { compactRecoverySegment } from '../../apps/generation-worker/src/timeline-recovery.js';
+import { currentEndorTarget, currentEndorVisualMedia } from './endor-compatibility.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -28,6 +30,10 @@ function argument(name: string): string | undefined {
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
 const segmentsRoot = path.resolve(workspaceRoot, argument('segments') ?? 'data/segments-live');
 const count = Number(argument('count') ?? 32);
+const compatibilityTarget = argument('target');
+if (compatibilityTarget !== undefined && compatibilityTarget !== currentEndorTarget) {
+  throw new Error(`Unsupported recovery compatibility target: ${compatibilityTarget}`);
+}
 if (!Number.isInteger(count) || count < 1 || count > 100) {
   throw new Error('--count must be an integer from 1 to 100');
 }
@@ -88,30 +94,32 @@ for (const entry of manifest.segments) {
     // Only complete, approved packages can become recovery material.
   }
 }
-const demoCandidates = candidates.filter(
+const compatibleCandidates =
+  compatibilityTarget === currentEndorTarget
+    ? candidates.filter(({ segment }) =>
+        currentEndorVisualMedia.has(segment.visualMedium ?? 'legacy'),
+      )
+    : candidates;
+const demoCandidates = compatibleCandidates.filter(
   ({ segment }) => segment.production.generator === 'demo-library',
+);
+const approvedOriginalCandidates = compatibleCandidates.filter(
+  ({ segment }) => segment.production.generator !== 'demo-library',
 );
 const requestedCandidates =
   requestedSourceIds === null
     ? []
-    : candidates.filter(({ entry }) => requestedSourceIds.has(entry.segmentId));
+    : compatibleCandidates.filter(({ entry }) => requestedSourceIds.has(entry.segmentId));
 const candidateSourcePool =
   requestedSourceIds !== null
     ? requestedCandidates
-    : demoCandidates.length >= count
-      ? demoCandidates
-      : candidates;
+    : mixedRecoveryCatalogue(approvedOriginalCandidates, demoCandidates, existingRecoverySegments);
 if (candidateSourcePool.length === 0) {
   throw new Error('No approved package is available for emergency refill');
 }
-const sourceOffset = existingRecoverySegments % candidateSourcePool.length;
-const rotatedCandidateSourcePool = [
-  ...candidateSourcePool.slice(sourceOffset),
-  ...candidateSourcePool.slice(0, sourceOffset),
-];
 const desiredSourceCount = Math.min(candidateSourcePool.length, count);
 const sourcePool: typeof candidates = [];
-for (const source of rotatedCandidateSourcePool) {
+for (const source of candidateSourcePool) {
   const segmentPath = path.join(segmentsRoot, source.entry.packagePath);
   let eligible = true;
   for (const event of source.segment.events) {
@@ -253,11 +261,8 @@ process.stdout.write(
       leadDurationRemovedMs,
       tailDurationRemovedMs,
       source:
-        requestedSourceIds !== null
-          ? 'requested-approved-catalogue'
-          : demoCandidates.length >= count
-            ? 'demo-library'
-            : 'approved-catalogue',
+        requestedSourceIds !== null ? 'requested-approved-catalogue' : 'mixed-approved-catalogue',
+      compatibilityTarget: compatibilityTarget ?? null,
       totalSegments: nextManifest.segments.length,
     },
     null,
