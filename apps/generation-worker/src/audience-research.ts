@@ -65,6 +65,7 @@ export interface PopularVideoSignal {
   viewCount: number;
   publishedAt: string;
   isLive: boolean;
+  source: 'most_popular' | 'recent_entertainment' | 'popular_live';
 }
 
 export interface AudienceResearchCandidate {
@@ -79,10 +80,15 @@ export interface AudienceResearchCandidate {
 export interface AudienceResearchBrief {
   schemaVersion: 1;
   generatedAt: string;
-  source: 'youtube_most_popular';
+  source: 'youtube_public_popularity';
   region: string;
   categoryId: string;
   sampleSize: number;
+  samples: {
+    mostPopular: number;
+    recentEntertainment: number;
+    popularLive: number;
+  };
   duration: {
     medianSeconds: number | null;
     underFiveMinutesShare: number;
@@ -166,10 +172,16 @@ export function deriveAudienceResearchBrief(
   return {
     schemaVersion: 1,
     generatedAt: options.generatedAt,
-    source: 'youtube_most_popular',
+    source: 'youtube_public_popularity',
     region: options.region,
     categoryId: options.categoryId,
     sampleSize: safeVideos.length,
+    samples: {
+      mostPopular: safeVideos.filter((video) => video.source === 'most_popular').length,
+      recentEntertainment: safeVideos.filter((video) => video.source === 'recent_entertainment')
+        .length,
+      popularLive: safeVideos.filter((video) => video.source === 'popular_live').length,
+    },
     duration: {
       medianSeconds: median(durations),
       underFiveMinutesShare: ratio(

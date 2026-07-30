@@ -2043,6 +2043,11 @@ Treat the ordinary visual anchor as the concrete subject inside the one format-s
 - Underused pacing to explore: ${optimisationBrief.increasePacing.join(', ') || 'none'}.
 - Motifs currently overused and forbidden in this attempt: ${optimisationBrief.avoidMotifs.join(', ') || 'none'}.
 - Strengths worth preserving without copying wording: ${optimisationBrief.preserveStrengths.join('; ') || 'none'}.
+- Public viewing-pattern hypothesis: ${
+          optimisationBrief.audienceHypothesis === undefined
+            ? 'none'
+            : `${optimisationBrief.audienceHypothesis.pattern}: ${optimisationBrief.audienceHypothesis.hypothesis}`
+        }.
 - Editorial direction: ${optimisationBrief.editorialDirection}.`;
   const noveltyExclusions = [
     ...new Set(

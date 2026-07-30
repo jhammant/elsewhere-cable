@@ -12,6 +12,7 @@ dist/
 data/benchmarks/*
 !data/benchmarks/.gitkeep
 data/cache/
+data/asset-library/
 data/generated/
 data/logs/
 data/observations/

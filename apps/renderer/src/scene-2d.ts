@@ -1,4 +1,16 @@
-import type { SegmentPackage } from '@elsewhere-cable/schemas';
+import type {
+  AssetLibraryEntry,
+  AssetLibraryManifest,
+  SegmentPackage,
+} from '@elsewhere-cable/schemas';
+import {
+  loadAssetLibrary,
+  matchingCharacterAsset,
+  matchingPropAsset,
+  visualAssetCollection,
+  type VisualAssetCollection,
+} from './asset-library.js';
+import { resolveBroadcastPackage } from './broadcast-package.js';
 import type { PlayoutVisuals } from './playout.js';
 import { pacingMotionFrame, type PacingMode, type PacingMotionFrame } from './motion-grammar.js';
 import { resolveProductionDesign, type CastArchetype } from './production-design.js';
@@ -60,6 +72,11 @@ export interface TwoDimensionalStageComposition {
   placements: TwoDimensionalPlacement[];
 }
 
+export interface TwoDimensionalStageBounds {
+  left: number;
+  right: number;
+}
+
 export interface Character2DDesign {
   archetype: StructuralCastArchetype;
   silhouette: CharacterSilhouette;
@@ -88,16 +105,23 @@ function stableHash(value: string): number {
   return hash >>> 0;
 }
 
+export function resolve2DStageBounds(segment: SegmentPackage): TwoDimensionalStageBounds {
+  const broadcastPackage = resolveBroadcastPackage(segment);
+  if (broadcastPackage === 'boxed_43') {
+    return { left: 350, right: 930 };
+  }
+  if (broadcastPackage === 'side_stack') {
+    return { left: 120, right: 840 };
+  }
+  return { left: 145, right: 1_135 };
+}
+
 export function resolve2DStageComposition(
   segment: SegmentPackage,
   castCount: number,
 ): TwoDimensionalStageComposition {
   const count = Math.max(1, Math.min(6, castCount));
-  const fullFrame = ['news', 'shopping', 'advert', 'sitcom', 'ident', 'emergency'].includes(
-    segment.programme.format,
-  );
-  const left = fullFrame ? 145 : 120;
-  const right = fullFrame ? 1_135 : 815;
+  const { left, right } = resolve2DStageBounds(segment);
   const centre = (left + right) / 2;
   const width = right - left;
   const hash = stableHash(`${segment.channel.id}:${segment.programme.id}:composition`);
@@ -373,6 +397,11 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private startedAt = 0;
   private activeStoryCue: ScheduledSoundCue | null = null;
   private activeStoryCueStartedAt = 0;
+  private photoCutout = false;
+  private assetLibrary: AssetLibraryManifest | null = null;
+  private assetCollection: VisualAssetCollection | null = null;
+  private activePropAsset: AssetLibraryEntry | null = null;
+  private readonly assetImages = new Map<string, HTMLImageElement>();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d');
@@ -390,6 +419,55 @@ export class Broadcast2DScene implements PlayoutVisuals {
       throw new Error('Canvas 2D static renderer is unavailable');
     }
     this.staticContext = staticContext;
+    void loadAssetLibrary()
+      .then((manifest) => {
+        this.assetLibrary = manifest;
+        for (const entry of manifest.assets) {
+          if (entry.kind === 'image_2d' && entry.status === 'ready') {
+            this.loadImageAsset(entry);
+          }
+        }
+        if (this.segment !== null) {
+          this.applyAssetLibrary(this.segment);
+          this.cacheStaticScene(this.segment);
+          this.render();
+        }
+      })
+      .catch(() => {
+        // The procedural renderer is the intentional fallback for a missing catalog.
+      });
+  }
+
+  private loadImageAsset(entry: AssetLibraryEntry): HTMLImageElement {
+    const existing = this.assetImages.get(entry.id);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const image = new Image();
+    image.decoding = 'async';
+    image.addEventListener('load', () => {
+      if (this.segment !== null) {
+        this.cacheStaticScene(this.segment);
+        this.render();
+      }
+    });
+    image.src = entry.uri;
+    this.assetImages.set(entry.id, image);
+    return image;
+  }
+
+  private imageFor(entry: AssetLibraryEntry | null | undefined): HTMLImageElement | null {
+    return entry === null || entry === undefined
+      ? null
+      : (this.assetImages.get(entry.id) ?? this.loadImageAsset(entry));
+  }
+
+  private applyAssetLibrary(segment: SegmentPackage): void {
+    this.assetCollection =
+      this.assetLibrary === null ? null : visualAssetCollection(this.assetLibrary, segment);
+    this.activePropAsset =
+      this.assetLibrary === null ? null : matchingPropAsset(this.assetLibrary, segment);
+    this.photoCutout = (this.assetCollection?.characters.length ?? 0) > 0;
   }
 
   loadSegment(segment: SegmentPackage): void {
@@ -397,6 +475,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const productionDesign = resolveProductionDesign(segment);
     const visualMedium = productionDesign.visualMedium;
     this.medium = isFlatVisualMedium(visualMedium) ? visualMedium : 'paper_cutout';
+    this.applyAssetLibrary(segment);
     this.castArchetype = productionDesign.castArchetype;
     this.pacing = segment.pacing ?? 'conversational';
     this.motionSeed =
@@ -472,10 +551,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const now = performance.now();
     const elapsed = (now - this.startedAt) / 1_000;
     const motion = pacingMotionFrame(this.pacing, elapsed, this.motionSeed);
-    const cueMotion = storyCueMotion(
-      this.activeStoryCue,
-      now - this.activeStoryCueStartedAt,
-    );
+    const cueMotion = storyCueMotion(this.activeStoryCue, now - this.activeStoryCueStartedAt);
     const context = this.context;
     context.save();
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -489,6 +565,9 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
     this.characters.forEach((character, index) => {
       const focused = focusIndex === -1 || focusIndex === index;
+      if (focusIndex !== -1 && !focused) {
+        return;
+      }
       context.save();
       const speaking = character.id === this.activeSpeaker && now < this.activeSpeakerUntil;
       const phase = elapsed * 1.7 + (character.seed % 360);
@@ -496,9 +575,6 @@ export class Broadcast2DScene implements PlayoutVisuals {
         Math.sin(phase) * motion.actorSway * (speaking ? 1.25 : 0.65),
         motion.actorBob * (speaking ? 1.35 : 0.55),
       );
-      if (focusIndex !== -1 && !focused) {
-        context.globalAlpha = 0.34;
-      }
       this.drawCharacter(character, now, elapsed, focused && focusIndex !== -1);
       context.restore();
     });
@@ -519,22 +595,19 @@ export class Broadcast2DScene implements PlayoutVisuals {
     }
   }
 
-  private usesFullFrame(segment: SegmentPackage): boolean {
-    return ['news', 'shopping', 'advert', 'sitcom', 'ident', 'emergency'].includes(
-      segment.programme.format,
-    );
+  private stageBounds(): TwoDimensionalStageBounds {
+    return this.segment === null ? { left: 145, right: 1_135 } : resolve2DStageBounds(this.segment);
   }
 
   private stageCentre(): number {
-    return this.segment !== null && this.usesFullFrame(this.segment) ? 640 : 465;
+    const { left, right } = this.stageBounds();
+    return (left + right) / 2;
   }
 
   private drawCompositionFrame(elapsed: number): void {
     const context = this.context;
     const centre = this.stageCentre();
-    const fullFrame = this.segment !== null && this.usesFullFrame(this.segment);
-    const left = fullFrame ? 72 : 52;
-    const right = fullFrame ? 1_208 : 880;
+    const { left, right } = this.stageBounds();
     context.save();
     if (this.composition === 'split_screen') {
       context.fillStyle = 'rgba(5, 9, 17, 0.16)';
@@ -603,6 +676,37 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const context = this.context;
     const seed = stableHash(segment.channel.name);
     const base = colour(seed, this.medium === 'corporate_vector' ? 48 : 42, 32);
+    const backgroundImage = this.imageFor(this.assetCollection?.background);
+    if (backgroundImage !== null && backgroundImage.complete && backgroundImage.naturalWidth > 0) {
+      const sourceRatio = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
+      const targetRatio = 1280 / 720;
+      const sourceWidth =
+        sourceRatio > targetRatio
+          ? backgroundImage.naturalHeight * targetRatio
+          : backgroundImage.naturalWidth;
+      const sourceHeight =
+        sourceRatio > targetRatio
+          ? backgroundImage.naturalHeight
+          : backgroundImage.naturalWidth / targetRatio;
+      context.drawImage(
+        backgroundImage,
+        (backgroundImage.naturalWidth - sourceWidth) / 2,
+        (backgroundImage.naturalHeight - sourceHeight) / 2,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        1280,
+        720,
+      );
+      const vignette = context.createLinearGradient(0, 0, 0, 720);
+      vignette.addColorStop(0, 'rgba(8, 7, 6, 0.08)');
+      vignette.addColorStop(0.72, 'rgba(8, 7, 6, 0)');
+      vignette.addColorStop(1, 'rgba(8, 7, 6, 0.32)');
+      context.fillStyle = vignette;
+      context.fillRect(0, 0, 1280, 720);
+      return;
+    }
     context.fillStyle = this.medium === 'ink_monochrome' ? '#f1eddf' : base;
     context.fillRect(0, 0, 1280, 720);
 
@@ -913,7 +1017,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const premise = segment.programme.premise.toLowerCase();
     const seed = stableHash(`${segment.channel.id}:${segment.programme.id}:set`);
     const centre = this.stageCentre();
-    const stageWidth = this.usesFullFrame(segment) ? 1_040 : 760;
+    const bounds = resolve2DStageBounds(segment);
+    const stageWidth = bounds.right - bounds.left;
     const left = centre - stageWidth / 2;
     const right = centre + stageWidth / 2;
     const pixel = this.medium === 'pixel_broadcast';
@@ -1081,9 +1186,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.translate(
       (pixel ? Math.round(centre / 16) * 16 : centre) + motion.propX + cueMotion.x,
       pixel
-        ? Math.round(
-            (370 + Math.sin(elapsed * 3) * 4 + motion.propY + cueMotion.y) / 16,
-          ) * 16
+        ? Math.round((370 + Math.sin(elapsed * 3) * 4 + motion.propY + cueMotion.y) / 16) * 16
         : 370 + Math.sin(elapsed * 0.8) * 3 + motion.propY + cueMotion.y,
     );
     context.rotate(cueMotion.rotation);
@@ -1106,6 +1209,18 @@ export class Broadcast2DScene implements PlayoutVisuals {
               : '#efc75e';
     if (signal) {
       context.globalAlpha = 0.62 + Math.sin(elapsed * 23) * 0.18;
+    }
+
+    const propImage = this.imageFor(this.activePropAsset);
+    if (propImage !== null && propImage.complete && propImage.naturalWidth > 0) {
+      const width = 360;
+      const height = width * (propImage.naturalHeight / propImage.naturalWidth);
+      context.shadowColor = 'rgba(0, 0, 0, 0.34)';
+      context.shadowBlur = 12;
+      context.shadowOffsetY = 10;
+      context.drawImage(propImage, -width / 2, -height / 2, width, height);
+      context.restore();
+      return;
     }
 
     const prop = premisePropKind(premise);
@@ -1335,6 +1450,16 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const context = this.context;
     const speaking = character.id === this.activeSpeaker && now < this.activeSpeakerUntil;
     const acting = now < character.actionUntil;
+    if (
+      this.photoCutout &&
+      this.drawPhotoCutoutCharacter(character, speaking, acting, elapsed, closeUp)
+    ) {
+      return;
+    }
+    if (this.medium === 'paper_cutout') {
+      this.drawConstructionPaperCharacter(character, speaking, acting, elapsed, closeUp);
+      return;
+    }
     if (this.medium === 'pixel_broadcast') {
       this.drawPixelCharacter(character, speaking, acting, elapsed, closeUp);
       return;
@@ -1444,7 +1569,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
       context.lineTo(bodyWidth * 0.64, -55);
       context.lineTo(bodyWidth * 0.42, 90);
       context.closePath();
-    } else if (this.medium === 'paper_cutout' || design.silhouette === 'jointed_puppet') {
+    } else if (design.silhouette === 'jointed_puppet') {
       context.moveTo(-bodyWidth / 2, 90);
       context.lineTo(-bodyWidth * 0.42, -120);
       context.lineTo(bodyWidth * 0.42, -120);
@@ -1583,6 +1708,338 @@ export class Broadcast2DScene implements PlayoutVisuals {
       }
     }
     context.restore();
+  }
+
+  private drawConstructionPaperCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): void {
+    const context = this.context;
+    const design = character.design;
+    const scale = (closeUp ? 1.34 : 1) * Math.min(design.scaleX, design.scaleY);
+    const x = closeUp ? this.stageCentre() : character.x;
+    const baseY = (closeUp ? 594 : 574) + design.baselineOffset * 0.42;
+    const snapFrame = Math.floor(elapsed * 6);
+    const speakingFrame = speaking ? snapFrame % 3 : 0;
+    const actionNod =
+      acting && character.action === 'REACTION_CONFUSED'
+        ? snapFrame % 2 === 0
+          ? -0.035
+          : 0.035
+        : acting && character.action === 'REACTION_ANGRY'
+          ? snapFrame % 2 === 0
+            ? -0.025
+            : 0.025
+          : speaking && snapFrame % 2 === 0
+            ? -0.012
+            : 0;
+    const actionLift =
+      acting && character.action === 'REACTION_SHOCKED' ? (snapFrame % 2 === 0 ? -14 : -8) : 0;
+    const variant = design.variant;
+    const bodyWidth = 126 + (character.seed % 37);
+    const bodyHeight = 184 + ((character.seed >>> 4) % 42);
+    const headWidth = 158 + ((character.seed >>> 8) % 46);
+    const headHeight = 126 + ((character.seed >>> 13) % 30);
+    const skin = colour(character.seed >>> 5, 26, 70);
+    const shirt = colour(character.seed + 83, 67, 48);
+    const accent = colour(character.seed + 211, 72, 58);
+    const hair = colour(character.seed >>> 9, 28, 21);
+    const outline = '#24313a';
+    const hardShadow = 'rgba(24, 27, 31, 0.28)';
+
+    const paperPolygon = (
+      points: readonly (readonly [number, number])[],
+      fill: string,
+      shadowOffset = 5,
+    ): void => {
+      context.save();
+      context.translate(shadowOffset, shadowOffset);
+      context.fillStyle = hardShadow;
+      context.beginPath();
+      points.forEach(([pointX, pointY], index) => {
+        if (index === 0) context.moveTo(pointX, pointY);
+        else context.lineTo(pointX, pointY);
+      });
+      context.closePath();
+      context.fill();
+      context.restore();
+      context.fillStyle = fill;
+      context.beginPath();
+      points.forEach(([pointX, pointY], index) => {
+        if (index === 0) context.moveTo(pointX, pointY);
+        else context.lineTo(pointX, pointY);
+      });
+      context.closePath();
+      context.fill();
+      context.strokeStyle = outline;
+      context.lineWidth = 3;
+      context.stroke();
+    };
+
+    context.save();
+    context.translate(x, baseY + actionLift);
+    context.scale(scale, scale);
+    context.rotate(actionNod);
+
+    const bodyTop = -bodyHeight;
+    paperPolygon(
+      [
+        [-bodyWidth * 0.47, 0],
+        [-bodyWidth * 0.54, bodyTop * 0.73],
+        [-bodyWidth * 0.38, bodyTop],
+        [bodyWidth * 0.36, bodyTop - 2],
+        [bodyWidth * 0.53, bodyTop * 0.7],
+        [bodyWidth * 0.46, 0],
+      ],
+      shirt,
+    );
+
+    context.save();
+    context.globalAlpha = 0.46;
+    context.fillStyle = accent;
+    const stripeWidth = Math.max(12, bodyWidth * 0.14);
+    if (variant % 3 === 0) {
+      context.fillRect(-stripeWidth / 2, bodyTop + 3, stripeWidth, bodyHeight - 5);
+    } else if (variant % 3 === 1) {
+      context.beginPath();
+      context.moveTo(-bodyWidth * 0.43, bodyTop * 0.58);
+      context.lineTo(bodyWidth * 0.43, bodyTop * 0.66);
+      context.lineTo(bodyWidth * 0.43, bodyTop * 0.52);
+      context.lineTo(-bodyWidth * 0.43, bodyTop * 0.44);
+      context.closePath();
+      context.fill();
+    } else {
+      for (let dot = -1; dot <= 1; dot += 1) {
+        context.beginPath();
+        context.arc(dot * 29, bodyTop * 0.53, 10, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+    context.restore();
+
+    const pointing = acting && character.action === 'POINT_AT';
+    const leftAngle = pointing ? -1.02 : -0.17;
+    const rightAngle =
+      acting && character.action === 'REACTION_SHOCKED'
+        ? 0.72
+        : speaking && snapFrame % 2 === 0
+          ? 0.24
+          : 0.14;
+    const drawArm = (side: -1 | 1, angle: number): void => {
+      context.save();
+      context.translate(side * bodyWidth * 0.42, bodyTop * 0.72);
+      context.rotate(side * angle);
+      paperPolygon(
+        [
+          [-13, 0],
+          [15, -2],
+          [18, 126],
+          [-10, 129],
+        ],
+        shirt,
+        3,
+      );
+      context.fillStyle = skin;
+      context.strokeStyle = outline;
+      context.lineWidth = 3;
+      context.beginPath();
+      context.ellipse(4, 132, 20, 16, 0, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+      context.restore();
+    };
+    drawArm(-1, leftAngle);
+    drawArm(1, rightAngle);
+
+    const headY = bodyTop - headHeight * 0.61;
+    context.save();
+    context.translate(5, 6);
+    context.fillStyle = hardShadow;
+    context.beginPath();
+    context.ellipse(0, headY, headWidth / 2, headHeight / 2, 0, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    context.fillStyle = skin;
+    context.strokeStyle = outline;
+    context.lineWidth = 3;
+    context.beginPath();
+    if (variant % 3 === 0) {
+      context.ellipse(0, headY, headWidth / 2, headHeight / 2, 0, 0, Math.PI * 2);
+    } else if (variant % 3 === 1) {
+      context.roundRect(-headWidth / 2, headY - headHeight / 2, headWidth, headHeight, 34);
+    } else {
+      context.moveTo(-headWidth * 0.47, headY - headHeight * 0.24);
+      context.lineTo(-headWidth * 0.3, headY - headHeight * 0.5);
+      context.lineTo(headWidth * 0.36, headY - headHeight * 0.44);
+      context.lineTo(headWidth * 0.5, headY + headHeight * 0.05);
+      context.lineTo(headWidth * 0.28, headY + headHeight * 0.46);
+      context.lineTo(-headWidth * 0.43, headY + headHeight * 0.37);
+      context.closePath();
+    }
+    context.fill();
+    context.stroke();
+
+    context.fillStyle = hair;
+    context.beginPath();
+    context.moveTo(-headWidth * 0.48, headY - headHeight * 0.18);
+    for (let point = 0; point <= 6; point += 1) {
+      const hairX = -headWidth * 0.48 + (headWidth * 0.96 * point) / 6;
+      const hairY =
+        headY - headHeight * (point % 2 === 0 ? 0.46 : 0.34) - ((variant + point) % 3) * 4;
+      context.lineTo(hairX, hairY);
+    }
+    context.lineTo(headWidth * 0.48, headY - headHeight * 0.08);
+    context.closePath();
+    context.fill();
+
+    const eyeY = headY - headHeight * 0.05;
+    const eyeGap = headWidth * 0.19;
+    const eyeRadius = variant % 2 === 0 ? 19 : 16;
+    for (const eyeX of [-eyeGap, eyeGap]) {
+      context.fillStyle = '#f8f5e8';
+      context.strokeStyle = outline;
+      context.lineWidth = 2.5;
+      context.beginPath();
+      context.ellipse(eyeX, eyeY, eyeRadius, eyeRadius * 1.08, 0, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+      context.fillStyle = outline;
+      context.beginPath();
+      context.arc(
+        eyeX + (acting && character.action === 'LOOK_AT' ? 6 : 0),
+        eyeY + 2,
+        4.5,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+    }
+
+    const mouthY = headY + headHeight * 0.25;
+    context.fillStyle = '#471e28';
+    context.strokeStyle = outline;
+    context.lineWidth = 2.5;
+    context.beginPath();
+    if (speakingFrame === 1) {
+      context.ellipse(0, mouthY, 23, 9, 0, 0, Math.PI * 2);
+    } else if (speakingFrame === 2) {
+      context.roundRect(-20, mouthY - 3, 40, 20, 8);
+    } else if (acting && character.action === 'REACTION_SHOCKED') {
+      context.ellipse(0, mouthY, 15, 19, 0, 0, Math.PI * 2);
+    } else {
+      context.roundRect(-24, mouthY - 2, 48, 6, 3);
+    }
+    context.fill();
+    context.stroke();
+
+    context.save();
+    context.globalAlpha = 0.12;
+    context.fillStyle = '#ffffff';
+    for (let fibre = 0; fibre < 9; fibre += 1) {
+      const fibreX =
+        ((character.seed + fibre * 29) % Math.max(1, Math.floor(bodyWidth))) - bodyWidth / 2;
+      const fibreY = bodyTop + 18 + ((character.seed + fibre * 47) % Math.max(1, bodyHeight - 36));
+      context.fillRect(fibreX, fibreY, 14 + (fibre % 3) * 5, 1.5);
+    }
+    context.restore();
+    context.restore();
+  }
+
+  private drawPhotoCutoutCharacter(
+    character: DrawnCharacter,
+    speaking: boolean,
+    acting: boolean,
+    elapsed: number,
+    closeUp: boolean,
+  ): boolean {
+    const context = this.context;
+    const asset = matchingCharacterAsset(this.assetCollection, character.name, character.index);
+    const image = this.imageFor(asset);
+    if (image === null || !image.complete || image.naturalWidth === 0) {
+      return false;
+    }
+    const design = character.design;
+    const fullHeight = (closeUp ? 540 : 480) * Math.min(1.12, design.scaleY);
+    const fullWidth = fullHeight * (image.naturalWidth / image.naturalHeight);
+    const x = closeUp ? this.stageCentre() : character.x;
+    const bottom = (closeUp ? 680 : 610) + design.baselineOffset * 0.35;
+    const top = bottom - fullHeight;
+    const headRatio = character.index % 2 === 0 ? 0.315 : 0.29;
+    const sourceHeadHeight = image.naturalHeight * headRatio;
+    const headHeight = fullHeight * headRatio;
+    const actionShift =
+      acting && character.action === 'POINT_AT'
+        ? 20
+        : acting && character.action === 'LOOK_AT'
+          ? -12
+          : 0;
+    const angryJitter =
+      acting && character.action === 'REACTION_ANGRY' ? Math.sin(elapsed * 28) * 5 : 0;
+    const shockedScale = acting && character.action === 'REACTION_SHOCKED' ? 1.055 : 1;
+    const headTilt =
+      acting && character.action === 'REACTION_CONFUSED'
+        ? Math.sin(elapsed * 2.5 + character.index) * 0.055
+        : speaking
+          ? Math.sin(elapsed * 7 + character.index) * 0.018
+          : 0;
+
+    context.save();
+    context.translate(x + actionShift + angryJitter, bottom);
+    context.scale(shockedScale, shockedScale);
+    context.translate(-x, -bottom);
+    context.imageSmoothingEnabled = true;
+    context.shadowColor = 'rgba(0, 0, 0, 0.38)';
+    context.shadowBlur = 10;
+    context.shadowOffsetY = 8;
+    context.drawImage(
+      image,
+      0,
+      sourceHeadHeight,
+      image.naturalWidth,
+      image.naturalHeight - sourceHeadHeight,
+      x - fullWidth / 2,
+      top + headHeight,
+      fullWidth,
+      fullHeight - headHeight,
+    );
+    context.shadowBlur = 8;
+    context.shadowOffsetY = 5;
+    context.save();
+    context.translate(x, top + headHeight);
+    context.rotate(headTilt);
+    context.drawImage(
+      image,
+      0,
+      0,
+      image.naturalWidth,
+      sourceHeadHeight,
+      -fullWidth / 2,
+      -headHeight,
+      fullWidth,
+      headHeight,
+    );
+    if (speaking) {
+      const mouthOpen = Math.sin(elapsed * 31 + character.seed) > -0.15;
+      context.shadowColor = 'transparent';
+      context.fillStyle = 'rgba(35, 12, 12, 0.9)';
+      context.beginPath();
+      context.ellipse(
+        character.index % 2 === 0 ? 0 : fullWidth * 0.055,
+        -headHeight * 0.43,
+        Math.max(3, fullWidth * 0.019),
+        mouthOpen ? Math.max(2.5, headHeight * 0.024) : 1.25,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+    }
+    context.restore();
+    context.restore();
+    return true;
   }
 
   private drawPixelCharacter(

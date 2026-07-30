@@ -1,11 +1,79 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assetLibraryManifestSchema,
   optimisationBriefSchema,
   playoutManifestSchema,
   playoutObservationSchema,
   preparedScriptSchema,
   segmentPackageSchema,
 } from './index.js';
+
+describe('assetLibraryManifestSchema', () => {
+  it('accepts an append-only multimodal library entry', () => {
+    const library = assetLibraryManifestSchema.parse({
+      schemaVersion: 1,
+      generatedAt: '2026-07-30T15:00:00.000Z',
+      libraryId: 'elsewhere-cable',
+      appendOnly: true,
+      assets: [
+        {
+          id: 'asset_photo_actor_test',
+          kind: 'image_2d',
+          role: 'character_cutout',
+          version: 1,
+          status: 'ready',
+          uri: '/assets/library/v1/characters/test.png',
+          mimeType: 'image/png',
+          sha256: 'a'.repeat(64),
+          bytes: 1024,
+          dimensions: { width: 1024, height: 1536 },
+          tags: ['fictional-person'],
+          programmeIds: ['test_programme'],
+          compatibleVisualMedia: ['collage_zine'],
+          provenance: {
+            source: 'generated_original',
+            createdAt: '2026-07-30T15:00:00.000Z',
+            generator: 'openai-imagegen',
+            rights: 'original-project-generation',
+            containsFictionalPeople: true,
+            containsRealPeople: false,
+          },
+        },
+      ],
+    });
+
+    expect(library.assets[0]?.kind).toBe('image_2d');
+  });
+
+  it('rejects duplicate asset IDs', () => {
+    const entry = {
+      id: 'asset_duplicate',
+      kind: 'shader_style',
+      role: 'render_style',
+      version: 1,
+      status: 'ready',
+      uri: 'procedure://renderer/styles/test',
+      tags: [],
+      provenance: {
+        source: 'procedural_original',
+        createdAt: '2026-07-30T15:00:00.000Z',
+        generator: 'renderer',
+        rights: 'original-project-code',
+        containsRealPeople: false,
+      },
+    };
+
+    expect(
+      assetLibraryManifestSchema.safeParse({
+        schemaVersion: 1,
+        generatedAt: '2026-07-30T15:00:00.000Z',
+        libraryId: 'elsewhere-cable',
+        appendOnly: true,
+        assets: [entry, entry],
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe('optimisationBriefSchema', () => {
   it('accepts a complete editorial direction longer than a list item', () => {

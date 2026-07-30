@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import {
+  audiencePatternSchema,
   optimisationBriefSchema,
   segmentPackageSchema,
   visualQualityObservationSchema,
@@ -11,6 +12,7 @@ import {
   type SegmentPackage,
   type VisualQualityObservation,
 } from '../../packages/schemas/src/index.js';
+import type { AudienceResearchBrief } from '../../apps/generation-worker/src/audience-research.js';
 import {
   categoryDiversityScore,
   concreteMotifPhrases,
@@ -92,6 +94,7 @@ const outputPath = path.resolve(
 );
 const historyPath = path.resolve(workspaceRoot, 'data/optimisation/history.ndjson');
 const reportPath = path.resolve(workspaceRoot, 'data/optimisation/latest-report.md');
+const audienceResearchPath = path.resolve(workspaceRoot, 'data/research/latest.json');
 const endorHost = argument('endor-host') ?? process.env.ELSEWHERE_ENDOR_HOST ?? 'endor';
 const llmBaseUrl =
   argument('llm-base-url') ?? process.env.ELSEWHERE_LLM_BASE_URL ?? 'http://127.0.0.1:1235/v1';
@@ -853,7 +856,49 @@ async function refreshAudienceResearchIfDue(): Promise<void> {
   }
 }
 
+async function activeAudienceHypothesis(): Promise<
+  OptimisationBrief['audienceHypothesis'] | undefined
+> {
+  try {
+    const research = JSON.parse(
+      await readFile(audienceResearchPath, 'utf8'),
+    ) as AudienceResearchBrief;
+    const ageMs = Date.now() - Date.parse(research.generatedAt);
+    if (
+      research.schemaVersion !== 1 ||
+      !Number.isFinite(ageMs) ||
+      ageMs < 0 ||
+      ageMs > researchIntervalHours * 2 * 60 * 60 * 1_000
+    ) {
+      return undefined;
+    }
+    const candidate = research.candidates[0];
+    const pattern = audiencePatternSchema.safeParse(candidate?.pattern);
+    if (
+      candidate === undefined ||
+      !pattern.success ||
+      candidate.evidenceCount < 2 ||
+      candidate.hypothesis.length > 500
+    ) {
+      return undefined;
+    }
+    return {
+      pattern: pattern.data,
+      evidenceCount: Math.min(500, candidate.evidenceCount),
+      sampleShare: Math.max(0, Math.min(1, candidate.sampleShare)),
+      relativeViewVelocity: Math.max(0, Math.min(100, candidate.relativeViewVelocity)),
+      hypothesis: candidate.hypothesis,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      reportObserverError('audience hypothesis', error);
+    }
+    return undefined;
+  }
+}
+
 async function runWindow(): Promise<void> {
+  await refreshAudienceResearchIfDue();
   const logs = await endorLogs();
   const ids = airedSegmentIds(logs);
   const segments = await readAiredSegments(ids);
@@ -863,13 +908,27 @@ async function runWindow(): Promise<void> {
     logs.match(/\/api\/playout\/segments\/[^"]+[\s\S]{0,260}"statusCode":(?:400|404|500)/gu) ?? []
   ).length;
   const fallbackOccurrences = Math.max(segments.length === 0 ? 1 : 0, failedSegmentRequests);
-  const brief = await criticBrief(
+  const baseBrief = await criticBrief(
     segments,
     delivery,
     fallbackOccurrences,
     publicObservation.visualQuality,
   );
+  const audienceHypothesis = await activeAudienceHypothesis();
+  const brief = optimisationBriefSchema.parse({
+    ...baseBrief,
+    ...(audienceHypothesis === undefined ? {} : { audienceHypothesis }),
+  });
   await writeBrief(brief);
+  try {
+    await execFileAsync(
+      path.join(workspaceRoot, 'node_modules/.bin/tsx'),
+      [path.join(workspaceRoot, 'infra/scripts/audit-asset-library.ts')],
+      { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 },
+    );
+  } catch (error) {
+    reportObserverError('asset library audit', error);
+  }
   try {
     await execFileAsync(
       path.join(workspaceRoot, 'node_modules/.bin/tsx'),
@@ -886,7 +945,6 @@ async function runWindow(): Promise<void> {
   } catch (error) {
     reportObserverError('scorecard refresh', error);
   }
-  await refreshAudienceResearchIfDue();
   process.stdout.write(
     `${JSON.stringify(
       {
@@ -898,6 +956,7 @@ async function runWindow(): Promise<void> {
         visualQuality: brief.visualQuality ?? null,
         increaseFormats: brief.increaseFormats,
         increasePacing: brief.increasePacing,
+        audienceHypothesis: brief.audienceHypothesis ?? null,
         avoidMotifs: brief.avoidMotifs,
         outputPath,
       },

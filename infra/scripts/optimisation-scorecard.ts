@@ -54,6 +54,22 @@ interface GenerationObservation {
   completedScripts: number;
 }
 
+interface AssetLibraryObservation {
+  auditedAt: string;
+  valid: boolean;
+  totalAssets: number;
+  readyAssets: number;
+  previewAssets: number;
+  retiredAssets: number;
+  fileBackedAssets: number;
+  proceduralAssets: number;
+  fileBytes: number;
+  programmeBoundAssets: number;
+  reusableAssets: number;
+  kinds: Record<string, number>;
+  errors: string[];
+}
+
 async function readNdjson<T>(filePath: string, parse: (value: unknown) => T): Promise<T[]> {
   try {
     return (await readFile(filePath, 'utf8'))
@@ -79,7 +95,7 @@ async function readAudienceResearch(filePath: string): Promise<AudienceResearchB
     const value = JSON.parse(await readFile(filePath, 'utf8')) as Partial<AudienceResearchBrief>;
     if (
       value.schemaVersion !== 1 ||
-      value.source !== 'youtube_most_popular' ||
+      value.source !== 'youtube_public_popularity' ||
       typeof value.generatedAt !== 'string' ||
       !Array.isArray(value.candidates) ||
       value.privacy?.sourceTextRetained !== false ||
@@ -135,6 +151,29 @@ function parseGenerationObservation(value: unknown): GenerationObservation {
     throw new Error('Invalid generation observation');
   }
   return record as GenerationObservation;
+}
+
+function parseAssetLibraryObservation(value: unknown): AssetLibraryObservation {
+  const record = value as Partial<AssetLibraryObservation>;
+  if (
+    typeof record.auditedAt !== 'string' ||
+    typeof record.valid !== 'boolean' ||
+    !Number.isInteger(record.totalAssets) ||
+    !Number.isInteger(record.readyAssets) ||
+    !Number.isInteger(record.previewAssets) ||
+    !Number.isInteger(record.retiredAssets) ||
+    !Number.isInteger(record.fileBackedAssets) ||
+    !Number.isInteger(record.proceduralAssets) ||
+    !Number.isInteger(record.fileBytes) ||
+    !Number.isInteger(record.programmeBoundAssets) ||
+    !Number.isInteger(record.reusableAssets) ||
+    typeof record.kinds !== 'object' ||
+    record.kinds === null ||
+    !Array.isArray(record.errors)
+  ) {
+    throw new Error('Invalid asset library observation');
+  }
+  return record as AssetLibraryObservation;
 }
 
 async function runwayProbe(
@@ -259,6 +298,10 @@ const generationHistoryPath = path.resolve(
   workspaceRoot,
   argument('generation-history') ?? 'data/optimisation/generation-history.ndjson',
 );
+const assetLibraryHistoryPath = path.resolve(
+  workspaceRoot,
+  argument('asset-library-history') ?? 'data/asset-library/history.ndjson',
+);
 
 const briefs = await readNdjson(historyPath, (value) => optimisationBriefSchema.parse(value));
 if (briefs.length === 0) {
@@ -284,6 +327,8 @@ const latest = scores.at(-1)!;
 const recommendedArms = rankExperimentArms(latest).slice(0, 6);
 const audienceResearch = await readAudienceResearch(audienceResearchPath);
 const generationHistory = await readNdjson(generationHistoryPath, parseGenerationObservation);
+const assetLibraryHistory = await readNdjson(assetLibraryHistoryPath, parseAssetLibraryObservation);
+const latestAssetLibrary = assetLibraryHistory.at(-1) ?? null;
 const recentGeneration = generationHistory.slice(-24);
 const approvedGeneration = recentGeneration.filter(
   (observation) => observation.status === 'approved',
@@ -387,6 +432,10 @@ const report = {
     latestRevision: recentGeneration.at(-1)?.revision ?? null,
     strategies: generationStrategies,
   },
+  assetLibrary: {
+    latest: latestAssetLibrary,
+    history: assetLibraryHistory.slice(-100),
+  },
   recommendedArms,
   history: scores,
 };
@@ -449,6 +498,24 @@ ${report.generation.strategies
   )
   .join('\n')}
 
+## Asset library
+
+${
+  latestAssetLibrary === null
+    ? 'No asset-library audit has been recorded.'
+    : `- Catalog valid: ${latestAssetLibrary.valid ? 'yes' : 'no'}
+- Total assets: ${latestAssetLibrary.totalAssets}
+- Ready assets: ${latestAssetLibrary.readyAssets}
+- File-backed assets: ${latestAssetLibrary.fileBackedAssets}
+- Procedural assets: ${latestAssetLibrary.proceduralAssets}
+- Programme-bound assets: ${latestAssetLibrary.programmeBoundAssets}
+- Reusable assets: ${latestAssetLibrary.reusableAssets}
+- Stored file size: ${(latestAssetLibrary.fileBytes / 1024 / 1024).toFixed(2)} MiB
+- Kinds: ${Object.entries(latestAssetLibrary.kinds)
+        .map(([kind, count]) => `${kind}=${count}`)
+        .join(', ')}`
+}
+
 ## Active experiment
 
 ${
@@ -492,6 +559,7 @@ process.stdout.write(
           guardrailsPassed: report.latest.guardrails.passed,
           evidenceCoverage: report.latest.evidenceCoverage,
           freshRunwayHours: report.runway.freshHours,
+          assetCount: report.assetLibrary.latest?.totalAssets ?? null,
           activeExperiment: report.experiment.experiment?.experimentId ?? null,
           decision: report.experiment.decision,
           outputPath,

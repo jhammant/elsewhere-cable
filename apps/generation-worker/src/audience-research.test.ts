@@ -14,6 +14,7 @@ function video(title: string, overrides: Partial<PopularVideoSignal> = {}): Popu
     viewCount: 100_000,
     publishedAt: '2026-07-29T12:00:00.000Z',
     isLive: false,
+    source: 'most_popular',
     ...overrides,
   };
 }
@@ -58,6 +59,30 @@ describe('audience research', () => {
       overTwentyMinutesShare: 0.333,
       liveShare: 0.333,
     });
+    expect(brief.samples).toEqual({
+      mostPopular: 3,
+      recentEntertainment: 0,
+      popularLive: 0,
+    });
+  });
+
+  it('tracks popular, recent-entertainment and live evidence without retaining titles', () => {
+    const brief = deriveAudienceResearchBrief(
+      [
+        video('How this was repaired', { source: 'most_popular' }),
+        video('Why this was restored', { source: 'recent_entertainment' }),
+        video('Live special tonight', { source: 'popular_live', isLive: true }),
+      ],
+      { generatedAt, region: 'GB', categoryId: '24' },
+    );
+
+    expect(brief.source).toBe('youtube_public_popularity');
+    expect(brief.samples).toEqual({
+      mostPopular: 1,
+      recentEntertainment: 1,
+      popularLive: 1,
+    });
+    expect(JSON.stringify(brief)).not.toContain('How this was repaired');
   });
 
   it('parses YouTube ISO-8601 durations', () => {

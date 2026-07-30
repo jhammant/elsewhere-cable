@@ -130,9 +130,10 @@ renderer. Recognisable melodies, performers and copyrighted recordings are prohi
 
 ## Audience research loop
 
-Public trend research is deliberately separate from both the quality score and programme
-generation. Every 12 hours, the research worker can sample the official YouTube `mostPopular`
-chart for the configured region and category:
+Public trend research is deliberately separate from the quality score. Every 12 hours, the
+research worker samples three official YouTube Data API surfaces: the regional `mostPopular`
+chart, the most-viewed recent entertainment videos and entertainment livestreams ordered by
+concurrent viewers:
 
 ```bash
 YOUTUBE_DATA_API_KEY_FILE=/protected/path/youtube-data-api-key pnpm research:audience:loop
@@ -141,12 +142,13 @@ YOUTUBE_DATA_API_KEY_FILE=/protected/path/youtube-data-api-key pnpm research:aud
 The key is read from an environment variable or protected file and is never written to the
 repository. The worker reads titles only long enough to count a small, fixed taxonomy of abstract
 viewing mechanisms such as visible transformation, bounded challenge, reveal chain and legible
-process. It does not ingest descriptions, retain source titles or pass raw source text to an LLM.
-Its output is a queue of hypotheses under `data/research/`, not a prompt.
+process. It does not retain source titles or pass raw source text to an LLM. The strongest current
+abstract hypothesis is attached to the next optimisation brief, so the writer can test the
+mechanism using wholly original characters, worlds and jokes.
 
-A research hypothesis must still be promoted into a single-arm experiment, pass the normal safety
-and originality gates, air for a complete candidate window and beat the fixed evaluator before it
-is kept. This prevents popularity research from turning Elsewhere Cable into imitation.
+A popularity hypothesis still passes the normal safety and originality gates, airs for a complete
+candidate window and must improve the fixed evaluator before it is kept. This prevents popularity
+research from turning Elsewhere Cable into imitation.
 
 The stronger long-term signal is first-party behaviour: average view duration, watch time,
 retention, likes, chat rate and returning viewers. Authenticated, read-only YouTube Analytics access

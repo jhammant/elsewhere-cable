@@ -21,6 +21,7 @@ function boundedInteger(name: string, fallback: number, minimum: number, maximum
 }
 
 interface YoutubeVideo {
+  id?: string;
   snippet?: {
     title?: string;
     publishedAt?: string;
@@ -34,6 +35,10 @@ interface YoutubeVideoList {
   items?: YoutubeVideo[];
 }
 
+interface YoutubeSearchList {
+  items?: Array<{ id?: { videoId?: string } }>;
+}
+
 async function apiKey(): Promise<string | null> {
   const filePath = argument('api-key-file') ?? process.env.YOUTUBE_DATA_API_KEY_FILE;
   const value =
@@ -44,7 +49,10 @@ async function apiKey(): Promise<string | null> {
   return key === '' ? null : key;
 }
 
-function asSignals(response: YoutubeVideoList): PopularVideoSignal[] {
+function asSignals(
+  response: YoutubeVideoList,
+  source: PopularVideoSignal['source'],
+): PopularVideoSignal[] {
   return (response.items ?? []).flatMap((item) => {
     const title = item.snippet?.title;
     const publishedAt = item.snippet?.publishedAt;
@@ -58,9 +66,68 @@ function asSignals(response: YoutubeVideoList): PopularVideoSignal[] {
         durationSeconds: parseIso8601Duration(item.contentDetails?.duration ?? ''),
         viewCount: Number(item.statistics?.viewCount ?? 0),
         isLive: item.snippet?.liveBroadcastContent === 'live',
+        source,
       },
     ];
   });
+}
+
+async function youtubeRequest<T>(url: URL): Promise<T> {
+  const response = await fetch(url, {
+    headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(45_000),
+  });
+  const body = (await response.json()) as T;
+  if (!response.ok) {
+    throw new Error(`YouTube research request failed (${response.status})`);
+  }
+  return body;
+}
+
+function youtubeUrl(pathname: string, parameters: Record<string, string>): URL {
+  const url = new URL(`https://www.googleapis.com/youtube/v3/${pathname}`);
+  url.search = new URLSearchParams(parameters).toString();
+  return url;
+}
+
+async function searchVideoIds(key: string, parameters: Record<string, string>): Promise<string[]> {
+  const response = await youtubeRequest<YoutubeSearchList>(
+    youtubeUrl('search', {
+      part: 'snippet',
+      type: 'video',
+      maxResults: String(Math.min(25, maxResults)),
+      regionCode: region,
+      relevanceLanguage: 'en',
+      safeSearch: 'strict',
+      key,
+      ...parameters,
+    }),
+  );
+  return [
+    ...new Set(
+      (response.items ?? [])
+        .map((item) => item.id?.videoId)
+        .filter((id): id is string => id !== undefined),
+    ),
+  ];
+}
+
+async function videosById(
+  key: string,
+  ids: readonly string[],
+  source: PopularVideoSignal['source'],
+): Promise<PopularVideoSignal[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const response = await youtubeRequest<YoutubeVideoList>(
+    youtubeUrl('videos', {
+      part: 'snippet,contentDetails,statistics,liveStreamingDetails',
+      id: ids.slice(0, 50).join(','),
+      key,
+    }),
+  );
+  return asSignals(response, source);
 }
 
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
@@ -85,25 +152,44 @@ async function runResearch(): Promise<void> {
     );
     return;
   }
-  const url = new URL('https://www.googleapis.com/youtube/v3/videos');
-  url.search = new URLSearchParams({
-    part: 'snippet,contentDetails,statistics,liveStreamingDetails',
-    chart: 'mostPopular',
-    regionCode: region,
-    videoCategoryId: categoryId,
-    maxResults: String(maxResults),
-    key,
-  }).toString();
-  const response = await fetch(url, {
-    headers: { accept: 'application/json' },
-    signal: AbortSignal.timeout(45_000),
-  });
-  const body = (await response.json()) as YoutubeVideoList;
-  if (!response.ok) {
-    throw new Error(`YouTube research request failed (${response.status})`);
+  const publishedAfter = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000).toISOString();
+  const [popularResult, recentIdsResult, liveIdsResult] = await Promise.allSettled([
+    youtubeRequest<YoutubeVideoList>(
+      youtubeUrl('videos', {
+        part: 'snippet,contentDetails,statistics,liveStreamingDetails',
+        chart: 'mostPopular',
+        regionCode: region,
+        maxResults: String(maxResults),
+        key,
+      }),
+    ),
+    searchVideoIds(key, {
+      order: 'viewCount',
+      publishedAfter,
+      videoCategoryId: categoryId,
+    }),
+    searchVideoIds(key, {
+      eventType: 'live',
+      order: 'viewCount',
+      videoCategoryId: categoryId,
+    }),
+  ]);
+  const mostPopular =
+    popularResult.status === 'fulfilled' ? asSignals(popularResult.value, 'most_popular') : [];
+  const recentEntertainment =
+    recentIdsResult.status === 'fulfilled'
+      ? await videosById(key, recentIdsResult.value, 'recent_entertainment')
+      : [];
+  const popularLive =
+    liveIdsResult.status === 'fulfilled'
+      ? await videosById(key, liveIdsResult.value, 'popular_live')
+      : [];
+  const signals = [...mostPopular, ...recentEntertainment, ...popularLive];
+  if (signals.length === 0) {
+    throw new Error('YouTube popularity sources returned no usable public videos');
   }
   const generatedAt = new Date().toISOString();
-  const brief = deriveAudienceResearchBrief(asSignals(body), {
+  const brief = deriveAudienceResearchBrief(signals, {
     generatedAt,
     region,
     categoryId,
@@ -118,6 +204,7 @@ async function runResearch(): Promise<void> {
       status: 'recorded',
       generatedAt,
       sampleSize: brief.sampleSize,
+      samples: brief.samples,
       candidates: brief.candidates.map((candidate) => candidate.pattern),
       outputPath,
     })}\n`,

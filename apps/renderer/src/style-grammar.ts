@@ -2,10 +2,10 @@ import type { VisualMedium } from './production-design.js';
 
 export const flatStyleGrammars = {
   paper_cutout: {
-    silhouette: 'hinged-paper-puppet',
-    backdrop: 'layered-construction-stage',
-    motion: 'limited-joint-animation',
-    texture: 'paper-fibre',
+    silhouette: 'front-facing-construction-paper-cast',
+    backdrop: 'layered-hand-cut-paper-town',
+    motion: 'six-frame-snap-pose-animation',
+    texture: 'fibrous-paper-with-hard-layer-shadows',
   },
   collage_zine: {
     silhouette: 'torn-photo-assemblage',

@@ -5,12 +5,13 @@ import { previewSafetyIssues, proposalQualityIssues } from './production.js';
 import { signalSurfDrafts } from './signal-surf.js';
 
 describe('signal-surf editorial pack', () => {
-  it('contains eleven original high-numbered channels with eleven production looks', () => {
-    expect(signalSurfDrafts).toHaveLength(11);
-    expect(new Set(signalSurfDrafts.map((draft) => draft.channelNumber)).size).toBe(11);
-    expect(new Set(signalSurfDrafts.map((draft) => draft.channelName)).size).toBe(11);
-    expect(new Set(signalSurfDrafts.map((draft) => draft.programmeTitle)).size).toBe(11);
-    expect(new Set(signalSurfDrafts.map((draft) => draft.visualMedium)).size).toBe(11);
+  it('contains twenty-four original high-numbered channels spanning every production look', () => {
+    expect(signalSurfDrafts).toHaveLength(24);
+    expect(new Set(signalSurfDrafts.map((draft) => draft.channelNumber)).size).toBe(24);
+    expect(new Set(signalSurfDrafts.map((draft) => draft.channelName)).size).toBe(24);
+    expect(new Set(signalSurfDrafts.map((draft) => draft.programmeTitle)).size).toBe(24);
+    expect(new Set(signalSurfDrafts.map((draft) => draft.visualMedium)).size).toBe(22);
+    expect(new Set(signalSurfDrafts.map((draft) => draft.visualStyle)).size).toBe(24);
     expect(signalSurfDrafts.every((draft) => draft.channelNumber >= 6_000_000_000)).toBe(true);
   });
 

@@ -77,6 +77,145 @@ export const storyModeSchema = z.enum([
   'visual_physics',
 ]);
 
+export const assetKindSchema = z.enum([
+  'audio',
+  'model_3d',
+  'image_2d',
+  'model_2d',
+  'shader_style',
+  'broadcast_graphic',
+  'sound_effect',
+]);
+
+export const assetSourceSchema = z.enum([
+  'generated_original',
+  'procedural_original',
+  'recorded_original',
+  'licensed',
+  'public_domain',
+]);
+
+const assetIdSchema = z
+  .string()
+  .regex(/^asset_[a-z0-9_]+$/u)
+  .max(120);
+const assetUriSchema = z
+  .string()
+  .min(1)
+  .max(240)
+  .refine((value) => !value.includes('..'), 'Asset URI must not contain parent traversal')
+  .refine(
+    (value) =>
+      /^\/assets\/[a-z0-9_./-]+$/u.test(value) ||
+      /^(?:procedure|voice):\/\/[a-z0-9_./-]+$/u.test(value),
+    'Asset URI must be a local public asset, procedure, or voice reference',
+  );
+
+export const assetLibraryEntrySchema = z.object({
+  id: assetIdSchema,
+  kind: assetKindSchema,
+  role: z
+    .string()
+    .regex(/^[a-z0-9_]+$/u)
+    .max(80),
+  version: z.number().int().min(1).max(10_000),
+  status: z.enum(['ready', 'preview', 'retired']),
+  uri: assetUriSchema,
+  collectionId: z
+    .string()
+    .regex(/^[a-z0-9_-]+$/u)
+    .max(100)
+    .optional(),
+  mimeType: z
+    .string()
+    .regex(/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/u)
+    .max(100)
+    .optional(),
+  sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/u)
+    .optional(),
+  bytes: z.number().int().positive().optional(),
+  dimensions: z
+    .object({
+      width: z.number().int().positive().max(32_768),
+      height: z.number().int().positive().max(32_768),
+    })
+    .optional(),
+  durationMs: z.number().int().positive().max(3_600_000).optional(),
+  tags: z
+    .array(
+      z
+        .string()
+        .regex(/^[a-z0-9_-]+$/u)
+        .max(60),
+    )
+    .max(32),
+  programmeIds: z
+    .array(
+      z
+        .string()
+        .regex(/^[a-z0-9_]+$/u)
+        .max(120),
+    )
+    .max(40)
+    .default([]),
+  compatibleVisualMedia: z.array(visualMediumSchema).max(22).default([]),
+  provenance: z.object({
+    source: assetSourceSchema,
+    createdAt: z.string().datetime(),
+    generator: z.string().min(1).max(120),
+    rights: z.string().min(1).max(160),
+    promptRef: z.string().max(240).optional(),
+    containsFictionalPeople: z.boolean().default(false),
+    containsRealPeople: z.literal(false),
+  }),
+});
+
+export const assetLibraryManifestSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    generatedAt: z.string().datetime(),
+    libraryId: z
+      .string()
+      .regex(/^[a-z0-9_-]+$/u)
+      .max(100),
+    appendOnly: z.literal(true),
+    assets: z.array(assetLibraryEntrySchema).max(20_000),
+  })
+  .superRefine((manifest, context) => {
+    const ids = new Set<string>();
+    for (const [index, asset] of manifest.assets.entries()) {
+      if (ids.has(asset.id)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['assets', index, 'id'],
+          message: `Duplicate asset ID: ${asset.id}`,
+        });
+      }
+      ids.add(asset.id);
+      const fileBacked = asset.uri.startsWith('/assets/');
+      if (fileBacked && (asset.sha256 === undefined || asset.bytes === undefined)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['assets', index],
+          message: 'File-backed assets require sha256 and bytes',
+        });
+      }
+    }
+  });
+
+export const audiencePatternSchema = z.enum([
+  'visible_transformation',
+  'bounded_challenge',
+  'explanation',
+  'reveal_chain',
+  'ranked_accumulation',
+  'social_reaction',
+  'live_occasion',
+  'process_satisfaction',
+]);
+
 function isOptimisationSafeText(value: string): boolean {
   for (const character of value) {
     const codePoint = character.codePointAt(0) ?? 0;
@@ -141,6 +280,15 @@ export const optimisationBriefSchema = z.object({
   avoidMotifs: z.array(optimisationTextSchema).max(12),
   preserveStrengths: z.array(optimisationTextSchema).max(8),
   editorialDirection: optimisationDirectionSchema,
+  audienceHypothesis: z
+    .object({
+      pattern: audiencePatternSchema,
+      evidenceCount: z.number().int().min(2).max(500),
+      sampleShare: z.number().min(0).max(1),
+      relativeViewVelocity: z.number().min(0).max(100),
+      hypothesis: optimisationDirectionSchema,
+    })
+    .optional(),
   delivery: z.object({
     isLive: z.boolean().nullable(),
     concurrentViewers: z.number().int().nonnegative().nullable(),
@@ -376,3 +524,6 @@ export type VisualQualityObservation = z.infer<typeof visualQualityObservationSc
 export type GeneratedSegmentDraft = z.infer<typeof generatedSegmentDraftSchema>;
 export type GeneratedSegmentProposal = z.infer<typeof generatedSegmentProposalSchema>;
 export type PreparedScript = z.infer<typeof preparedScriptSchema>;
+export type AssetKind = z.infer<typeof assetKindSchema>;
+export type AssetLibraryEntry = z.infer<typeof assetLibraryEntrySchema>;
+export type AssetLibraryManifest = z.infer<typeof assetLibraryManifestSchema>;

@@ -3,6 +3,7 @@ import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import {
   premisePropKind,
   resolve2DCharacterDesign,
+  resolve2DStageBounds,
   resolve2DStageComposition,
   usesTwoDimensionalRenderer,
 } from './scene-2d.js';
@@ -175,6 +176,20 @@ describe('2D programme composition', () => {
           expect(placement.scale).toBeLessThanOrEqual(1.34);
         }
       }
+    }
+  });
+
+  it('keeps boxed 4:3 channels inside their visible crop', () => {
+    const programme = segment('paper_cutout');
+    programme.channel.id = 'channel_8216994507';
+    programme.programme.id = 'the_suitcase_chooses_first';
+    const bounds = resolve2DStageBounds(programme);
+
+    expect(bounds).toEqual({ left: 350, right: 930 });
+    const composition = resolve2DStageComposition(programme, 3);
+    for (const placement of composition.placements) {
+      expect(placement.x).toBeGreaterThanOrEqual(350);
+      expect(placement.x).toBeLessThanOrEqual(930);
     }
   });
 });
