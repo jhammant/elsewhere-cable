@@ -906,6 +906,12 @@ const requestedMediums = [
   'shadow_theatre',
   'hand_drawn',
   'thermal_camera',
+  'ascii_terminal',
+  'blueprint_schematic',
+  'stained_glass',
+  'xerox_punk',
+  'storybook_wash',
+  'isometric_manual',
 ] as const;
 
 const requestedCastArchetypes = [
@@ -1065,6 +1071,18 @@ const visualDirections: Record<(typeof requestedMediums)[number], string> = {
     'loose pencil characters, unstable outlines and a continuously redrawn notebook environment',
   thermal_camera:
     'false-colour heat signatures, measurement reticles and surveillance-camera blocking',
+  ascii_terminal:
+    'phosphor-green character cells, monospace glyph performers, command-line scenery and cursor-stepped movement',
+  blueprint_schematic:
+    'cyan architectural drafting, exploded character diagrams, dimension lines and mechanically annotated movement',
+  stained_glass:
+    'luminous leaded panes, jewel-coloured faceted performers and refracted panel-by-panel motion',
+  xerox_punk:
+    'high-contrast photocopied figures, torn flyposter scenery, toner noise and jumpy overprinted movement',
+  storybook_wash:
+    'soft watercolour landscapes, painted ink performers, pigment blooms and gentle page-layer parallax',
+  isometric_manual:
+    'axonometric instruction-sheet scenery, numbered assembly figures, registration marks and diagram-step motion',
 };
 
 function axisIndex(serial: number, salt: number, length: number): number {

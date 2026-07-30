@@ -151,7 +151,9 @@ function roundedRect(
 }
 
 export class Broadcast2DScene implements PlayoutVisuals {
-  private readonly context: CanvasRenderingContext2D;
+  private context: CanvasRenderingContext2D;
+  private readonly staticCanvas: HTMLCanvasElement;
+  private readonly staticContext: CanvasRenderingContext2D;
   private segment: SegmentPackage | null = null;
   private medium: FlatVisualMedium = 'paper_cutout';
   private castArchetype: CastArchetype = 'mixed';
@@ -169,6 +171,14 @@ export class Broadcast2DScene implements PlayoutVisuals {
     this.context = context;
     this.canvas.width = 1280;
     this.canvas.height = 720;
+    this.staticCanvas = document.createElement('canvas');
+    this.staticCanvas.width = 1280;
+    this.staticCanvas.height = 720;
+    const staticContext = this.staticCanvas.getContext('2d');
+    if (staticContext === null) {
+      throw new Error('Canvas 2D static renderer is unavailable');
+    }
+    this.staticContext = staticContext;
   }
 
   loadSegment(segment: SegmentPackage): void {
@@ -215,6 +225,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
       }
     }
     this.camera = 'CAMERA_WIDE';
+    this.cacheStaticScene(segment);
     this.render();
   }
 
@@ -245,8 +256,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const elapsed = (now - this.startedAt) / 1_000;
     const context = this.context;
     context.save();
-    this.drawBackdrop(segment, elapsed);
-    this.drawSetDressing(segment, elapsed);
+    context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    context.drawImage(this.staticCanvas, 0, 0);
     this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed);
 
     const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
@@ -261,6 +272,18 @@ export class Broadcast2DScene implements PlayoutVisuals {
     });
     this.drawMediumTexture(elapsed);
     context.restore();
+  }
+
+  private cacheStaticScene(segment: SegmentPackage): void {
+    const displayContext = this.context;
+    this.context = this.staticContext;
+    try {
+      this.staticContext.clearRect(0, 0, this.staticCanvas.width, this.staticCanvas.height);
+      this.drawBackdrop(segment, 0);
+      this.drawSetDressing(segment, 0);
+    } finally {
+      this.context = displayContext;
+    }
   }
 
   private usesFullFrame(segment: SegmentPackage): boolean {

@@ -113,7 +113,7 @@ describe('generation prompts', () => {
 
   it('uses every Endor-compatible visual renderer and alternates 2D against 3D history', () => {
     const allMedia = Array.from({ length: 2_000 }, (_, serial) => assignedVisualMedium(serial));
-    expect(new Set(allMedia).size).toBe(16);
+    expect(new Set(allMedia).size).toBe(22);
 
     const afterFlat = assignedVisualMedium(81, ['paper_cutout', 'pixel_broadcast']);
     expect([
@@ -137,6 +137,12 @@ describe('generation prompts', () => {
       'shadow_theatre',
       'hand_drawn',
       'thermal_camera',
+      'ascii_terminal',
+      'blueprint_schematic',
+      'stained_glass',
+      'xerox_punk',
+      'storybook_wash',
+      'isometric_manual',
     ]).toContain(afterThreeDimensional);
   });
 

@@ -146,7 +146,15 @@ const rendererStatusExpression = `({
   active: window.__ELSEWHERE_RENDERER_ACTIVE__ === true,
   standby: document.querySelector('#broadcast')?.classList.contains('handover-standby') === true,
   title: document.title,
-  href: location.href
+  href: location.href,
+  fps: document.querySelector('#fps-value')?.textContent,
+  channelNumber: document.querySelector('#channel-number-value')?.textContent,
+  programmeTitle: document.querySelector('#programme-title')?.textContent,
+  format: document.querySelector('#broadcast')?.dataset.format,
+  visualMedium: document.querySelector('#broadcast')?.dataset.medium,
+  castArchetype: document.querySelector('#broadcast')?.dataset.cast,
+  pacing: document.querySelector('#broadcast')?.dataset.pacing,
+  subtitle: document.querySelector('#subtitle')?.textContent
 })`;
 
 async function waitReady(port, timeoutMs) {
