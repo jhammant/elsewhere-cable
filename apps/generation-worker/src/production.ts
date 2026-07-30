@@ -1183,7 +1183,8 @@ export function mechanismVariantsWithSeeds(
 
 export function preferGeneratedMechanismVariants(variants: readonly string[]): string[] {
   const generated = variants.filter((variant) => variant.startsWith('Rule: '));
-  return generated.length > 0 ? generated : [...variants];
+  const fixed = variants.filter((variant) => !variant.startsWith('Rule: '));
+  return generated.length > 0 ? [...generated, ...fixed] : fixed;
 }
 
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {

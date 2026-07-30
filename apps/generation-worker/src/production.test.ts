@@ -1557,7 +1557,7 @@ describe('produceBatch', () => {
     expect(ranked).toEqual(['fresh mechanism', 'middle mechanism', 'saturated mechanism']);
   });
 
-  it('searches generated kernels before the saturated fixed catalogue', () => {
+  it('searches generated kernels before falling back to the validated fixed catalogue', () => {
     expect(
       preferGeneratedMechanismVariants([
         'fixed mechanism one',
@@ -1565,7 +1565,12 @@ describe('produceBatch', () => {
         'fixed mechanism two',
         'Rule: generated kernel two',
       ]),
-    ).toEqual(['Rule: generated kernel one', 'Rule: generated kernel two']);
+    ).toEqual([
+      'Rule: generated kernel one',
+      'Rule: generated kernel two',
+      'fixed mechanism one',
+      'fixed mechanism two',
+    ]);
     expect(preferGeneratedMechanismVariants(['fixed one', 'fixed two'])).toEqual([
       'fixed one',
       'fixed two',
