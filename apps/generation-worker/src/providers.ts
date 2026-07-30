@@ -300,16 +300,19 @@ export function proposalStructuralExample(request: StructuredGenerationRequest):
     storyMode,
     premise:
       assignedKernel !== null
-        ? `At ${physicalSetting}, a placeholder ${formatRole} wants this: ${assignedKernel.protagonistGoal}, but an opposing role wants this: ${assignedKernel.opposingGoal}; the only rule is ${assignedKernel.rule}.`
+        ? `At ${physicalSetting}, a placeholder ${formatRole} wants THE TITLE SUBJECT for the assigned goal while an opposing role must prevent that goal under THE EXACT KERNEL RULE.`
         : assignedMechanism === null
           ? `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved and ${mechanismShape}, causing one concrete harmless consequence.`
           : `At ${physicalSetting}, a placeholder ${formatRole} needs the original subject resolved, but ${mechanismShape}.`,
     tone: ['original-tone', 'original-tone'],
-    continuityFact: 'Replace with one original fictional fact established by the scene.',
+    continuityFact:
+      assignedKernel === null
+        ? 'Replace with one original fictional fact established by the scene.'
+        : `Replace with one short fact about this exact rule: ${assignedKernel.rule}.`,
     endingBeat:
       assignedKernel === null
         ? 'Replace with one concrete comic decision or status reversal using only established elements.'
-        : `Replace with this earned decision in natural programme language: ${assignedKernel.earnedPayoff}.`,
+        : `Rewrite this exact earned payoff without adding a noun: ${assignedKernel.earnedPayoff}.`,
   });
 }
 
@@ -523,6 +526,14 @@ ${repairInstruction}`,
         frequencyPenalty: 0.05,
       },
       this.proposalEndpoint ?? undefined,
+      kernelFirst
+        ? `The JSON below demonstrates the required keys and a short premise compression pattern only.
+Replace every placeholder and capitalised instruction with original programme content. The premise
+must be one sentence of no more than 48 words: use one concrete noun from the Exact comedy kernel
+as the title subject and repeat it in the premise; compress but preserve both assigned goals; state
+the assigned rule without changing its causal meaning. Rewrite the exact earned payoff using only
+nouns already established by the premise. Add no role, prop, procedure, exemption or second rule:`
+        : undefined,
     );
   }
 

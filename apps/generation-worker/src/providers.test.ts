@@ -128,7 +128,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
     expect(proposal.premise).not.toContain('one spoken phrase');
   });
 
-  it('carries a generated comedy kernel into the proposal and ending examples', () => {
+  it('compresses a generated comedy kernel into a bounded proposal example', () => {
     const proposal = JSON.parse(
       proposalStructuralExample({
         systemPrompt: 'Return JSON.',
@@ -139,13 +139,11 @@ describe('OpenAiCompatibleTtsProvider', () => {
 - Visual medium: stop_motion.
 - Pacing: conversational.`,
       }),
-    ) as { premise: string; endingBeat: string };
+    ) as { premise: string; continuityFact: string; endingBeat: string };
 
-    expect(proposal.premise).toContain('One flatmate wants to make tea before leaving for work.');
-    expect(proposal.premise).toContain(
-      'The other flatmate wants the kettle for a longer breakfast.',
-    );
-    expect(proposal.premise).toContain(
+    expect(proposal.premise.split(/\s+/u).length).toBeLessThanOrEqual(48);
+    expect(proposal.premise).toContain('THE EXACT KERNEL RULE');
+    expect(proposal.continuityFact).toContain(
       'Control of the kettle passes to the person whose biscuit breaks most quietly.',
     );
     expect(proposal.endingBeat).toContain(
@@ -165,15 +163,10 @@ This is a kernel-first proposal. Use one causal rule, two incompatible goals and
 - Visual medium: paper_cutout.
 - Pacing: slow_burn.`,
       }),
-    ) as { premise: string; endingBeat: string };
+    ) as { premise: string; continuityFact: string; endingBeat: string };
 
-    expect(proposal.premise).toContain(
-      'The caretaker wants to lock the hall before the final bus.',
-    );
-    expect(proposal.premise).toContain(
-      'The volunteer wants the key left out for the morning class.',
-    );
-    expect(proposal.premise).toContain(
+    expect(proposal.premise.split(/\s+/u).length).toBeLessThanOrEqual(48);
+    expect(proposal.continuityFact).toContain(
       'Touching the brass key requires its holder to introduce the next silence.',
     );
     expect(proposal.endingBeat).toContain(
