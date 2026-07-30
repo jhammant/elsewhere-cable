@@ -57,6 +57,19 @@ function sharedPhrase(left: string, right: string, width = 5): string | null {
   return null;
 }
 
+function withoutOpeningSetting(value: string): string {
+  const normalised = normalise(value);
+  const commaIndex = value.indexOf(',');
+  if (
+    commaIndex === -1 ||
+    !/^(?:at|during|in|inside|on)\b/iu.test(value.trim()) ||
+    commaIndex > 140
+  ) {
+    return normalised;
+  }
+  return normalise(value.slice(commaIndex + 1));
+}
+
 const comicMechanismFamilies = [
   {
     name: 'broadcast graphic demands credit before moving',
@@ -119,7 +132,14 @@ export function conceptNoveltyIssues(
     if (premise === normalise(previous.premise) || similarity(premise, previous.premise) >= 0.7) {
       issues.push(`premise resembles "${previous.premise}"`);
     }
-    const repeatedPhrase = sharedPhrase(premise, previous.premise, sharedPhraseWidth);
+    // Locations are assigned production coordinates and deliberately recur across a
+    // large catalogue. Compare the comic body after the opening location clause so
+    // a reused set does not make an otherwise new programme impossible to approve.
+    const repeatedPhrase = sharedPhrase(
+      withoutOpeningSetting(proposal.premise),
+      withoutOpeningSetting(previous.premise),
+      sharedPhraseWidth,
+    );
     if (repeatedPhrase !== null) {
       issues.push(`premise reuses the phrase "${repeatedPhrase}"`);
     }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GeneratedSegmentDraft } from '@elsewhere-cable/schemas';
-import { noveltyIssues, recordFromDraft } from './novelty.js';
+import { conceptNoveltyIssues, noveltyIssues, recordFromDraft } from './novelty.js';
 
 function candidate(overrides: Partial<GeneratedSegmentDraft> = {}): GeneratedSegmentDraft {
   return {
@@ -92,6 +92,21 @@ describe('creative novelty', () => {
     });
 
     expect(noveltyIssues(fresh, history)).toEqual([]);
+  });
+
+  it('allows a production set to recur when the comic mechanism changes', () => {
+    const previous = candidate({
+      programmeTitle: 'Last Order Please',
+      premise:
+        'At a local utilities bunker with an excessively polite spokesperson, a warning caption promotes whoever apologises last.',
+    });
+    const fresh = candidate({
+      programmeTitle: 'The Borrowed Extension Lead',
+      premise:
+        'At a local utilities bunker with an excessively polite spokesperson, a caller sells spare electricity to a homesick desk lamp.',
+    });
+
+    expect(conceptNoveltyIssues(fresh, [recordFromDraft(previous)])).toEqual([]);
   });
 
   it('rejects a paraphrased repeat of the same broadcast-graphic credit mechanism', () => {

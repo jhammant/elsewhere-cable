@@ -32,6 +32,7 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Mandatory creative coordinates');
       expect(prompt).toContain('Physical setting:');
       expect(prompt).toContain('Format-specific comedy frame:');
+      expect(prompt).toContain('Television-format anchor:');
       expect(prompt).toContain('Scope ceiling:');
       expect(prompt).toContain('Comedy mechanism family:');
       expect(prompt).toContain('Cast structure:');
@@ -52,6 +53,17 @@ describe('generation prompts', () => {
   it('asks for longer fragments that build useful broadcast duration', () => {
     expect(systemPrompt).toContain('6–12 short dialogue lines');
     expect(systemPrompt).toContain('30–120 second segment');
+  });
+
+  it('draws locations and casts from broad production pools', () => {
+    const prompts = Array.from({ length: 420 }, (_, serial) => userPrompt(serial, []));
+    const locations = prompts.map(
+      (prompt) => prompt.match(/Physical setting: (.+)\.\n/u)?.[1] ?? '',
+    );
+    const casts = prompts.map((prompt) => prompt.match(/Cast structure: (.+)\.\n/u)?.[1] ?? '');
+
+    expect(new Set(locations).size).toBeGreaterThan(28);
+    expect(new Set(casts).size).toBeGreaterThan(30);
   });
 
   it('assigns pacing deterministically even when a provider omits it', () => {

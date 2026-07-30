@@ -620,31 +620,69 @@ const formatCasts: Record<GeneratedSegmentProposal['format'], readonly string[]>
   advert: [
     'one spokesperson, one sceptical demonstrator and the product’s existing owner',
     'one service representative and a testimonial guest who regrets agreeing',
+    'an exhausted inventor, an overly honest neighbour and the appliance representing itself',
+    'a retired stage magician, a delivery driver and the household object neither will endorse',
+    'three rival brand mascots sharing one costume assistant and one working sample',
+    'a serene product expert, a furious repairer and a talking instruction leaflet',
   ],
   shopping: [
     'one sales host, one demonstrator and one call-in customer',
     'two rival hosts and the product’s previous owner',
+    'a ventriloquist sales host, the returned product and a caller who recognises its voice',
+    'an aristocratic bargain hunter, a warehouse picker and one self-pricing ornament',
+    'two exhausted overnight hosts and a very alert caller buying for somebody else',
+    'a miniature presenter, a full-sized demonstrator and the prop demanding equal billing',
   ],
   news: [
     'one anchor, one field reporter and one personally involved local official',
     'two correspondents and the ordinary witness neither can dismiss',
+    'a sports commentator, a talking trophy and the groundskeeper who saw everything',
+    'a weather presenter, a neighbourhood cloud and the resident refusing its forecast',
+    'one solemn anchor, two competing eyewitness objects and an impatient camera operator',
+    'a kitchen-table newsreader, their visiting relative and the caption correcting both',
   ],
   sitcom: [
     'two household members with incompatible goals and one arriving visitor',
     'two colleagues competing for status and their unimpressed supervisor',
+    'three flatmates of radically different sizes and the neighbour borrowing their ceiling',
+    'a talking sofa, its exhausted owner and the guest it has already chosen',
+    'two retired rivals sharing a kitchen and the delivery person who remembers their old act',
+    'a meticulous office plant, its careless desk-mate and the temporary manager seeking advice',
   ],
   emergency: [
     'one calm spokesperson, one procedure author and one resident requesting an exception',
     'one local official, one caller and the junior employee who understands the instructions',
+    'a soothing announcer, an argumentative warning light and the caretaker who installed it',
+    'two neighbours offering each other the same exception and a baffled coordination officer',
+    'a hotel concierge, a misplaced afternoon and the guest who has dinner plans inside it',
+    'one utilities presenter, a talking fuse box and the resident hosting an awkward reunion',
   ],
   ident: [
     'one continuity announcer, one off-screen scheduler and one programme element that can speak',
     'one announcer and two logo elements negotiating their order',
+    'a hand-painted letter, a digital numeral and the craftsperson asked to introduce both',
+    'two outgoing sitcom characters and the announcer trying to release them from the schedule',
+    'a station clock, a very late presenter and the title card covering for them',
+    'three geometric logo pieces and the silent stagehand who knows their correct arrangement',
   ],
   public_access: [
     'one clerk, one complainant and the junior official already living under the disputed policy',
     'one call-in host, one resident and one quiet committee chair',
+    'an amateur craft host, a highly competent object and the caller taking the object’s side',
+    'three argumentative houseplants and the only ordinary gardener in the committee room',
+    'a basement talent-show host, the quiet scenery helper and two contestants avoiding victory',
+    'a relationship presenter broadcasting from home, their caller and the relative in the next room',
   ],
+};
+
+const formatAnchorTerms: Record<GeneratedSegmentProposal['format'], string> = {
+  advert: 'advertise, demonstrate, offer, promote or sell',
+  public_access: 'caller, civic, committee, community, lesson or resident',
+  news: 'anchor, bulletin, coverage, news or report',
+  shopping: 'buy, customer, order, price, product, refund or sell',
+  sitcom: 'family, household, neighbour, roommate or workplace',
+  emergency: 'advisory, emergency, procedure, public, recall or warning',
+  ident: 'channel, continuity, network, programme, signal, station or transmission',
 };
 const requestedMediums = [
   'cel_shaded',
@@ -943,7 +981,7 @@ export function userPrompt(
 ): string {
   const serial = Math.abs(index);
   const format = assignedFormat(serial, optimisationBrief);
-  const settingPool = formatSettings[format];
+  const settingPool = [...formatSettings[format], ...settings];
   const setting =
     settingPool[axisIndex(serial, 0x2f6e2b1, settingPool.length)] ??
     settings[axisIndex(serial, 0x2f6e2b1, settings.length)]!;
@@ -1040,6 +1078,7 @@ ${optimisationBlock}
 Mandatory creative coordinates for this attempt:
 - Physical setting: ${setting}.
 - Format-specific comedy frame: ${storyFrame}.
+- Television-format anchor: include at least one of these words literally in the premise: ${formatAnchorTerms[format]}.
 - Scope ceiling: ${storyScale}. Never exceed it.
 - Story mode: ${storyMode}.
 - Comedy mechanism family: ${mechanismFamily.direction}.

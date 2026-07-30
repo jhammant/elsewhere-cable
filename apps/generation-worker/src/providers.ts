@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { GeneratedSegmentDraft, GeneratedSegmentProposal } from '@elsewhere-cable/schemas';
@@ -766,8 +766,7 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
     }
     const firstBaseUrl = this.nextBaseUrl;
     this.nextBaseUrl = (this.nextBaseUrl + 1) % this.baseUrls.length;
-    let sourceDurationMs: number | undefined;
-    let tempoCorrection = 1;
+    let outputDurationMs: number | undefined;
     const failures: string[] = [];
     for (let offset = 0; offset < this.baseUrls.length; offset += 1) {
       const baseUrl = this.baseUrls[(firstBaseUrl + offset) % this.baseUrls.length]!;
@@ -816,38 +815,53 @@ export class OpenAiCompatibleTtsProvider implements TtsProvider {
           await unlink(sourceFile);
           continue;
         }
-        sourceDurationMs = durationMs;
-        tempoCorrection = candidateTempoCorrection;
+        await execFileAsync('ffmpeg', [
+          '-hide_banner',
+          '-loglevel',
+          'error',
+          '-i',
+          sourceFile,
+          '-af',
+          `silenceremove=start_periods=1:start_duration=0.08:start_threshold=-45dB:stop_periods=1:stop_duration=0.35:stop_threshold=-45dB,${candidateTempoCorrection > 1 ? `atempo=${candidateTempoCorrection.toFixed(4)},` : ''}loudnorm=I=-16:LRA=7:TP=-1.5`,
+          '-c:a',
+          'aac',
+          '-b:a',
+          '160k',
+          '-ar',
+          '48000',
+          '-y',
+          outputFile,
+        ]);
+        await unlink(sourceFile);
+        const processedDurationMs = await probeDurationMs(outputFile);
+        if (processedDurationMs < minimumPlausibleDurationMs) {
+          failures.push(
+            `${baseUrl}: post-processing clipped speech to ${processedDurationMs}ms (minimum plausible ${minimumPlausibleDurationMs}ms)`,
+          );
+          await rm(outputFile, { force: true });
+          continue;
+        }
+        const processedQualityIssue = speechAudioQualityIssue(await inspectSpeechAudio(outputFile));
+        if (processedQualityIssue !== null) {
+          failures.push(`${baseUrl}: post-processing ${processedQualityIssue}`);
+          await rm(outputFile, { force: true });
+          continue;
+        }
+        outputDurationMs = processedDurationMs;
         break;
       } catch (error) {
         failures.push(`${baseUrl}: ${error instanceof Error ? error.message : String(error)}`);
+        await rm(sourceFile, { force: true });
+        await rm(outputFile, { force: true });
       }
     }
-    if (sourceDurationMs === undefined) {
+    if (outputDurationMs === undefined) {
       throw new Error(`All TTS endpoints failed: ${failures.join('; ')}`);
     }
-    await execFileAsync('ffmpeg', [
-      '-hide_banner',
-      '-loglevel',
-      'error',
-      '-i',
-      sourceFile,
-      '-af',
-      `silenceremove=start_periods=1:start_duration=0.08:start_threshold=-45dB:stop_periods=1:stop_duration=0.35:stop_threshold=-45dB,${tempoCorrection > 1 ? `atempo=${tempoCorrection.toFixed(4)},` : ''}loudnorm=I=-16:LRA=7:TP=-1.5`,
-      '-c:a',
-      'aac',
-      '-b:a',
-      '160k',
-      '-ar',
-      '48000',
-      '-y',
-      outputFile,
-    ]);
-    await unlink(sourceFile);
 
     return {
       audioFile: path.posix.join('audio', path.basename(outputFile)),
-      durationMs: await probeDurationMs(outputFile),
+      durationMs: outputDurationMs,
       provider: `${this.id}:${this.model}`,
     };
   }
