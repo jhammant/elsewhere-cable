@@ -21,6 +21,7 @@ import {
   proposalQualityIssues,
   mechanismVariantsWithSeeds,
   preferGeneratedMechanismVariants,
+  proposalRejectionCategory,
   rankMechanismVariantsByNovelty,
   repairNetworkIdentityCollision,
   sanitisedMechanismSeed,
@@ -1557,6 +1558,32 @@ describe('produceBatch', () => {
       'fixed one',
       'fixed two',
     ]);
+  });
+
+  it('attributes premise and critic failures to actionable optimisation categories', () => {
+    expect(
+      proposalRejectionCategory(
+        'premise must state one legible comic rule in 8–48 words',
+      ),
+    ).toBe('premise-length');
+    expect(
+      proposalRejectionCategory('premise must be one complete sentence, not several'),
+    ).toBe('premise-sentence');
+    expect(
+      proposalRejectionCategory(
+        'proposal critic: The ending requires an unstated exemption from the rule.',
+      ),
+    ).toBe('critic-causality');
+    expect(
+      proposalRejectionCategory(
+        'proposal critic: The central mechanism is incoherent and changes its rule.',
+      ),
+    ).toBe('critic-mechanism');
+    expect(
+      proposalRejectionCategory(
+        'proposal critic: The conflict gives neither character an opposing goal.',
+      ),
+    ).toBe('critic-conflict');
   });
 
   it('counts replay aliases once in creative history', () => {

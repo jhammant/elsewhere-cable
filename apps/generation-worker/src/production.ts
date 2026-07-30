@@ -589,11 +589,13 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   return issues;
 }
 
-function proposalRejectionCategory(reason: string): string {
+export function proposalRejectionCategory(reason: string): string {
   if (reason.includes('semantically repeats')) return 'semantic-novelty';
   if (/(?:repeats|resembles|reuses|mechanism repeats)/u.test(reason)) {
     return 'concept-novelty';
   }
+  if (reason.includes('one complete sentence')) return 'premise-sentence';
+  if (reason.includes('one legible comic rule in 8–48 words')) return 'premise-length';
   if (reason.includes('specific character goal or refusal')) return 'character-goal';
   if (reason.includes('programme title promises')) return 'title-premise-alignment';
   if (reason.includes('physical setting')) return 'physical-setting';
@@ -604,6 +606,26 @@ function proposalRejectionCategory(reason: string): string {
   if (reason.includes('non-visual story mode')) return 'nonvisual-transformation';
   if (reason.includes('ending introduces')) return 'unearned-ending';
   if (reason.includes('harmless fictional administrative stakes')) return 'emergency-safety';
+  if (reason.startsWith('proposal critic:')) {
+    if (
+      /\b(?:ending|payoff|resolution|resolves?|unstated|unearned|introduces?)\b/iu.test(reason)
+    ) {
+      return 'critic-causality';
+    }
+    if (/\b(?:mechanism|rule|causal|coheren|incoheren)\w*\b/iu.test(reason)) {
+      return 'critic-mechanism';
+    }
+    if (/\b(?:stage|stageab|visual|narrat)\w*\b/iu.test(reason)) {
+      return 'critic-stageability';
+    }
+    if (/\b(?:conflict|goal|want|oppos)\w*\b/iu.test(reason)) {
+      return 'critic-conflict';
+    }
+    if (/\bformat\b/iu.test(reason)) {
+      return 'critic-format';
+    }
+    return 'critic-other';
+  }
   return 'other-editorial';
 }
 
