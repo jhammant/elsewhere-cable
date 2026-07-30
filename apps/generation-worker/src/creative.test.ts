@@ -43,6 +43,7 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Television-format anchor:');
       expect(prompt).toContain('Scope ceiling:');
       expect(prompt).toContain('Comedy mechanism family:');
+      expect(prompt).toContain('Mechanism variant:');
       expect(prompt).toContain('Cast structure:');
       expect(prompt).toContain('Broadcast presentation:');
       expect(prompt).toContain('Visual medium:');
@@ -103,13 +104,18 @@ describe('generation prompts', () => {
       (prompt) =>
         prompt.match(/Ordinary cost of failure: that same role must (.+)\.\n/u)?.[1] ?? '',
     );
+    const mechanisms = prompts.map(
+      (prompt) => prompt.match(/Mechanism variant: (.+)\. Treat this/u)?.[1] ?? '',
+    );
     const combinations = prompts.map(
-      (_prompt, index) => `${relationships[index]}|${objectives[index]}|${costs[index]}`,
+      (_prompt, index) =>
+        `${relationships[index]}|${objectives[index]}|${costs[index]}|${mechanisms[index]}`,
     );
 
     expect(new Set(relationships).size).toBeGreaterThanOrEqual(25);
     expect(new Set(objectives).size).toBeGreaterThanOrEqual(25);
     expect(new Set(costs).size).toBeGreaterThanOrEqual(25);
+    expect(new Set(mechanisms).size).toBeGreaterThanOrEqual(70);
     expect(new Set(combinations).size).toBeGreaterThan(800);
     expect(prompts[0]).toContain('Translate them onto roles already present in the assigned cast');
   });

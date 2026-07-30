@@ -767,6 +767,108 @@ const storyModes = [
   },
 ] as const;
 
+const storyModeMechanismVariants: Record<
+  NonNullable<GeneratedSegmentProposal['storyMode']>,
+  readonly string[]
+> = {
+  social_protocol: [
+    'the right to leave belongs to whoever first solves another person’s tiny inconvenience',
+    'offering the good chair makes its recipient responsible for choosing the next speaker',
+    'the person holding one shared household item must host until somebody sincerely asks for it',
+    'a farewell remains socially incomplete until the least expressive guest accepts one practical favour',
+    'guest status passes to whoever admits the most ordinary reason for wanting to stay',
+    'the first sincere compliment gives its recipient control of one disputed routine',
+    'speaking order follows who last helped a rival without claiming it was deliberate',
+    'a welcome is valid only when delivered by the person privately hoping the visitor leaves early',
+    'the person who refuses the ceremonial place must choose who reluctantly occupies it',
+    'an apology may be accepted only by the bystander whose plans it actually changed',
+  ],
+  service_mismatch: [
+    'a reminder service delivers each message to the person most affected instead of its customer',
+    'a repair service faithfully preserves the useful flaw its customer cannot admit needing',
+    'a booking service optimises two appointments into the awkward encounter both customers meant to avoid',
+    'a return desk gives an item back to whoever remembers its previous use most accurately',
+    'a translation service converts every polite hint into the practical request hidden inside it',
+    'a delivery service chooses the recipient with the dullest genuine use for the parcel',
+    'a cleaning service labels every object by the private reason its owner kept it',
+    'a help line answers the caller’s unstated logistical problem rather than the question asked',
+    'a scheduling service preserves exactly the delay its customer was pretending to dislike',
+    'a replacement service supplies the requested function inside an embarrassingly familiar object',
+  ],
+  status_transfer: [
+    'temporary decision control passes to whoever performs the smallest necessary task with care',
+    'the right to ask the next question passes to the person whose last answer changed somebody’s mind',
+    'naming rights belong to the participant least emotionally invested in the disputed object',
+    'control of one shared prop confers a narrow responsibility its holder is trying to avoid',
+    'a veto passes to whoever gives the most ordinary truthful reason for their preference',
+    'public credit attaches to the participant working hardest to remain incidental',
+    'the final choice belongs to whoever correctly remembers one trivial but useful detail',
+    'hosting duty moves to the person who helps their rival before helping themselves',
+    'formal authority ends the moment its holder insists on being addressed by title',
+    'speaking priority passes to whoever admits practical dependence on another participant',
+  ],
+  format_literalism: [
+    'a lower third determines which speaker is officially allowed to correct the other',
+    'the phrase back to you transfers responsibility for the unfinished practical problem',
+    'studio applause is counted as a binding vote on one mundane choice',
+    'a recap becomes the official account the participants must negotiate before continuing',
+    'saying up next makes the incoming programme inherit the outgoing programme’s tiny obligation',
+    'a product disclaimer assigns custody of the demonstrated object to whoever reads it',
+    'the live caption becomes the meeting minute both speakers need worded differently',
+    'closing credits rank the ordinary tasks each participant hoped would remain invisible',
+    'a camera tally light gives its visible subject the duty to finish the current sentence',
+    'breaking news status prevents anyone from treating the reported inconvenience as finished',
+  ],
+  object_agency: [
+    'the object wants one formal question before supplying the useful evidence it already has',
+    'the object chooses an owner according to the least glamorous sincere use offered',
+    'the object files a correction to the flattering label its presenter needs left unchanged',
+    'the object refuses a prestigious role and negotiates to remain practically useful',
+    'the object requests inclusion in one group photograph its owner wants to finish quickly',
+    'the object wants its previous owner acknowledged without being returned to them',
+    'the object cooperates only after its user admits why one useful defect must remain',
+    'the object requests that a recent improvement be politely undone before the demonstration ends',
+    'the object withholds one petty clue until addressed by the ordinary name it prefers',
+    'the object wants the quiet helper named as its interpreter instead of its owner',
+  ],
+  product_consequence: [
+    'the product delivers apologies before their buyers decide what they regret',
+    'the product remembers a previous household and compares one harmless routine aloud',
+    'the product reveals the cheapest genuine reason each customer wants the premium version',
+    'the product assigns its subscription to the person using it on somebody else’s behalf',
+    'the product records an unspoken preference as its only successful customer review',
+    'the product anticipates a visitor’s decision and prepares the socially inconvenient option',
+    'the product transfers its minor maintenance duty to whoever praises it most confidently',
+    'the product rates the demonstrator using the same criteria intended for customers',
+    'the product preserves one mistake as a premium feature its owner secretly values',
+    'the product works perfectly only for the mundane off-label use the spokesperson dismisses',
+  ],
+  semantic_contract: [
+    'saying we should schedules the proposed task for the speaker personally',
+    'a routine farewell commits its speaker to one additional practical visit',
+    'saying no trouble waives the speaker’s right to hide the inconvenience already caused',
+    'the phrase after you transfers the next deadline rather than physical precedence',
+    'saying keep it assigns long-term storage duty for the disputed ordinary object',
+    'a sincere you are welcome formally accepts responsibility for hosting the next occasion',
+    'using an old nickname grants its subject the unwanted role associated with it',
+    'the phrase just one thing extends the programme until that thing is honestly answered',
+    'correcting one accurate word makes the corrector responsible for the revised account',
+    'saying fine accepts the other person’s proposed version of one shared routine',
+  ],
+  visual_physics: [
+    'the transformation makes the quiet participant appear uniquely prepared',
+    'the transformed element gives one rival access to the useful prop both need',
+    'the transformed staging undermines the confident role’s claimed expertise',
+    'the visible change turns the fastest proposed method into the slowest route',
+    'the changed set forces two rivals to cooperate without settling their dispute',
+    'the transformation gives the least respected role the only usable sightline',
+    'the altered element makes a private preference visible without revealing a secret',
+    'the changed geometry transfers one ceremonial position to its reluctant occupant',
+    'the transformation makes the technically correct demonstration socially unhelpful',
+    'the altered set rewards the participant who stops performing confidence first',
+  ],
+};
+
 const comicTriggers = [
   'someone completes a sentence with a concrete noun',
   'a presenter makes direct eye contact with the main camera',
@@ -1466,7 +1568,7 @@ export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): Genera
     .slice(1)
     .filter((speaker, index) => speaker === speakers[index]).length;
   const strictlyAlternating =
-    draft.dialogue.length >= 8 &&
+    pacingRepaired.dialogue.length >= 8 &&
     new Set(speakers).size === 2 &&
     speakers.slice(1).every((speaker, index) => speaker !== speakers[index]);
   const requiresBrokenAlternation = architecturesThatRequireBrokenAlternation.some((prefix) =>
@@ -1595,6 +1697,9 @@ export function userPrompt(
     storyEngines[axisIndex(serial, 0x36abf51, storyEngines.length)]!;
   const storyScale = storyScales[axisIndex(serial, 0x3bce725, storyScales.length)]!;
   const mechanismFamily = storyModes.find(({ id }) => id === storyMode)!;
+  const mechanismVariants = storyModeMechanismVariants[storyMode];
+  const mechanismVariant =
+    mechanismVariants[axisIndex(serial, 0x3f5297b, mechanismVariants.length)]!;
   const usesVisualPhysics = storyMode === 'visual_physics';
   const comicTrigger = comicTriggers[axisIndex(serial, 0x43d721a, comicTriggers.length)]!;
   const castPool = formatCasts[format];
@@ -1698,6 +1803,7 @@ Mandatory creative coordinates for this attempt:
 - Scope ceiling: ${storyScale}. Never exceed it.
 - Story mode: ${storyMode}.
 - Comedy mechanism family: ${mechanismFamily.direction}.
+- Mechanism variant: ${mechanismVariant}. Treat this as the exact subtype of the comedy mechanism, not as a second rule.
 ${physicalMechanismBlock}
 - Cast structure: ${cast}.
 - Cast archetype: ${castArchetype}. Render every named role through this body family while preserving the assigned cast structure and readable role differences.
