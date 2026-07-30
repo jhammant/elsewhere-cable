@@ -10,6 +10,7 @@ import {
 import { demoDraft, scriptPrompt, visualMediumForStyle, visualStyleForMedium } from './creative.js';
 import {
   assertPreviewSafe,
+  deduplicateCreativeHistory,
   editorialCritiqueIssues,
   midSpeechCameraEvents,
   openingGraphicForFormat,
@@ -19,6 +20,7 @@ import {
   proposalCritiqueIssues,
   proposalQualityIssues,
   mechanismVariantsWithSeeds,
+  preferGeneratedMechanismVariants,
   rankMechanismVariantsByNovelty,
   repairNetworkIdentityCollision,
   sanitisedMechanismSeed,
@@ -1540,6 +1542,46 @@ describe('produceBatch', () => {
     );
 
     expect(ranked).toEqual(['fresh mechanism', 'middle mechanism', 'saturated mechanism']);
+  });
+
+  it('searches generated kernels before the saturated fixed catalogue', () => {
+    expect(
+      preferGeneratedMechanismVariants([
+        'fixed mechanism one',
+        'Rule: generated kernel one',
+        'fixed mechanism two',
+        'Rule: generated kernel two',
+      ]),
+    ).toEqual(['Rule: generated kernel one', 'Rule: generated kernel two']);
+    expect(preferGeneratedMechanismVariants(['fixed one', 'fixed two'])).toEqual([
+      'fixed one',
+      'fixed two',
+    ]);
+  });
+
+  it('counts replay aliases once in creative history', () => {
+    const first = {
+      title: 'The Teaspoon Decision',
+      premise: 'At a breakfast table, two neighbours contest the final clean teaspoon.',
+      dialogue: ['It was clean when I objected.'],
+      visualMedium: 'cutout_2d' as const,
+      castArchetype: 'human_duo' as const,
+    };
+    const second = {
+      title: 'Unrelated Forecast',
+      premise: 'In a weather studio, a presenter forecasts the return of borrowed umbrellas.',
+      dialogue: ['Rain retains no legal counsel.'],
+      visualMedium: 'cel_shaded_3d' as const,
+      castArchetype: 'object_pair' as const,
+    };
+
+    expect(
+      deduplicateCreativeHistory([
+        first,
+        { ...first, title: '  THE TEASPOON DECISION  ' },
+        second,
+      ]),
+    ).toEqual([first, second]);
   });
 
   it('sanitises generated mechanisms before they can enter a programme prompt', () => {

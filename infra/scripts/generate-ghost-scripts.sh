@@ -18,7 +18,7 @@ embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
 embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
 generation_history=${ELSEWHERE_GENERATION_HISTORY:-data/optimisation/generation-history.ndjson}
-generation_strategy=${ELSEWHERE_GENERATION_STRATEGY:-goal-driven-comedy-kernels-v1}
+generation_strategy=${ELSEWHERE_GENERATION_STRATEGY:-dynamic-kernel-first-v1}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2

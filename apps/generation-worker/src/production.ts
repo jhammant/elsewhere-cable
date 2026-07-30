@@ -673,6 +673,20 @@ async function readManifest(root: string): Promise<PlayoutManifest> {
   }
 }
 
+export function deduplicateCreativeHistory(
+  records: readonly CreativeRecord[],
+): CreativeRecord[] {
+  const seen = new Set<string>();
+  return records.filter((record) => {
+    const key = `${record.title.normalize('NFKC').toLocaleLowerCase('en-GB').replace(/\s+/gu, ' ').trim()}\u0000${record.premise.normalize('NFKC').toLocaleLowerCase('en-GB').replace(/\s+/gu, ' ').trim()}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
 async function readCreativeHistory(
   root: string,
   manifest: PlayoutManifest,
@@ -704,13 +718,15 @@ async function readCreativeHistory(
   // Live priority deliberately reshuffles the manifest around Endor's current cursor.
   // Creative contrast must follow creation order, otherwise every unattended batch sees
   // whichever recovery alias happens to be last and can repeatedly choose the same medium.
-  return records
-    .sort(
-      (left, right) =>
-        left.generatedAt.localeCompare(right.generatedAt) ||
-        left.manifestIndex - right.manifestIndex,
-    )
-    .map(({ record }) => record);
+  return deduplicateCreativeHistory(
+    records
+      .sort(
+        (left, right) =>
+          left.generatedAt.localeCompare(right.generatedAt) ||
+          left.manifestIndex - right.manifestIndex,
+      )
+      .map(({ record }) => record),
+  );
 }
 
 async function writeManifest(root: string, manifest: PlayoutManifest): Promise<void> {
@@ -1027,6 +1043,7 @@ interface ProduceOptions {
 // reject exact and near-exact wording, while this higher semantic threshold catches paraphrased
 // versions of the same joke without exhausting a set after one appearance.
 const semanticSimilarityLimit = 0.84;
+const dynamicMechanismCatalogueThreshold = 256;
 const mechanismSeedSystemPrompt = `You invent compact comedy kernels for an original surreal television generator.
 Each kernel contains one exact repeatable causal rule, one ordinary protagonist goal, one incompatible
 ordinary goal for another participant, and one decision or status reversal caused only by that rule.
@@ -1141,6 +1158,11 @@ export function mechanismVariantsWithSeeds(
     seen.add(key);
     return true;
   });
+}
+
+export function preferGeneratedMechanismVariants(variants: readonly string[]): string[] {
+  const generated = variants.filter((variant) => variant.startsWith('Rule: '));
+  return generated.length > 0 ? generated : [...variants];
 }
 
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
@@ -1556,7 +1578,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         : await options.embeddingProvider.embed(creativeHistory.map((record) => record.premise));
     let dynamicMechanismSeeds: MechanismSeed[] = [];
     if (
-      creativeHistory.length >= 1_000 &&
+      creativeHistory.length >= dynamicMechanismCatalogueThreshold &&
       queuedApprovedProposals.length < options.count &&
       options.llm?.generateMechanismSeeds !== undefined
     ) {
@@ -1829,12 +1851,13 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               );
             const storyMode = assignedStoryMode(creativeSerial, options.optimisationBrief ?? null);
             const mechanismRanking =
-              creativeHistory.length >= 1_000
+              creativeHistory.length >= dynamicMechanismCatalogueThreshold
                 ? await rankedMechanismVariants(storyMode)
                 : mechanismVariantsForStoryMode(storyMode);
-            const mechanismCandidateCount = Math.min(12, mechanismRanking.length);
+            const mechanismCandidates = preferGeneratedMechanismVariants(mechanismRanking);
+            const mechanismCandidateCount = Math.min(12, mechanismCandidates.length);
             const mechanismVariant =
-              mechanismRanking[(creativeCoordinateAttempt + index) % mechanismCandidateCount];
+              mechanismCandidates[(creativeCoordinateAttempt + index) % mechanismCandidateCount];
             if (mechanismVariant === undefined) {
               throw new Error(`No mechanism variant is available for ${storyMode}`);
             }
