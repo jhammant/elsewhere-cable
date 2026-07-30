@@ -97,6 +97,18 @@ describe('visual timeline energiser', () => {
     expect(laterGraphicText.every((text) => !text.startsWith('HOST —'))).toBe(true);
   });
 
+  it('can energise recovery visuals without adding audio static', () => {
+    const result = energiseVisualTimeline(segment(), {
+      pacing: 'frantic',
+      repairGraphics: true,
+      addStatic: false,
+    });
+
+    expect(result.cameraEventsAdded + result.graphicEventsAdded).toBeGreaterThan(0);
+    expect(result.staticEventsAdded).toBe(0);
+    expect(result.segment.events.some((event) => event.type === 'audio.static')).toBe(false);
+  });
+
   it('uses a deliberately contrasting deterministic pacing cycle', () => {
     expect(Array.from({ length: 8 }, (_, index) => remixedPacing(index))).toEqual([
       'frantic',

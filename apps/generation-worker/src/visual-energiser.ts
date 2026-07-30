@@ -136,6 +136,7 @@ export function energiseVisualTimeline(
   options: {
     pacing?: Pacing;
     repairGraphics?: boolean;
+    addStatic?: boolean;
   } = {},
 ): VisualEnergiserResult {
   const pacing = options.pacing ?? segment.pacing ?? 'conversational';
@@ -203,11 +204,13 @@ export function energiseVisualTimeline(
       graphic: desiredGraphic,
       text: editorialGraphicText(segment, line, speech.indexOf(line)),
     });
-    staticAdditions.push({
-      atMs: Math.max(0, atMs - 180),
-      type: 'audio.static',
-      durationMs: 140,
-    });
+    if (options.addStatic !== false) {
+      staticAdditions.push({
+        atMs: Math.max(0, atMs - 180),
+        type: 'audio.static',
+        durationMs: 140,
+      });
+    }
     lastGraphicAt = atMs;
   }
 

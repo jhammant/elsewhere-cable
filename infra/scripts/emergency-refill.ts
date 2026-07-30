@@ -17,6 +17,7 @@ import {
   diversifyRunway,
   type RunwayDescriptor,
 } from '../../apps/generation-worker/src/runway-diversity.js';
+import { energiseVisualTimeline } from '../../apps/generation-worker/src/visual-energiser.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -158,6 +159,14 @@ const diversifiedSourcePool = diversifyRunway(
 );
 const stamp = Date.now().toString(36);
 const recoveryEntries: PlayoutManifest['segments'] = [];
+let cameraEventsAdded = 0;
+let graphicEventsAdded = 0;
+const recoveryPresentationPacing = [
+  'frantic',
+  'staccato',
+  'interrupted',
+  'conversational',
+] as const;
 for (let index = 0; index < count; index += 1) {
   const sourceIndex = Math.floor((index * diversifiedSourcePool.length) / count);
   const source =
@@ -172,7 +181,7 @@ for (let index = 0; index < count; index += 1) {
     path.join(aliasDirectory, 'audio'),
     'dir',
   );
-  const segment = segmentPackageSchema.parse({
+  const aliasBase = segmentPackageSchema.parse({
     ...source.segment,
     segmentId: aliasId,
     production: {
@@ -181,6 +190,22 @@ for (let index = 0; index < count; index += 1) {
       generator: 'emergency-recovery-alias',
       model: 'approved-replay',
     },
+  });
+  const energised = energiseVisualTimeline(aliasBase, {
+    pacing:
+      recoveryPresentationPacing[
+        (existingRecoverySegments + index) % recoveryPresentationPacing.length
+      ]!,
+    repairGraphics: true,
+    addStatic: false,
+  });
+  cameraEventsAdded += energised.cameraEventsAdded;
+  graphicEventsAdded += energised.graphicEventsAdded;
+  const segment = segmentPackageSchema.parse({
+    ...energised.segment,
+    // The faster recovery presentation controls shot and graphic frequency only.
+    // Preserve the source's spoken pacing label because its audio timeline is unchanged.
+    pacing: aliasBase.pacing,
   });
   await writeFile(
     path.join(aliasDirectory, 'segment.json'),
@@ -213,6 +238,9 @@ process.stdout.write(
       recoveryDurationMs: recoveryEntries.reduce((total, entry) => total + entry.durationMs, 0),
       distinctSources: sourcePool.length,
       diversified: true,
+      cameraEventsAdded,
+      graphicEventsAdded,
+      audioStaticAdded: 0,
       source:
         requestedSourceIds !== null
           ? 'requested-approved-catalogue'
