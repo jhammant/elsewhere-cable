@@ -10,9 +10,11 @@ import {
   type SegmentPackage,
 } from '../../packages/schemas/src/index.js';
 import {
+  concreteMotifPhrases,
   deliveryPacingDirection,
   pacingCandidatesForDelivery,
   pacingModes,
+  repeatedStoryPhrases,
 } from '../../apps/generation-worker/src/optimisation-policy.js';
 
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
@@ -145,97 +147,6 @@ const criticResponseSchema = {
   },
   required: ['scores', 'avoidMotifs', 'preserveStrengths', 'editorialDirection'],
 } as const;
-const stopWords = new Set([
-  'across',
-  'about',
-  'action',
-  'after',
-  'again',
-  'against',
-  'away',
-  'before',
-  'become',
-  'being',
-  'between',
-  'answer',
-  'barrier',
-  'because',
-  'broadcast',
-  'camera',
-  'caus',
-  'cause',
-  'character',
-  'component',
-  'correct',
-  'customer',
-  'during',
-  'every',
-  'exit',
-  'first',
-  'from',
-  'force',
-  'forced',
-  'forces',
-  'forcing',
-  'handheld',
-  'host',
-  'household',
-  'inside',
-  'instantly',
-  'into',
-  'label',
-  'larger',
-  'late',
-  'least',
-  'must',
-  'name',
-  'next',
-  'night',
-  'object',
-  'only',
-  'person',
-  'perfectly',
-  'physical',
-  'physically',
-  'presenter',
-  'props',
-  'refuse',
-  'refused',
-  'refuses',
-  'refusing',
-  'remain',
-  'rule',
-  'scene',
-  'segment',
-  'setting',
-  'shadow',
-  'show',
-  'stage',
-  'studio',
-  'swap',
-  'that',
-  'their',
-  'them',
-  'there',
-  'these',
-  'they',
-  'thing',
-  'this',
-  'time',
-  'through',
-  'until',
-  'when',
-  'where',
-  'whenever',
-  'which',
-  'while',
-  'whose',
-  'with',
-  'want',
-  'wanted',
-  'wanting',
-  'wants',
-]);
 const nonStoryMotifs = new Set(
   [
     ...allFormats,
@@ -461,45 +372,6 @@ function leastUsed<T extends string>(
     .slice(0, count);
 }
 
-function overusedMotifs(segments: readonly SegmentPackage[]): string[] {
-  const frequencies = new Map<string, number>();
-  for (const segment of segments) {
-    const text = `${segment.programme.title} ${segment.programme.premise}`.toLowerCase();
-    const seen = new Set(
-      text
-        .match(/[a-z]{4,}/gu)
-        ?.filter((word) => !stopWords.has(word))
-        .map((word) => {
-          if (word.length > 6 && word.endsWith('ing')) {
-            return word.slice(0, -3);
-          }
-          if (word.length > 5 && word.endsWith('ed')) {
-            return word.slice(0, -2);
-          }
-          if (
-            word.length > 5 &&
-            word.endsWith('s') &&
-            !word.endsWith('ss') &&
-            !word.endsWith('us') &&
-            !word.endsWith('is')
-          ) {
-            return word.slice(0, -1);
-          }
-          return word;
-        })
-        .filter((word) => !stopWords.has(word)) ?? [],
-    );
-    for (const word of seen) {
-      frequencies.set(word, (frequencies.get(word) ?? 0) + 1);
-    }
-  }
-  return [...frequencies.entries()]
-    .filter(([, count]) => count >= 2)
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-    .slice(0, 8)
-    .map(([word]) => word);
-}
-
 function fallbackBrief(
   segments: readonly SegmentPackage[],
   delivery: DeliveryProbe,
@@ -531,7 +403,11 @@ function fallbackBrief(
       segments.map((segment) => segment.pacing ?? 'conversational'),
       2,
     ),
-    avoidMotifs: overusedMotifs(segments),
+    avoidMotifs: repeatedStoryPhrases(
+      segments.map(
+        (segment) => `${segment.programme.title} ${segment.programme.premise}`,
+      ),
+    ),
     preserveStrengths: ['clear character wants', 'one legible comic rule'],
     editorialDirection:
       segments.length === 0
@@ -663,18 +539,11 @@ async function criticBrief(
         .replace(/[,;:-]+$/u, '');
       return /[.!?]$/u.test(bounded) ? bounded : `${bounded}.`;
     };
-    const criticMotifs = (critic.avoidMotifs ?? [])
-      .map((value) => safeText(value))
-      .filter((value): value is string => {
-        if (value === null) {
-          return false;
-        }
-        if (nonStoryMotifs.has(value.toLowerCase()) || value.includes('_')) {
-          return false;
-        }
-        const words = value.toLowerCase().match(/[a-z]{4,}/gu) ?? [];
-        return words.length > 1 || (words.length === 1 && !stopWords.has(words[0]));
-      });
+    const criticMotifs = concreteMotifPhrases(
+      (critic.avoidMotifs ?? [])
+        .map((value) => safeText(value))
+        .filter((value): value is string => value !== null && !value.includes('_')),
+    ).filter((value) => !nonStoryMotifs.has(value));
     const criticStrengths = (critic.preserveStrengths ?? [])
       .map((value) => safeText(value))
       .filter((value): value is string => value !== null);

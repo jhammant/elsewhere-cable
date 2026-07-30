@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { SegmentEvent } from '@elsewhere-cable/schemas';
-import { compactSpeechTimeline, recoveryTimingTargets } from './timeline-recovery.js';
+import type { SegmentEvent, SegmentPackage } from '@elsewhere-cable/schemas';
+import {
+  compactRecoverySegment,
+  compactSpeechTimeline,
+  recoveryTimingTargets,
+} from './timeline-recovery.js';
 
 function speech(atMs: number, durationMs: number, index: number): SegmentEvent {
   return {
@@ -53,5 +57,75 @@ describe('delivery timeline recovery', () => {
     expect(recoveryTimingTargets.near_silent.tailMs).toBeGreaterThan(
       recoveryTimingTargets.slow_burn.tailMs,
     );
+  });
+
+  it('turns an approved replay into a continuous energetic presentation without changing speech', () => {
+    const source = {
+      schemaVersion: 1,
+      segmentId: 'seg_recovery_source',
+      channel: {
+        id: 'channel_9876543210',
+        number: 9_876_543_210,
+        name: 'Continuity Laboratory',
+        realityId: 'REALITY-TEST',
+      },
+      programme: {
+        id: 'the_delayed_reply',
+        title: 'The Delayed Reply',
+        format: 'public_access',
+        premise: 'A presenter and caller negotiate who must answer a harmless question first.',
+      },
+      durationMs: 20_000,
+      visualStyle: 'public_access_1991',
+      visualMedium: 'paper_cutout',
+      castArchetype: 'paper_puppets',
+      pacing: 'near_silent',
+      storyMode: 'social_protocol',
+      tone: ['dry', 'awkward'],
+      events: [
+        { atMs: 0, type: 'transition.play', transition: 'FADE_TO_IDENT' },
+        speech(3_200, 2_000, 0),
+        { atMs: 5_300, type: 'audio.static', durationMs: 120 },
+        speech(8_000, 2_000, 1),
+        { atMs: 18_000, type: 'transition.play', transition: 'STATIC_BURST' },
+      ],
+      continuityUpdates: [],
+      suggestedExit: {
+        earliestMs: 18_000,
+        preferredMs: 19_000,
+        transition: 'STATIC_BURST',
+      },
+      production: {
+        generatedAt: '2026-07-30T00:00:00.000Z',
+        generator: 'demo-library',
+        model: 'hand-authored-demo',
+        safetyStatus: 'approved-for-local-preview',
+        audioPrepared: true,
+      },
+    } satisfies SegmentPackage;
+
+    const result = compactRecoverySegment(source, 'frantic');
+    const sourceSpeech = source.events.filter((event) => event.type === 'speech.play');
+    const nextSpeech = result.segment.events.filter((event) => event.type === 'speech.play');
+    const sourceStatic = source.events.filter((event) => event.type === 'audio.static');
+    const nextStatic = result.segment.events.filter((event) => event.type === 'audio.static');
+
+    expect(nextSpeech.map(({ atMs }) => atMs)).toEqual([540, 2_630]);
+    expect(nextSpeech).toHaveLength(sourceSpeech.length);
+    nextSpeech.forEach((event, index) => {
+      expect(event).toEqual({ ...sourceSpeech[index]!, atMs: event.atMs });
+    });
+    expect(nextStatic).toHaveLength(sourceStatic.length);
+    nextStatic.forEach((event, index) => {
+      expect(event).toEqual({ ...sourceStatic[index]!, atMs: event.atMs });
+    });
+    expect(result.segment.pacing).toBe('frantic');
+    expect(result.segment.durationMs).toBe(8_000);
+    expect(result.timelineDurationRemovedMs).toBe(12_000);
+    expect(result.speechGapsTightened).toBe(1);
+    expect(result.tailDurationRemovedMs).toBe(6_630);
+    expect(
+      result.segment.events.every((event) => event.atMs < result.segment.durationMs),
+    ).toBe(true);
   });
 });

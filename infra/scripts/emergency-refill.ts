@@ -18,6 +18,7 @@ import {
   type RunwayDescriptor,
 } from '../../apps/generation-worker/src/runway-diversity.js';
 import { energiseVisualTimeline } from '../../apps/generation-worker/src/visual-energiser.js';
+import { compactRecoverySegment } from '../../apps/generation-worker/src/timeline-recovery.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -161,6 +162,10 @@ const stamp = Date.now().toString(36);
 const recoveryEntries: PlayoutManifest['segments'] = [];
 let cameraEventsAdded = 0;
 let graphicEventsAdded = 0;
+let timelineDurationRemovedMs = 0;
+let speechGapsTightened = 0;
+let leadDurationRemovedMs = 0;
+let tailDurationRemovedMs = 0;
 const recoveryPresentationPacing = [
   'frantic',
   'staccato',
@@ -191,22 +196,23 @@ for (let index = 0; index < count; index += 1) {
       model: 'approved-replay',
     },
   });
-  const energised = energiseVisualTimeline(aliasBase, {
-    pacing:
-      recoveryPresentationPacing[
-        (existingRecoverySegments + index) % recoveryPresentationPacing.length
-      ]!,
+  const presentationPacing =
+    recoveryPresentationPacing[
+      (existingRecoverySegments + index) % recoveryPresentationPacing.length
+    ]!;
+  const compacted = compactRecoverySegment(aliasBase, presentationPacing);
+  timelineDurationRemovedMs += compacted.timelineDurationRemovedMs;
+  speechGapsTightened += compacted.speechGapsTightened;
+  leadDurationRemovedMs += compacted.leadDurationRemovedMs;
+  tailDurationRemovedMs += compacted.tailDurationRemovedMs;
+  const energised = energiseVisualTimeline(compacted.segment, {
+    pacing: presentationPacing,
     repairGraphics: true,
     addStatic: false,
   });
   cameraEventsAdded += energised.cameraEventsAdded;
   graphicEventsAdded += energised.graphicEventsAdded;
-  const segment = segmentPackageSchema.parse({
-    ...energised.segment,
-    // The faster recovery presentation controls shot and graphic frequency only.
-    // Preserve the source's spoken pacing label because its audio timeline is unchanged.
-    pacing: aliasBase.pacing,
-  });
+  const segment = segmentPackageSchema.parse(energised.segment);
   await writeFile(
     path.join(aliasDirectory, 'segment.json'),
     `${JSON.stringify(segment, null, 2)}\n`,
@@ -216,6 +222,7 @@ for (let index = 0; index < count; index += 1) {
     ...source.entry,
     segmentId: aliasId,
     packagePath: `${aliasId}/segment.json`,
+    durationMs: segment.durationMs,
   });
 }
 
@@ -241,6 +248,10 @@ process.stdout.write(
       cameraEventsAdded,
       graphicEventsAdded,
       audioStaticAdded: 0,
+      timelineDurationRemovedMs,
+      speechGapsTightened,
+      leadDurationRemovedMs,
+      tailDurationRemovedMs,
       source:
         requestedSourceIds !== null
           ? 'requested-approved-catalogue'

@@ -82,3 +82,92 @@ export function compactSpeechTimeline(
     leadReductionMs,
   };
 }
+
+function lastEventIndex(
+  events: readonly SegmentEvent[],
+  predicate: (event: SegmentEvent) => boolean,
+): number {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (predicate(events[index]!)) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+export function compactRecoverySegment(
+  segment: SegmentPackage,
+  pacing: Pacing,
+): {
+  segment: SegmentPackage;
+  timelineDurationRemovedMs: number;
+  speechGapsTightened: number;
+  leadDurationRemovedMs: number;
+  tailDurationRemovedMs: number;
+} {
+  const compacted = compactSpeechTimeline(segment.events, pacing);
+  const speechEvents = compacted.events.filter((event) => event.type === 'speech.play');
+  const lastSpeechEndMs = speechEvents.reduce(
+    (latest, event) => Math.max(latest, event.atMs + event.durationMs),
+    0,
+  );
+  if (lastSpeechEndMs === 0) {
+    return {
+      segment: { ...segment, pacing },
+      timelineDurationRemovedMs: 0,
+      speechGapsTightened: 0,
+      leadDurationRemovedMs: 0,
+      tailDurationRemovedMs: 0,
+    };
+  }
+
+  const speechCompactedDurationMs = segment.durationMs - compacted.removedDurationMs;
+  const desiredDurationMs = Math.max(
+    8_000,
+    lastSpeechEndMs + recoveryTimingTargets[pacing].tailMs,
+  );
+  const nextDurationMs = Math.min(speechCompactedDurationMs, desiredDurationMs);
+  const tailDurationRemovedMs = speechCompactedDurationMs - nextDurationMs;
+  const endingGraphicIndex = lastEventIndex(
+    compacted.events,
+    (event) =>
+      event.type === 'graphic.show' &&
+      event.graphic === 'WARNING' &&
+      event.atMs >= lastSpeechEndMs,
+  );
+  const endingTransitionIndex = lastEventIndex(
+    compacted.events,
+    (event) => event.type === 'transition.play' && event.atMs >= lastSpeechEndMs,
+  );
+  const latestEventMs = nextDurationMs - 20;
+  const nextEvents = compacted.events
+    .map((event, index): SegmentEvent => {
+      let atMs = event.atMs;
+      if (index === endingGraphicIndex) {
+        atMs = Math.min(atMs, lastSpeechEndMs + 120);
+      }
+      if (index === endingTransitionIndex) {
+        atMs = Math.min(atMs, nextDurationMs - 520);
+      }
+      return { ...event, atMs: Math.max(0, Math.min(atMs, latestEventMs)) };
+    })
+    .sort((left, right) => left.atMs - right.atMs);
+
+  return {
+    segment: {
+      ...segment,
+      pacing,
+      durationMs: nextDurationMs,
+      events: nextEvents,
+      suggestedExit: {
+        ...segment.suggestedExit,
+        earliestMs: Math.max(0, nextDurationMs - 1_000),
+        preferredMs: nextDurationMs,
+      },
+    },
+    timelineDurationRemovedMs: segment.durationMs - nextDurationMs,
+    speechGapsTightened: compacted.tightenedGapCount,
+    leadDurationRemovedMs: compacted.leadReductionMs,
+    tailDurationRemovedMs,
+  };
+}
