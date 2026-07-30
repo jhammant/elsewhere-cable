@@ -8,6 +8,7 @@ import {
   segmentPackageSchema,
   type GeneratedSegmentDraft,
   type GeneratedSegmentProposal,
+  type AssetLibraryManifest,
   type OptimisationBrief,
   type PreparedScript,
   type PlayoutManifest,
@@ -40,6 +41,7 @@ import {
   visualMediumForStyle,
   visualStyleForMedium,
 } from './creative.js';
+import { generationAssetCapabilities } from './asset-capabilities.js';
 import { containsSpokenStageDirection } from './dialogue-quality.js';
 import { energiseVisualTimeline } from './visual-energiser.js';
 import {
@@ -607,9 +609,7 @@ export function proposalRejectionCategory(reason: string): string {
   if (reason.includes('ending introduces')) return 'unearned-ending';
   if (reason.includes('harmless fictional administrative stakes')) return 'emergency-safety';
   if (reason.startsWith('proposal critic:')) {
-    if (
-      /\b(?:ending|payoff|resolution|resolves?|unstated|unearned|introduces?)\b/iu.test(reason)
-    ) {
+    if (/\b(?:ending|payoff|resolution|resolves?|unstated|unearned|introduces?)\b/iu.test(reason)) {
       return 'critic-causality';
     }
     if (/\b(?:mechanism|rule|causal|coheren|incoheren)\w*\b/iu.test(reason)) {
@@ -644,7 +644,7 @@ export function editorialCritiqueIssues(critique: EditorialCritique): string[] {
   if (
     critique.accepted &&
     critique.coherence >= 7 &&
-    critique.comedyEscalation >= 6 &&
+    critique.comedyEscalation >= 7 &&
     critique.dialogueNaturalness >= 7 &&
     critique.endingEarned >= 7
   ) {
@@ -695,9 +695,7 @@ async function readManifest(root: string): Promise<PlayoutManifest> {
   }
 }
 
-export function deduplicateCreativeHistory(
-  records: readonly CreativeRecord[],
-): CreativeRecord[] {
+export function deduplicateCreativeHistory(records: readonly CreativeRecord[]): CreativeRecord[] {
   const seen = new Set<string>();
   return records.filter((record) => {
     const key = `${record.title.normalize('NFKC').toLocaleLowerCase('en-GB').replace(/\s+/gu, ' ').trim()}\u0000${record.premise.normalize('NFKC').toLocaleLowerCase('en-GB').replace(/\s+/gu, ' ').trim()}`;
@@ -1058,6 +1056,7 @@ interface ProduceOptions {
   prepareScriptsOnly?: boolean;
   packagePreparedScripts?: boolean;
   proposalAttempts?: number;
+  assetLibrary?: AssetLibraryManifest | null;
 }
 
 // Premises deliberately reuse television formats and physical sets. Lower thresholds mostly
@@ -1772,7 +1771,12 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
         try {
           const scripted = await options.llm!.generateStructured({
             systemPrompt,
-            userPrompt: scriptPrompt(proposal, rejectionReasons, options.optimisationBrief ?? null),
+            userPrompt: scriptPrompt(
+              proposal,
+              rejectionReasons,
+              options.optimisationBrief ?? null,
+              generationAssetCapabilities(options.assetLibrary ?? null, proposal.visualMedium),
+            ),
           });
           const candidate = repairDialogueArchitecture(
             repairNetworkIdentityCollision({
@@ -1903,6 +1907,10 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                 catalogueSize: creativeHistory.length,
                 noveltyExclusions: noveltyCollisionPremises,
                 mechanismVariant,
+                assetCapabilities: generationAssetCapabilities(
+                  options.assetLibrary ?? null,
+                  assignedVisualMedium(creativeSerial, recentMediums, catalogueMediums),
+                ),
               },
               structuralRepairProposal,
             );

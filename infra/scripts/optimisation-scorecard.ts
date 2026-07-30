@@ -95,7 +95,7 @@ async function readAudienceResearch(filePath: string): Promise<AudienceResearchB
     const value = JSON.parse(await readFile(filePath, 'utf8')) as Partial<AudienceResearchBrief>;
     if (
       value.schemaVersion !== 1 ||
-      value.source !== 'youtube_public_popularity' ||
+      !['youtube_public_popularity', 'youtube_public_web_research'].includes(value.source ?? '') ||
       typeof value.generatedAt !== 'string' ||
       !Array.isArray(value.candidates) ||
       value.privacy?.sourceTextRetained !== false ||

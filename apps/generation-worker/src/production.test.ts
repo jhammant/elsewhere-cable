@@ -159,6 +159,18 @@ describe('produceBatch', () => {
     ).toEqual([]);
     expect(
       editorialCritiqueIssues({
+        accepted: true,
+        coherence: 8,
+        comedyEscalation: 6,
+        dialogueNaturalness: 8,
+        endingEarned: 8,
+        issues: [],
+      }),
+    ).toEqual([
+      'editorial critic rejected coherence 8/10, comedy 6/10, dialogue 8/10, ending 8/10',
+    ]);
+    expect(
+      editorialCritiqueIssues({
         accepted: false,
         coherence: 4,
         comedyEscalation: 5,
@@ -1562,13 +1574,11 @@ describe('produceBatch', () => {
 
   it('attributes premise and critic failures to actionable optimisation categories', () => {
     expect(
-      proposalRejectionCategory(
-        'premise must state one legible comic rule in 8–48 words',
-      ),
+      proposalRejectionCategory('premise must state one legible comic rule in 8–48 words'),
     ).toBe('premise-length');
-    expect(
-      proposalRejectionCategory('premise must be one complete sentence, not several'),
-    ).toBe('premise-sentence');
+    expect(proposalRejectionCategory('premise must be one complete sentence, not several')).toBe(
+      'premise-sentence',
+    );
     expect(
       proposalRejectionCategory(
         'proposal critic: The ending requires an unstated exemption from the rule.',
@@ -1603,11 +1613,7 @@ describe('produceBatch', () => {
     };
 
     expect(
-      deduplicateCreativeHistory([
-        first,
-        { ...first, title: '  THE TEASPOON DECISION  ' },
-        second,
-      ]),
+      deduplicateCreativeHistory([first, { ...first, title: '  THE TEASPOON DECISION  ' }, second]),
     ).toEqual([first, second]);
   });
 

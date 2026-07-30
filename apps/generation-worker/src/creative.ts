@@ -1929,6 +1929,7 @@ export function userPrompt(
     catalogueSize?: number;
     noveltyExclusions?: readonly string[];
     mechanismVariant?: string;
+    assetCapabilities?: string;
   } = {},
   previousProposal: GeneratedSegmentProposal | null = null,
 ): string {
@@ -1993,6 +1994,10 @@ export function userPrompt(
     transformationVerbs[axisIndex(serial, 0xb37c1d9, transformationVerbs.length)]!;
   const escalation = escalationCadences[axisIndex(serial, 0xc9e8047, escalationCadences.length)]!;
   const visualDirection = visualDirections[visualMedium];
+  const assetCapabilityBlock =
+    recentCreativeCoordinates.assetCapabilities?.trim() === ''
+      ? ''
+      : recentCreativeCoordinates.assetCapabilities;
   const storyModeAcceptanceContract: Record<
     NonNullable<GeneratedSegmentProposal['storyMode']>,
     string
@@ -2200,6 +2205,7 @@ ${physicalMechanismBlock}
 - Cast archetype: ${castArchetype}.
 - Pacing: ${pacing}.
 - Graphic package: ${graphicPackage}. It is presentation metadata only.
+${assetCapabilityBlock ?? ''}
 
 Before returning JSON, enforce every gate:
 1. premise is one complete sentence of 8–48 words beginning At, In, Inside, On or During;
@@ -2242,6 +2248,7 @@ ${ordinaryVisualAnchorBlock}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
+${assetCapabilityBlock ?? ''}
 ${storyAssemblyBlock}
 Literally use needs, wants or must so the conflict cannot be mistaken for atmosphere. Prefer a proactive complication, temptation, mistaken alliance or incompatible shared goal; use refuses only when the assigned frame strictly requires a refusal.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
@@ -2255,6 +2262,7 @@ export function scriptPrompt(
   proposal: GeneratedSegmentProposal,
   rejectionReasons: readonly string[] = [],
   optimisationBrief: OptimisationBrief | null = null,
+  assetCapabilities = '',
 ): string {
   const pacingRange = {
     frantic: '8–12 very short lines with rapid reversals',
@@ -2352,14 +2360,18 @@ Immutable story contract:
 - The approved premise is the whole fiction for this fragment, not a starting point for another invention.
 - Lines one and two make the established roles' incompatible immediate wants clear through natural disagreement.
 - The middle beats apply the proposal's exact trigger, show its exact consequence, then force a bargain, refusal, concealment, concession or status change using only that same cause.
+- Build a three-step comic ladder: first a reasonable tactic fails because of the rule; then a different tactic gives the opposing role leverage; finally one character makes a costly but harmless choice that earns endingBeat. The three steps must change behaviour, not merely restate information.
 - A physical action may reveal a reaction or change leverage, but it cannot become a new test, workaround, option, ritual, power, object, authority condition or resolution method.
 - Never add a third choice, an alternative trigger, or a clever new way around the approved rule. Vary the characters' tactics and emotions instead.
 - The final spoken line is a concise character decision or reaction caused by the approved endingBeat. It must not describe staging, instruct the renderer or explain the rule.
 Visible blocking: throughout the exchange, the cast must ${visibleBusiness}. Refer to the approved premise's central object while doing it. This is practical stage business, never a new rule or source of magic.
+${assetCapabilities}
+If the approved premise uses a listed production asset or effect, at least one supported physical action must visibly acknowledge it at the beat where it matters. Do not say an effect name as a stage direction and do not invent an unlisted asset.
 ${liveEditorialBlock}${retryCorrectionBlock}Dialogue architecture: ${dialogueShape}
 Required speaker rhythm: ${speakerPattern}. Map A, B and C only to roles already established in the premise. Preserve consecutive turns exactly where shown; a second turn by one role must advance or revise their goal rather than repeat their previous line.
 Follow that architecture exactly using only roles already present in the premise. Do not invent a narrator, unseen speaker or new participant merely to satisfy the architecture.
 Characters must never say "the rule forces", "the law takes effect", "the system demands", "refusal triggers" or "safety mandate", or narrate a visible transformation merely to explain it. Let them bargain, conceal, accuse, boast, misunderstand and change decisions while the renderer shows physical action. Visual medium is a rendering style, not permission to invent new story physics. Do not introduce tragedy, trauma, dead relatives or an unrelated spectacle. Never include word counts, drafting notes or model commentary in programme fields. The ending may only use characters, objects and mechanisms already established by the approved premise. Never end with somebody screaming, trembling or staring in horror; end on a comic decision, loss of status, reluctant agreement or earned visual consequence.
+Before returning JSON, silently trace a cause-and-choice chain through every line. If two adjacent lines could be swapped without changing the scene, rewrite them so the later line responds to a new fact, tactic or concession from the earlier one.
 ${
   rejectionReasons.length === 0
     ? ''

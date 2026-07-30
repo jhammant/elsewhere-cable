@@ -19,6 +19,7 @@ import {
   resolveTitleSequenceGrammar,
   titleSequenceFrame,
 } from './title-sequence.js';
+import { BroadcastVisualEffects } from './visual-effects.js';
 
 interface PlayoutElements {
   broadcast: HTMLElement;
@@ -176,6 +177,7 @@ export class PlayoutEngine {
   private activeAudio: HTMLAudioElement | null = null;
   private audioUnlocked = false;
   private readonly soundDesigner: BroadcastSoundDesigner;
+  private readonly visualEffects: BroadcastVisualEffects;
   private persistPlaybackHistory = false;
   private graphicKickers: ContinuityCopy['graphicKickers'] = {
     lowerThird: 'Programme already in progress',
@@ -186,6 +188,7 @@ export class PlayoutEngine {
   constructor(private readonly visuals: PlayoutVisuals) {
     assertTitleSequenceFramesComplete();
     this.soundDesigner = new BroadcastSoundDesigner(() => this.audioUnlocked);
+    this.visualEffects = new BroadcastVisualEffects(requiredElement('#story-visual-effect'));
     const parameters = new URLSearchParams(window.location.search);
     const requestedStart = Number(parameters.get('start') ?? 0);
     if (Number.isInteger(requestedStart) && requestedStart >= 0) {
@@ -447,6 +450,7 @@ export class PlayoutEngine {
     this.ui.tickerText.textContent = segment.programme.premise;
     this.ui.graphic.classList.remove('is-visible', 'is-warning');
     this.visuals.loadSegment(segment);
+    this.visualEffects.loadSegment(segment);
     this.staticBurst(620);
 
     const baseDirectory = segmentDirectory(packagePath);
@@ -456,6 +460,8 @@ export class PlayoutEngine {
     for (const soundCue of soundCuesForSegment(segment)) {
       this.timer(() => {
         this.soundDesigner.play(soundCue);
+        this.visuals.performStoryCue(soundCue);
+        this.visualEffects.play(soundCue);
       }, soundCue.atMs);
     }
   }

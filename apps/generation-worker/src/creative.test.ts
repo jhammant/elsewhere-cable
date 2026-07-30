@@ -779,6 +779,8 @@ describe('generation prompts', () => {
   it('keeps stage directions out of spoken dialogue', () => {
     expect(userPrompt(12, [], [], [])).toContain('Mandatory creative coordinates');
     expect(scriptPrompt(demoDraft(0))).toContain('Visible blocking: throughout the exchange');
+    expect(scriptPrompt(demoDraft(0))).toContain('three-step comic ladder');
+    expect(scriptPrompt(demoDraft(0))).toContain('two adjacent lines could be swapped');
     expect(scriptPrompt(demoDraft(0))).toContain(
       'never put stage directions, visual labels, bracketed actions',
     );

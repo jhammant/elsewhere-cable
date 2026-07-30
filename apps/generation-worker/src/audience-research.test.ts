@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  audiencePatternCatalog,
+  createSanitizedAudienceResearchBrief,
   deriveAudienceResearchBrief,
   parseIso8601Duration,
   type PopularVideoSignal,
@@ -90,5 +92,37 @@ describe('audience research', () => {
     expect(parseIso8601Duration('PT45S')).toBe(45);
     expect(parseIso8601Duration('P1DT1M')).toBe(86_460);
     expect(parseIso8601Duration('not-a-duration')).toBe(0);
+  });
+
+  it('turns manually counted public trends into fixed original story mechanisms', () => {
+    const brief = createSanitizedAudienceResearchBrief(
+      [
+        {
+          pattern: 'live_occasion',
+          evidenceCount: 3,
+          sampleShare: 0.1,
+          relativeViewVelocity: 1,
+        },
+        {
+          pattern: 'explanation',
+          evidenceCount: 2,
+          sampleShare: 0.067,
+          relativeViewVelocity: 1,
+        },
+      ],
+      { generatedAt, region: 'GB', categoryId: '24', sampleSize: 30 },
+    );
+
+    expect(brief.source).toBe('youtube_public_web_research');
+    expect(brief.candidates[0]).toMatchObject({
+      pattern: 'live_occasion',
+      evidenceCount: 3,
+      sampleShare: 0.1,
+    });
+    expect(brief.candidates[0]?.hypothesis).toBe(
+      audiencePatternCatalog.find((pattern) => pattern.id === 'live_occasion')?.hypothesis,
+    );
+    expect(JSON.stringify(brief)).not.toContain('title');
+    expect(brief.privacy.rawTextAllowedInPrompts).toBe(false);
   });
 });

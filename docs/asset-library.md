@@ -65,6 +65,19 @@ data/asset-library/status.json
 - Asset creation and renderer deployment are separate from the Endor uploader, so
   building the library cannot stop the public stream.
 
+## Generation awareness
+
+The generation worker reads the validated catalog at startup and converts it into a
+bounded capability brief for the assigned visual medium. The brief contains reusable
+background, prop, performer, sound and effect tags only: it omits file paths, remote
+references, provenance prompts and programme-reserved artwork.
+
+The proposal and script stages receive the same brief. Their asset-use contract permits
+one story-relevant background family and one central prop; spectacular effects are
+allowed only when the approved single comic rule explicitly causes that event. This
+keeps the picture aligned with the dialogue while preventing the asset library from
+turning every scene into unrelated decoration.
+
 ## Rights and people
 
 Generated people must be explicitly fictional and must not intentionally resemble public

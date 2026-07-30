@@ -10,6 +10,7 @@ import {
   visualAssetCollection,
   type VisualAssetCollection,
 } from './asset-library.js';
+import { resolveFictionalBackground } from './fictional-backgrounds.js';
 import { resolveBroadcastPackage } from './broadcast-package.js';
 import type { PlayoutVisuals } from './playout.js';
 import { pacingMotionFrame, type PacingMode, type PacingMotionFrame } from './motion-grammar.js';
@@ -1014,7 +1015,6 @@ export class Broadcast2DScene implements PlayoutVisuals {
 
   private drawSetDressing(segment: SegmentPackage, elapsed: number): void {
     const context = this.context;
-    const premise = segment.programme.premise.toLowerCase();
     const seed = stableHash(`${segment.channel.id}:${segment.programme.id}:set`);
     const centre = this.stageCentre();
     const bounds = resolve2DStageBounds(segment);
@@ -1022,6 +1022,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const left = centre - stageWidth / 2;
     const right = centre + stageWidth / 2;
     const pixel = this.medium === 'pixel_broadcast';
+    const backgroundFamily = resolveFictionalBackground(segment);
     const unit = pixel ? 16 : 1;
     const snap = (value: number): number => (pixel ? Math.round(value / unit) * unit : value);
 
@@ -1044,7 +1045,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
           : colour(seed, 44, 46);
     context.lineWidth = pixel ? 8 : this.medium === 'ink_monochrome' ? 7 : 4;
 
-    if (/\b(?:cook|kitchen|recipe|ingredient|meal|food|restaurant)\b/u.test(premise)) {
+    if (backgroundFamily === 'culinary_workroom') {
       context.fillRect(snap(left + 20), 430, snap(stageWidth - 40), 110);
       context.strokeRect(snap(left + 20), 430, snap(stageWidth - 40), 110);
       for (let index = 0; index < 4; index += 1) {
@@ -1059,7 +1060,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
       for (let index = 0; index < 6; index += 1) {
         context.fillRect(snap(left + 32 + index * 58), 390 - (index % 3) * 20, 34, 40);
       }
-    } else if (/\b(?:sand|desert|dune|dust|oasis)\b/u.test(premise)) {
+    } else if (backgroundFamily === 'sand_architecture') {
       for (let index = 0; index < 4; index += 1) {
         context.beginPath();
         context.ellipse(
@@ -1079,10 +1080,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
       context.beginPath();
       context.arc(snap(right - 100), 130, 62, 0, Math.PI * 2);
       context.fill();
-    } else if (
-      /\b(?:news|report|headline|election|forecast|weather|bulletin)\b/u.test(premise) ||
-      segment.programme.format === 'news'
-    ) {
+    } else if (backgroundFamily === 'newsroom') {
       for (let index = 0; index < 3; index += 1) {
         const x = snap(left + 34 + index * (stageWidth / 3));
         context.fillRect(x, 96 + (index % 2) * 30, snap(stageWidth / 3 - 48), 132);
@@ -1094,11 +1092,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
       }
       context.fillRect(snap(left + 10), 456, snap(stageWidth - 20), 92);
       context.strokeRect(snap(left + 10), 456, snap(stageWidth - 20), 92);
-    } else if (
-      /\b(?:shop|sale|buy|product|customer|subscription|price)\b/u.test(premise) ||
-      segment.programme.format === 'shopping' ||
-      segment.programme.format === 'advert'
-    ) {
+    } else if (backgroundFamily === 'showroom') {
       for (let index = 0; index < 4; index += 1) {
         const width = 88 + (index % 2) * 34;
         const x = snap(left + 80 + index * (stageWidth / 4));
@@ -1111,10 +1105,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
         context.fill();
         context.fillStyle = colour(seed, 44, 46);
       }
-    } else if (
-      /\b(?:municipal|appeal|court|bureau|permit|council|official|office)\b/u.test(premise) ||
-      segment.programme.format === 'public_access'
-    ) {
+    } else if (backgroundFamily === 'civic_counter') {
       context.fillRect(snap(left + 20), 455, snap(stageWidth - 40), 92);
       context.strokeRect(snap(left + 20), 455, snap(stageWidth - 40), 92);
       for (let stack = 0; stack < 4; stack += 1) {
@@ -1130,6 +1121,138 @@ export class Broadcast2DScene implements PlayoutVisuals {
       context.fillStyle = colour(seed + 203, 52, 54);
       context.fillRect(snap(right - 154), 92, 128, 214);
       context.strokeRect(snap(right - 154), 92, 128, 214);
+    } else if (backgroundFamily === 'aquatic_observatory') {
+      context.fillStyle = colour(seed + 33, 54, 34);
+      context.fillRect(snap(left + 15), 445, snap(stageWidth - 30), 108);
+      context.strokeRect(snap(left + 15), 445, snap(stageWidth - 30), 108);
+      for (let index = 0; index < 5; index += 1) {
+        const x = snap(left + 70 + index * (stageWidth / 4.7));
+        const y = 135 + (index % 3) * 72;
+        context.beginPath();
+        context.ellipse(x, y, 76, 38, index % 2 === 0 ? 0.12 : -0.12, 0, Math.PI * 2);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(x - 16, y + 38);
+        context.bezierCurveTo(x - 46, y + 105, x + 48, y + 115, x + 18, y + 190);
+        context.stroke();
+      }
+      context.fillStyle = colour(seed + 170, 72, 62);
+      for (let bubble = 0; bubble < 11; bubble += 1) {
+        context.beginPath();
+        context.arc(
+          snap(left + ((seed + bubble * 137) % Math.max(1, stageWidth))),
+          80 + ((seed + bubble * 83) % 330),
+          5 + (bubble % 4) * 3,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+      }
+    } else if (backgroundFamily === 'celestial_interior') {
+      context.strokeStyle = colour(seed + 111, 70, 72);
+      context.lineWidth = pixel ? 8 : 5;
+      for (let orbit = 0; orbit < 4; orbit += 1) {
+        context.beginPath();
+        context.ellipse(
+          centre,
+          265,
+          180 + orbit * 115,
+          60 + orbit * 42,
+          orbit * 0.13,
+          0,
+          Math.PI * 2,
+        );
+        context.stroke();
+      }
+      for (let body = 0; body < 7; body += 1) {
+        context.fillStyle = colour(seed + body * 77, 68, 61);
+        context.beginPath();
+        context.arc(
+          snap(left + 80 + ((seed + body * 173) % Math.max(1, stageWidth - 160))),
+          96 + ((seed + body * 97) % 286),
+          20 + (body % 3) * 11,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+      }
+    } else if (backgroundFamily === 'transit_room') {
+      context.fillRect(snap(left + 12), 462, snap(stageWidth - 24), 86);
+      context.strokeRect(snap(left + 12), 462, snap(stageWidth - 24), 86);
+      for (let window = 0; window < 4; window += 1) {
+        const x = snap(left + 30 + window * (stageWidth / 4));
+        context.strokeRect(x, 116, snap(stageWidth / 4 - 42), 214);
+        context.beginPath();
+        context.moveTo(x + 20, 306);
+        context.lineTo(x + snap(stageWidth / 4 - 64), 142);
+        context.stroke();
+      }
+      context.fillStyle = colour(seed + 163, 64, 58);
+      context.fillRect(snap(left + 48), 348, snap(stageWidth - 96), 22);
+    } else if (backgroundFamily === 'garden_enclosure') {
+      for (let index = 0; index < 7; index += 1) {
+        const x = snap(left + 55 + index * (stageWidth / 6.8));
+        context.fillRect(x - 7, 218 + (index % 2) * 44, 14, 280);
+        context.fillStyle = colour(seed + index * 61, 52, 46);
+        context.beginPath();
+        context.arc(x - 28, 206 + (index % 2) * 42, 46, 0, Math.PI * 2);
+        context.arc(x + 26, 188 + (index % 3) * 35, 38, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.fillStyle = colour(seed + 199, 46, 32);
+      context.fillRect(snap(left + 18), 490, snap(stageWidth - 36), 62);
+    } else if (backgroundFamily === 'theatre') {
+      context.fillStyle = colour(seed + 141, 66, 38);
+      context.beginPath();
+      context.moveTo(left, 70);
+      context.lineTo(left + stageWidth * 0.22, 380);
+      context.lineTo(left, 530);
+      context.closePath();
+      context.fill();
+      context.beginPath();
+      context.moveTo(right, 70);
+      context.lineTo(right - stageWidth * 0.22, 380);
+      context.lineTo(right, 530);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = colour(seed + 231, 62, 70);
+      context.beginPath();
+      context.arc(centre, 348, stageWidth * 0.34, Math.PI, 0);
+      context.stroke();
+      context.fillRect(snap(left + 28), 510, snap(stageWidth - 56), 46);
+    } else if (backgroundFamily === 'laboratory') {
+      context.fillRect(snap(left + 18), 454, snap(stageWidth - 36), 98);
+      context.strokeRect(snap(left + 18), 454, snap(stageWidth - 36), 98);
+      for (let index = 0; index < 5; index += 1) {
+        const x = snap(left + 70 + index * (stageWidth / 5));
+        context.strokeRect(x - 34, 132 + (index % 2) * 38, 68, 194);
+        context.fillStyle = colour(seed + index * 95, 72, 59);
+        context.fillRect(x - 22, 236 + (index % 2) * 38, 44, 70);
+        context.fillStyle = colour(seed, 44, 46);
+      }
+    } else if (backgroundFamily === 'domestic_room') {
+      context.fillStyle = colour(seed + 177, 42, 38);
+      context.fillRect(snap(left + 70), 376, snap(stageWidth - 140), 170);
+      context.strokeRect(snap(left + 70), 376, snap(stageWidth - 140), 170);
+      context.fillStyle = colour(seed + 79, 60, 61);
+      for (let cushion = 0; cushion < 4; cushion += 1) {
+        const width = snap((stageWidth - 220) / 4);
+        const x = snap(left + 105 + cushion * (width + 10));
+        context.fillRect(x, 402 + (cushion % 2) * 12, width, 92);
+        context.strokeRect(x, 402 + (cushion % 2) * 12, width, 92);
+      }
+      context.fillStyle = colour(seed + 231, 54, 52);
+      context.fillRect(snap(left + 28), 128, snap(stageWidth * 0.24), 172);
+      context.strokeRect(snap(left + 28), 128, snap(stageWidth * 0.24), 172);
+      context.fillRect(snap(right - stageWidth * 0.21), 210, 20, 292);
+      context.beginPath();
+      context.moveTo(snap(right - stageWidth * 0.29), 224);
+      context.lineTo(snap(right - stageWidth * 0.12), 224);
+      context.lineTo(snap(right - stageWidth * 0.17), 132);
+      context.lineTo(snap(right - stageWidth * 0.24), 132);
+      context.closePath();
+      context.fill();
+      context.stroke();
     } else {
       const motif = seed % 3;
       for (let index = 0; index < 5; index += 1) {

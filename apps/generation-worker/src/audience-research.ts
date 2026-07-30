@@ -58,6 +58,9 @@ export const audiencePatternCatalog = [
 ] as const;
 
 export type AudiencePatternId = (typeof audiencePatternCatalog)[number]['id'];
+export type AudienceResearchSource =
+  | 'youtube_public_popularity'
+  | 'youtube_public_web_research';
 
 export interface PopularVideoSignal {
   title: string;
@@ -80,7 +83,7 @@ export interface AudienceResearchCandidate {
 export interface AudienceResearchBrief {
   schemaVersion: 1;
   generatedAt: string;
-  source: 'youtube_public_popularity';
+  source: AudienceResearchSource;
   region: string;
   categoryId: string;
   sampleSize: number;
@@ -104,6 +107,13 @@ export interface AudienceResearchBrief {
   };
 }
 
+export interface SanitizedAudienceEvidence {
+  pattern: AudiencePatternId;
+  evidenceCount: number;
+  sampleShare: number;
+  relativeViewVelocity: number;
+}
+
 function finiteNonNegative(value: number): number {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
@@ -121,6 +131,14 @@ function median(values: readonly number[]): number | null {
 
 function ratio(count: number, total: number): number {
   return total === 0 ? 0 : Number((count / total).toFixed(3));
+}
+
+function boundedRatio(value: number): number {
+  return Number(Math.max(0, Math.min(1, finiteNonNegative(value))).toFixed(3));
+}
+
+function boundedVelocity(value: number): number {
+  return Number(Math.max(0, Math.min(100, finiteNonNegative(value))).toFixed(2));
 }
 
 function viewVelocity(video: PopularVideoSignal, generatedAt: string): number {
@@ -199,6 +217,74 @@ export function deriveAudienceResearchBrief(
         safeVideos.length,
       ),
       liveShare: ratio(safeVideos.filter((video) => video.isLive).length, safeVideos.length),
+    },
+    candidates,
+    privacy: {
+      sourceTextRetained: false,
+      descriptionsIngested: false,
+      rawTextAllowedInPrompts: false,
+    },
+  };
+}
+
+export function createSanitizedAudienceResearchBrief(
+  evidence: readonly SanitizedAudienceEvidence[],
+  options: {
+    generatedAt: string;
+    region: string;
+    categoryId: string;
+    sampleSize: number;
+  },
+): AudienceResearchBrief {
+  if (!Number.isFinite(Date.parse(options.generatedAt))) {
+    throw new Error('generatedAt must be a valid ISO timestamp');
+  }
+  const sampleSize = Math.max(0, Math.min(500, Math.trunc(options.sampleSize)));
+  const candidates = evidence
+    .flatMap((candidate) => {
+      const pattern = audiencePatternCatalog.find((entry) => entry.id === candidate.pattern);
+      if (pattern === undefined || !Number.isInteger(candidate.evidenceCount)) {
+        return [];
+      }
+      return [
+        {
+          pattern: pattern.id,
+          evidenceCount: Math.max(0, Math.min(500, candidate.evidenceCount)),
+          sampleShare: boundedRatio(candidate.sampleShare),
+          relativeViewVelocity: boundedVelocity(candidate.relativeViewVelocity),
+          hypothesis: pattern.hypothesis,
+          surface: pattern.surface,
+        },
+      ];
+    })
+    .filter((candidate) => candidate.evidenceCount >= 2)
+    .sort(
+      (left, right) =>
+        right.sampleShare * Math.max(0.5, right.relativeViewVelocity) -
+          left.sampleShare * Math.max(0.5, left.relativeViewVelocity) ||
+        right.evidenceCount - left.evidenceCount ||
+        left.pattern.localeCompare(right.pattern),
+    )
+    .slice(0, 5);
+
+  return {
+    schemaVersion: 1,
+    generatedAt: options.generatedAt,
+    source: 'youtube_public_web_research',
+    region: options.region,
+    categoryId: options.categoryId,
+    sampleSize,
+    samples: {
+      mostPopular: sampleSize,
+      recentEntertainment: 0,
+      popularLive: 0,
+    },
+    duration: {
+      medianSeconds: null,
+      underFiveMinutesShare: 0,
+      fiveToTwentyMinutesShare: 0,
+      overTwentyMinutesShare: 0,
+      liveShare: 0,
     },
     candidates,
     privacy: {

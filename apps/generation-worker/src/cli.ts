@@ -3,9 +3,11 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import {
+  assetLibraryManifestSchema,
   optimisationBriefSchema,
   playoutManifestSchema,
   type OptimisationBrief,
+  type AssetLibraryManifest,
 } from '@elsewhere-cable/schemas';
 import { produceBatch } from './production.js';
 import {
@@ -73,6 +75,24 @@ async function readOptimisationBrief(
   return optimisationBriefSchema.parse(JSON.parse(await readFile(resolvedPath, 'utf8')));
 }
 
+async function readAssetLibrary(filePath: string): Promise<AssetLibraryManifest | null> {
+  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(workspaceRoot, filePath);
+  try {
+    return assetLibraryManifestSchema.parse(JSON.parse(await readFile(resolvedPath, 'utf8')));
+  } catch (error) {
+    process.stderr.write(
+      `${JSON.stringify({
+        timestamp: new Date().toISOString(),
+        service: 'generation-worker',
+        level: 'warn',
+        event: 'asset_library_unavailable',
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+      })}\n`,
+    );
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   const demo = process.argv.includes('--demo');
   const prepareScriptsOnly = process.argv.includes('--prepare-scripts');
@@ -106,6 +126,11 @@ async function main(): Promise<void> {
   );
   const optimisationBrief = await readOptimisationBrief(
     argument('optimisation-brief') ?? process.env.ELSEWHERE_OPTIMISATION_BRIEF,
+  );
+  const assetLibrary = await readAssetLibrary(
+    argument('asset-library') ??
+      process.env.ELSEWHERE_ASSET_LIBRARY ??
+      'apps/renderer/public/assets/library/catalog.json',
   );
 
   if (ifEmpty && (await queueHasSegments(outputRoot))) {
@@ -179,6 +204,7 @@ async function main(): Promise<void> {
     prepareScriptsOnly,
     packagePreparedScripts,
     proposalAttempts: proposalAttemptsArgument(),
+    assetLibrary,
     fresh: process.argv.includes('--fresh'),
     ...(historyRoot === undefined
       ? {}

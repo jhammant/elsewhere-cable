@@ -85,6 +85,35 @@ A recurring programme deterministically retains its grammar. Format-specific poo
 every genre from using the same visual language, while broadcast-package safe frames keep
 titles clear of side panels, channel numbers and subtitles.
 
+## fictional-background-bank-v1
+
+The procedural background resolver builds twelve wholly fictional scenic families across
+the 2D media: aquatic observatory, celestial interior, civic counter, culinary workroom,
+domestic room, garden enclosure, laboratory, newsroom, sand architecture, showroom,
+theatre and transit room. It interprets the approved physical setting and television
+format; it never fetches a real location or turns scenery into an extra comic rule.
+
+The existing Three.js studio kit supplies corresponding modular civic, domestic, news,
+orbit and shopping spaces for 3D media. Every family is deterministic per programme, is
+safe behind broadcast overlays, and remains available when file-backed plates fail.
+
+## story-effect-bank-v1
+
+Six original visual effects and six paired procedural sounds are scheduled from the same
+trusted cue:
+
+- `cel_impact`: a graphic radial impact with a short tonal thump.
+- `paper_burst`: layered cut-paper shards with dry paper percussion.
+- `pixel_blast`: stepped sprite blocks with an eight-bit descending burst.
+- `signal_rupture`: displaced RGB bands with a synthetic transmission tear.
+- `spectrum_arc`: a bounded rainbow arc with an ascending spectrum sweep.
+- `prism_spill`: a faceted colour spill with a glassy prism chord.
+
+They trigger only from concrete, already approved story language. Generic excitement
+cannot summon an effect. Opacity remains at or below 0.64, no effect exceeds two flashes
+per second, and the full effect lasts under one second. Programme graphics and subtitles
+remain above the effect plane.
+
 ## Growth rules
 
 - Add new IDs; never silently replace an existing ID.

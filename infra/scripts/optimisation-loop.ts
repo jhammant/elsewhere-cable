@@ -1,5 +1,14 @@
 import { execFile } from 'node:child_process';
-import { appendFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import {
+  appendFile,
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -94,6 +103,10 @@ const outputPath = path.resolve(
 );
 const historyPath = path.resolve(workspaceRoot, 'data/optimisation/history.ndjson');
 const reportPath = path.resolve(workspaceRoot, 'data/optimisation/latest-report.md');
+const latestContactSheetPath = path.resolve(
+  workspaceRoot,
+  'data/optimisation/latest-contact-sheet.jpg',
+);
 const audienceResearchPath = path.resolve(workspaceRoot, 'data/research/latest.json');
 const endorHost = argument('endor-host') ?? process.env.ELSEWHERE_ENDOR_HOST ?? 'endor';
 const llmBaseUrl =
@@ -419,6 +432,8 @@ async function publicDeliveryRatios(url: string): Promise<{
       ],
       { timeout: 45_000, maxBuffer: 2 * 1024 * 1024 },
     );
+    await mkdir(path.dirname(latestContactSheetPath), { recursive: true });
+    await copyFile(contactSheetPath, latestContactSheetPath);
     return {
       delivery: {
         silenceRatio: clampRatio(silenceSeconds / deliverySampleSeconds),

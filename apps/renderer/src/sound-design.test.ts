@@ -141,4 +141,40 @@ describe('soundCuesForSegment', () => {
     );
     expect(soundCuesForSegment(civic).some(({ cue }) => cue === 'bureaucratic_stamp')).toBe(true);
   });
+
+  it('synchronises only concrete spectrum and harmless impact language with effect sounds', () => {
+    const spectrum = segment();
+    spectrum.programme.premise =
+      'At a weather desk, a presenter wants one rainbow filed before the prism changes shift.';
+    spectrum.events = spectrum.events.map((event, index) =>
+      event.type === 'speech.play' && index === 0
+        ? { ...event, subtitle: 'The rainbow has arrived through the staff prism.' }
+        : event,
+    );
+    const spectrumCues = soundCuesForSegment(spectrum).map(({ cue }) => cue);
+    expect(spectrumCues).toContain('spectrum_sweep');
+
+    const impact = segment();
+    impact.programme.premise =
+      'At a demonstration desk, a harmless paper burst awards the least impressed host.';
+    impact.events = impact.events.map((event, index) =>
+      event.type === 'speech.play' && index === 0
+        ? { ...event, subtitle: 'The cardboard explodes into confetti when you compliment it.' }
+        : event,
+    );
+    expect(soundCuesForSegment(impact).some(({ cue }) => cue === 'paper_burst')).toBe(true);
+
+    const unrelated = segment();
+    unrelated.programme.premise = 'At a table, two neighbours discuss a loud afternoon.';
+    unrelated.events = unrelated.events.map((event) =>
+      event.type === 'speech.play'
+        ? { ...event, subtitle: 'I am surprised by your unusually emphatic choice.' }
+        : event,
+    );
+    expect(
+      soundCuesForSegment(unrelated).some(({ cue }) =>
+        ['cel_impact', 'paper_burst', 'pixel_blast', 'signal_rupture'].includes(cue),
+      ),
+    ).toBe(false);
+  });
 });

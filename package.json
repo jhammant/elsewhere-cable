@@ -41,6 +41,7 @@
     "optimise:scorecard": "tsx infra/scripts/optimisation-scorecard.ts",
     "optimise:experiment": "tsx infra/scripts/record-optimisation-experiment.ts",
     "research:audience": "tsx infra/scripts/audience-research.ts --once",
+    "research:audience:sanitized": "tsx infra/scripts/record-sanitized-audience-brief.ts",
     "research:audience:loop": "tsx infra/scripts/audience-research.ts",
     "assets:audit": "tsx infra/scripts/audit-asset-library.ts",
     "assets:plan": "tsx infra/scripts/plan-asset-library-growth.ts",

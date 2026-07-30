@@ -70,7 +70,11 @@ export function storyCueMotion(
     }
     case 'bureaucratic_stamp':
     case 'buzzer':
+    case 'cel_impact':
     case 'knock':
+    case 'paper_burst':
+    case 'pixel_blast':
+    case 'signal_rupture':
     case 'wood_tap':
       return {
         x: pulse * 21,
@@ -104,6 +108,8 @@ export function storyCueMotion(
       };
     case 'cloud_hatch':
     case 'paper_rustle':
+    case 'prism_chime':
+    case 'spectrum_sweep':
     case 'teletype':
     case 'tuning': {
       const step = Math.floor(progress * 12);

@@ -7,6 +7,7 @@ export type BroadcastSoundCue =
   | 'bureaucratic_stamp'
   | 'buzzer'
   | 'cash_register'
+  | 'cel_impact'
   | 'clink'
   | 'cloud_hatch'
   | 'continuity_blip'
@@ -15,7 +16,12 @@ export type BroadcastSoundCue =
   | 'knock'
   | 'mechanical_click'
   | 'paper_rustle'
+  | 'paper_burst'
   | 'phone_chirp'
+  | 'pixel_blast'
+  | 'prism_chime'
+  | 'signal_rupture'
+  | 'spectrum_sweep'
   | 'teletype'
   | 'tick'
   | 'tuning'
@@ -38,6 +44,7 @@ const cueDurationMs: Record<BroadcastSoundCue, number> = {
   bureaucratic_stamp: 180,
   buzzer: 170,
   cash_register: 220,
+  cel_impact: 620,
   clink: 120,
   cloud_hatch: 260,
   continuity_blip: 160,
@@ -46,7 +53,12 @@ const cueDurationMs: Record<BroadcastSoundCue, number> = {
   knock: 190,
   mechanical_click: 120,
   paper_rustle: 170,
+  paper_burst: 580,
   phone_chirp: 260,
+  pixel_blast: 560,
+  prism_chime: 820,
+  signal_rupture: 650,
+  spectrum_sweep: 880,
   teletype: 230,
   tick: 90,
   tuning: 180,
@@ -65,6 +77,32 @@ const formatCue: Record<SegmentPackage['programme']['format'], BroadcastSoundCue
 };
 
 const lexicalCues: ReadonlyArray<{ pattern: RegExp; cue: BroadcastSoundCue }> = [
+  {
+    pattern: /\b(?:rainbow|refraction|spectrum)\b/iu,
+    cue: 'spectrum_sweep',
+  },
+  {
+    pattern: /\b(?:prism|prismatic)\b/iu,
+    cue: 'prism_chime',
+  },
+  {
+    pattern:
+      /\b(?:paper|confetti|cardboard)\s+(?:blast|burst|explosion|explodes?|pops?|rupture)\b/iu,
+    cue: 'paper_burst',
+  },
+  {
+    pattern: /\b(?:pixel|sprite|terminal)\s+(?:blast|burst|explosion|explodes?|pops?|rupture)\b/iu,
+    cue: 'pixel_blast',
+  },
+  {
+    pattern: /\b(?:signal|screen|transmission)\s+(?:blast|burst|explosion|explodes?|rupture)\b/iu,
+    cue: 'signal_rupture',
+  },
+  {
+    pattern:
+      /\b(?:harmless|tiny|comic|colourful|colorful|contained|demonstration)\s+(?:blast|burst|explosion)\b|\b(?:bursts?|explodes?|pops?)\s+into\s+(?:confetti|paper|ribbons?|stars?|colour|color)\b/iu,
+    cue: 'cel_impact',
+  },
   {
     pattern: /\b(?:cloud|forecast|rain|weather)\b/iu,
     cue: 'cloud_hatch',
@@ -344,6 +382,11 @@ export class BroadcastSoundDesigner {
         this.tone(context, 680, 70, gain, 'square');
         this.tone(context, 1_180, 120, gain * 0.8, 'sine', 72, 1_480);
         break;
+      case 'cel_impact':
+        this.tone(context, 118, 210, gain * 0.9, 'sawtooth', 0, 54);
+        this.noise(context, 170, gain * 0.78, scheduled.seed, 860, 24);
+        this.tone(context, 720, 260, gain * 0.45, 'triangle', 120, 1_180);
+        break;
       case 'clink':
         this.tone(context, 1_320, 105, gain, 'sine');
         this.tone(context, 2_040, 85, gain * 0.55, 'sine', 6);
@@ -377,9 +420,50 @@ export class BroadcastSoundDesigner {
       case 'paper_rustle':
         this.noise(context, 155, gain, scheduled.seed, 2_100);
         break;
+      case 'paper_burst':
+        this.noise(context, 210, gain * 0.84, scheduled.seed, 1_650);
+        for (let index = 0; index < 4; index += 1) {
+          this.tone(context, 420 + index * 180, 120, gain * 0.32, 'triangle', 70 + index * 48);
+        }
+        break;
       case 'phone_chirp':
         this.tone(context, 440, 95, gain, 'sine');
         this.tone(context, 560, 95, gain, 'sine', 115);
+        break;
+      case 'pixel_blast':
+        for (let index = 0; index < 5; index += 1) {
+          this.tone(
+            context,
+            150 + index * 95,
+            80,
+            gain * (0.74 - index * 0.08),
+            'square',
+            index * 54,
+            90 + index * 70,
+          );
+        }
+        break;
+      case 'prism_chime':
+        for (let index = 0; index < 5; index += 1) {
+          this.tone(
+            context,
+            520 + index * 155,
+            420,
+            gain * (0.52 - index * 0.06),
+            'sine',
+            index * 70,
+            760 + index * 180,
+          );
+        }
+        break;
+      case 'signal_rupture':
+        this.noise(context, 280, gain * 0.74, scheduled.seed, 2_400);
+        this.tone(context, 280, 360, gain * 0.52, 'sawtooth', 0, 72);
+        this.tone(context, 840, 170, gain * 0.35, 'square', 190, 230);
+        break;
+      case 'spectrum_sweep':
+        this.tone(context, 260, 620, gain * 0.48, 'sine', 0, 1_360);
+        this.tone(context, 390, 580, gain * 0.3, 'triangle', 80, 1_760);
         break;
       case 'teletype':
         for (let index = 0; index < 4; index += 1) {

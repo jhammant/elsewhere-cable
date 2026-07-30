@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-30T14:45:00.000Z",
+  "generatedAt": "2026-07-30T15:25:00.000Z",
   "libraryId": "elsewhere-cable",
   "appendOnly": true,
   "assets": [
@@ -491,6 +491,141 @@
       "provenance": {
         "source": "procedural_original",
         "createdAt": "2026-07-30T15:05:00.000Z",
+        "generator": "web-audio-sound-designer",
+        "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_model2d_fictional_background_bank_v1",
+      "kind": "model_2d",
+      "role": "fictional_background_bank",
+      "version": 1,
+      "status": "ready",
+      "uri": "procedure://renderer/backgrounds/fictional-set-bank-v1",
+      "tags": [
+        "aquatic-observatory",
+        "celestial-interior",
+        "civic-counter",
+        "culinary-workroom",
+        "domestic-room",
+        "garden-enclosure",
+        "laboratory",
+        "newsroom",
+        "sand-architecture",
+        "showroom",
+        "theatre",
+        "transit-room"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": [
+        "paper_cutout",
+        "pixel_broadcast",
+        "archive_film",
+        "signal_corruption",
+        "collage_zine",
+        "ink_monochrome",
+        "corporate_vector",
+        "shadow_theatre",
+        "hand_drawn",
+        "thermal_camera",
+        "ascii_terminal",
+        "blueprint_schematic",
+        "stained_glass",
+        "xerox_punk",
+        "storybook_wash",
+        "isometric_manual"
+      ],
+      "provenance": {
+        "source": "procedural_original",
+        "createdAt": "2026-07-30T15:25:00.000Z",
+        "generator": "canvas2d-fictional-background-resolver",
+        "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_model3d_fictional_studio_set_bank_v1",
+      "kind": "model_3d",
+      "role": "studio_set_kit",
+      "version": 1,
+      "status": "ready",
+      "uri": "procedure://renderer/backgrounds/modular-studio-set-bank-v1",
+      "tags": [
+        "civic-studio",
+        "domestic-room",
+        "impossible-props",
+        "newsroom",
+        "orbit-stage",
+        "shopping-showroom"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": [
+        "cel_shaded",
+        "neon_wireframe",
+        "public_access_vhs",
+        "stop_motion",
+        "miniature_diorama",
+        "claymation"
+      ],
+      "provenance": {
+        "source": "procedural_original",
+        "createdAt": "2026-07-30T15:25:00.000Z",
+        "generator": "threejs-renderer",
+        "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_shader_story_effect_bank_v1",
+      "kind": "shader_style",
+      "role": "story_effect_bank",
+      "version": 1,
+      "status": "ready",
+      "uri": "procedure://renderer/effects/story-effect-bank-v1",
+      "tags": [
+        "cel-impact",
+        "paper-burst",
+        "pixel-blast",
+        "prism-spill",
+        "signal-rupture",
+        "spectrum-arc"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": [],
+      "provenance": {
+        "source": "procedural_original",
+        "createdAt": "2026-07-30T15:25:00.000Z",
+        "generator": "broadcast-visual-effects",
+        "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_sfx_story_effect_bank_v1",
+      "kind": "sound_effect",
+      "role": "story_effect_bank",
+      "version": 1,
+      "status": "ready",
+      "uri": "procedure://audio/sfx/story-effect-bank-v1",
+      "tags": [
+        "cel-impact",
+        "paper-burst",
+        "pixel-blast",
+        "prism-chime",
+        "signal-rupture",
+        "spectrum-sweep",
+        "story-synchronised"
+      ],
+      "programmeIds": [],
+      "compatibleVisualMedia": [],
+      "provenance": {
+        "source": "procedural_original",
+        "createdAt": "2026-07-30T15:25:00.000Z",
         "generator": "web-audio-sound-designer",
         "rights": "original-project-code",
         "containsFictionalPeople": false,
