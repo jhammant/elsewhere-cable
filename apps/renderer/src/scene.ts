@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
+import { pacingMotionFrame, type PacingMode } from './motion-grammar.js';
 import {
   resolveProductionDesign,
   type CastArchetype,
@@ -761,6 +762,8 @@ export class BroadcastScene {
   private cameraPosition = new THREE.Vector3(0, 4.2, 12.8);
   private cameraTarget = new THREE.Vector3(0, 2.15, 0);
   private profile = 'public_access';
+  private pacing: PacingMode = 'conversational';
+  private motionSeed = 0;
   private viewport: ProgrammeViewport = { ...defaultProgrammeViewport };
   private segmentStartedAt = 0;
   private renderScale = 1;
@@ -847,6 +850,9 @@ export class BroadcastScene {
     this.updateRenderResolution();
     this.segmentStartedAt = this.clock.getElapsedTime();
     this.profile = segment.programme.format;
+    this.pacing = segment.pacing ?? 'conversational';
+    this.motionSeed =
+      (stableHash(`${segment.channel.id}:${segment.programme.id}:motion`) % 10_000) / 10_000;
     this.viewport = { ...defaultProgrammeViewport };
     this.camera.aspect = this.viewport.width / this.viewport.height;
     this.camera.updateProjectionMatrix();
@@ -1154,6 +1160,8 @@ export class BroadcastScene {
 
   render(): void {
     const elapsed = this.clock.getElapsedTime();
+    const segmentElapsed = Math.max(0, elapsed - this.segmentStartedAt);
+    const motion = pacingMotionFrame(this.pacing, segmentElapsed, this.motionSeed);
 
     this.characters.forEach((character, index) => {
       const speech =
@@ -1165,18 +1173,28 @@ export class BroadcastScene {
         return;
       }
       character.group.position.y =
-        character.baseY + Math.sin(elapsed * 1.2 + character.phase) * 0.028;
-      character.group.rotation.y = Math.sin(elapsed * 0.45 + character.phase) * 0.035;
+        character.baseY +
+        Math.sin(elapsed * 1.2 + character.phase) * 0.028 +
+        motion.actorBob * 0.008 * (index === this.activeSpeaker ? 1.35 : 0.55);
+      character.group.rotation.y =
+        Math.sin(elapsed * 0.45 + character.phase) * 0.035 +
+        motion.actorSway * 0.004 * (index % 2 === 0 ? 1 : -1);
       character.group.rotation.z =
         character.action === 'REACTION_CONFUSED' && elapsed < character.actionUntil
           ? Math.sin(elapsed * 3) * 0.12
           : character.action === 'REACTION_SHOCKED' && elapsed < character.actionUntil
-            ? Math.sin(elapsed * 18) * 0.025
-            : 0;
+            ? Math.sin(elapsed * 18) * 0.08
+            : character.action === 'LOOK_AT' && elapsed < character.actionUntil
+              ? (index % 2 === 0 ? 1 : -1) * 0.08
+              : character.action === 'PAUSE' && elapsed < character.actionUntil
+                ? (index % 2 === 0 ? 1 : -1) * 0.045
+                : 0;
       character.leftArm.rotation.z =
         character.action === 'REACTION_ANGRY' && elapsed < character.actionUntil
           ? -0.8
-          : 0.18 + Math.sin(elapsed * 0.8 + character.phase) * 0.08;
+          : character.action === 'REACTION_NEUTRAL' && elapsed < character.actionUntil
+            ? -0.28
+            : 0.18 + Math.sin(elapsed * 0.8 + character.phase) * 0.08;
       character.rightArm.rotation.z =
         character.action === 'POINT_AT' && elapsed < character.actionUntil
           ? -1.05
@@ -1199,11 +1217,26 @@ export class BroadcastScene {
     this.cloud.group.position.y = 3 + Math.sin(elapsed * 0.8) * 0.18;
     this.cloud.mouth.scale.y =
       elapsed < this.cloudSpeakerUntil ? 0.6 + Math.abs(Math.sin(elapsed * 12)) * 4 : 1;
-    this.warningLight.intensity =
-      Math.floor(elapsed) % 17 === 14 ? Math.max(0, Math.sin(elapsed * 18)) * 2.5 : 0;
+    this.premiseProps.group.position.x = motion.propX * 0.012;
+    this.premiseProps.group.position.y = 3.35 + motion.propY * 0.009;
+    this.premiseProps.group.rotation.y = motion.propX * 0.002;
+    this.stripes.forEach((stripe, index) => {
+      stripe.rotation.z =
+        (index % 2 === 0 ? 0.08 : -0.08) +
+        Math.sin(segmentElapsed * (this.pacing === 'frantic' ? 2.4 : 0.45) + index) *
+          motion.graphicPulse *
+          0.025;
+    });
+    this.warningLight.intensity = Math.max(
+      Math.floor(elapsed) % 17 === 14 ? Math.max(0, Math.sin(elapsed * 18)) * 2.5 : 0,
+      this.pacing === 'interrupted' ? motion.graphicPulse * 1.8 : 0,
+    );
     this.camera.position.copy(this.cameraPosition);
     this.camera.position.x +=
-      Math.sin(elapsed * 0.13) * (this.currentCamera === 'CAMERA_WIDE' ? 0.08 : 0.025);
+      Math.sin(elapsed * 0.13) * (this.currentCamera === 'CAMERA_WIDE' ? 0.08 : 0.025) +
+      motion.cameraX * 0.012;
+    this.camera.position.y += motion.cameraY * 0.008;
+    this.camera.position.z -= (motion.zoom - 1) * 24;
     this.camera.lookAt(this.cameraTarget);
 
     this.renderer.setScissorTest(false);

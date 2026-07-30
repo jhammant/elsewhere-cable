@@ -1,5 +1,6 @@
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import type { PlayoutVisuals } from './playout.js';
+import { pacingMotionFrame, type PacingMode, type PacingMotionFrame } from './motion-grammar.js';
 import { resolveProductionDesign, type CastArchetype } from './production-design.js';
 import { flatVisualMedia, isFlatVisualMedium, type FlatVisualMedium } from './style-grammar.js';
 
@@ -365,6 +366,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private activeSpeakerUntil = 0;
   private camera: CameraName = 'CAMERA_WIDE';
   private composition: TwoDimensionalComposition = 'wide_tableau';
+  private pacing: PacingMode = 'conversational';
+  private motionSeed = 0;
   private startedAt = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -391,6 +394,9 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const visualMedium = productionDesign.visualMedium;
     this.medium = isFlatVisualMedium(visualMedium) ? visualMedium : 'paper_cutout';
     this.castArchetype = productionDesign.castArchetype;
+    this.pacing = segment.pacing ?? 'conversational';
+    this.motionSeed =
+      (stableHash(`${segment.channel.id}:${segment.programme.id}:motion`) % 10_000) / 10_000;
     this.startedAt = performance.now();
     const speakers = new Map<string, string>();
     for (const event of segment.events) {
@@ -454,23 +460,34 @@ export class Broadcast2DScene implements PlayoutVisuals {
     }
     const now = performance.now();
     const elapsed = (now - this.startedAt) / 1_000;
+    const motion = pacingMotionFrame(this.pacing, elapsed, this.motionSeed);
     const context = this.context;
     context.save();
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    context.translate(640 + motion.cameraX, 360 + motion.cameraY);
+    context.scale(motion.zoom, motion.zoom);
+    context.translate(-640, -360);
     context.drawImage(this.staticCanvas, 0, 0);
     this.drawCompositionFrame(elapsed);
-    this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed);
+    this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed, motion);
 
     const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
     this.characters.forEach((character, index) => {
       const focused = focusIndex === -1 || focusIndex === index;
       context.save();
+      const speaking = character.id === this.activeSpeaker && now < this.activeSpeakerUntil;
+      const phase = elapsed * 1.7 + (character.seed % 360);
+      context.translate(
+        Math.sin(phase) * motion.actorSway * (speaking ? 1.25 : 0.65),
+        motion.actorBob * (speaking ? 1.35 : 0.55),
+      );
       if (focusIndex !== -1 && !focused) {
         context.globalAlpha = 0.34;
       }
       this.drawCharacter(character, now, elapsed, focused && focusIndex !== -1);
       context.restore();
     });
+    this.drawPacingGraphic(motion, elapsed);
     this.drawMediumTexture(elapsed);
     context.restore();
   }
@@ -1033,7 +1050,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
     context.restore();
   }
 
-  private drawPremiseProp(premise: string, elapsed: number): void {
+  private drawPremiseProp(premise: string, elapsed: number, motion: PacingMotionFrame): void {
     const context = this.context;
     context.save();
     const pixel = this.medium === 'pixel_broadcast';
@@ -1042,10 +1059,10 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const signal = this.medium === 'signal_corruption';
     const centre = this.stageCentre();
     context.translate(
-      pixel ? Math.round(centre / 16) * 16 : centre,
+      (pixel ? Math.round(centre / 16) * 16 : centre) + motion.propX,
       pixel
-        ? Math.round((370 + Math.sin(elapsed * 3) * 4) / 16) * 16
-        : 370 + Math.sin(elapsed * 0.8) * 3,
+        ? Math.round((370 + Math.sin(elapsed * 3) * 4 + motion.propY) / 16) * 16
+        : 370 + Math.sin(elapsed * 0.8) * 3 + motion.propY,
     );
     context.lineWidth = this.medium === 'ink_monochrome' ? 9 : pixel ? 12 : 4;
     context.strokeStyle = shadow ? '#21130f' : thermal ? '#ffec62' : signal ? '#57ffe1' : '#182129';
@@ -1216,6 +1233,67 @@ export class Broadcast2DScene implements PlayoutVisuals {
         context.fill();
         context.stroke();
       }
+    }
+    context.restore();
+  }
+
+  private drawPacingGraphic(motion: PacingMotionFrame, elapsed: number): void {
+    const context = this.context;
+    context.save();
+    if (this.pacing === 'frantic') {
+      context.globalAlpha = 0.22 + motion.graphicPulse * 0.16;
+      context.fillStyle = colour(Math.floor(elapsed * 53) + 180, 82, 62);
+      const travel = (elapsed * 260) % 1_520;
+      for (let index = 0; index < 5; index += 1) {
+        context.fillRect(((travel + index * 310) % 1_520) - 120, 74 + index * 104, 142, 12);
+      }
+    } else if (this.pacing === 'staccato') {
+      context.globalAlpha = 0.18 + motion.graphicPulse * 0.18;
+      context.fillStyle = '#fff3a8';
+      const size = 18 + Math.round(motion.graphicPulse * 32);
+      for (const [x, y] of [
+        [54, 54],
+        [1_226 - size, 54],
+        [54, 666 - size],
+        [1_226 - size, 666 - size],
+      ] as const) {
+        context.fillRect(x, y, size, size);
+      }
+    } else if (this.pacing === 'interrupted' && motion.graphicPulse > 0.05) {
+      context.globalAlpha = motion.graphicPulse * 0.32;
+      context.fillStyle = '#ff4f68';
+      context.translate(640, 360);
+      context.rotate(-0.18);
+      context.fillRect(-760, -26, 1_520, 52);
+    } else if (this.pacing === 'slow_burn') {
+      const sweep = ((elapsed * 34 + this.motionSeed * 1_280) % 1_680) - 200;
+      const gradient = context.createLinearGradient(sweep - 180, 0, sweep + 180, 0);
+      gradient.addColorStop(0, 'rgba(255, 245, 190, 0)');
+      gradient.addColorStop(0.5, `rgba(255, 245, 190, ${0.05 + motion.graphicPulse * 0.06})`);
+      gradient.addColorStop(1, 'rgba(255, 245, 190, 0)');
+      context.fillStyle = gradient;
+      context.fillRect(0, 44, 1_280, 610);
+    } else if (this.pacing === 'near_silent') {
+      context.globalAlpha = 0.12 + motion.graphicPulse * 0.12;
+      context.strokeStyle = '#fff4c4';
+      context.lineWidth = 3;
+      context.beginPath();
+      context.ellipse(
+        640 + Math.sin(elapsed * 0.2) * 60,
+        350,
+        310 + motion.graphicPulse * 80,
+        210 + motion.graphicPulse * 45,
+        elapsed * 0.01,
+        0,
+        Math.PI * 2,
+      );
+      context.stroke();
+    } else {
+      context.globalAlpha = 0.2 + motion.graphicPulse * 0.14;
+      context.fillStyle = '#fff4c4';
+      context.beginPath();
+      context.arc(1_194, 86, 5 + motion.graphicPulse * 4, 0, Math.PI * 2);
+      context.fill();
     }
     context.restore();
   }
