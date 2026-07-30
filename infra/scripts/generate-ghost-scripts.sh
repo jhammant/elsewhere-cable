@@ -55,8 +55,6 @@ case "$generation_strategy" in
     ;;
 esac
 
-generation_revision=$(git rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')
-
 mkdir -p "$script_queue/pending" "$script_queue/completed" "$(dirname "$generation_history")"
 
 while :; do
@@ -87,6 +85,7 @@ while :; do
     set -- "$@" --optimisation-brief "$optimisation_brief"
   fi
 
+  generation_revision=$(git rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')
   batch_started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
   batch_started_epoch=$(date '+%s')
   pending_before=$pending_count
