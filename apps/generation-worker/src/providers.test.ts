@@ -142,11 +142,7 @@ describe('OpenAiCompatibleTtsProvider', () => {
         ),
       ),
     );
-    const provider = new OpenAiCompatibleProvider(
-      'writer-model',
-      'http://writer.test/v1',
-      'local',
-    );
+    const provider = new OpenAiCompatibleProvider('writer-model', 'http://writer.test/v1', 'local');
 
     await expect(
       provider.generateProposal({
@@ -309,6 +305,108 @@ describe('OpenAiCompatibleTtsProvider', () => {
         presencePenalty: 0.3,
       },
     ]);
+  });
+
+  it('generates a strict batch of bare comedy mechanisms on the proposal endpoint', async () => {
+    const requests: Array<{
+      url: string;
+      model: string | undefined;
+      schemaName: string | undefined;
+      temperature: number | undefined;
+      userPrompt: string;
+    }> = [];
+    const seeds = [
+      {
+        storyMode: 'social_protocol',
+        mechanism: 'Touching the spare teaspoon requires its holder to introduce the next silence.',
+      },
+      {
+        storyMode: 'service_mismatch',
+        mechanism:
+          'A professional queuing service arrives early and occupies the customer’s reunion.',
+      },
+      {
+        storyMode: 'status_transfer',
+        mechanism: 'Control of the kettle passes to the person whose biscuit breaks most quietly.',
+      },
+      {
+        storyMode: 'format_literalism',
+        mechanism: 'Every lower third becomes the only permitted answer to a mundane question.',
+      },
+      {
+        storyMode: 'object_agency',
+        mechanism: 'The coat hook requests a window seat before it will hold anyone’s jacket.',
+      },
+      {
+        storyMode: 'product_consequence',
+        mechanism:
+          'A compliment-sorting device reveals that two flatmates praise the same lamp differently.',
+      },
+      {
+        storyMode: 'semantic_contract',
+        mechanism:
+          'Saying “nearly sorted” assigns the speaker responsibility for the smallest loose item.',
+      },
+      {
+        storyMode: 'visual_physics',
+        mechanism:
+          'Closing one drawer slides every table sideways until its owner admits choosing it.',
+      },
+    ] as const;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request, init?: RequestInit) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (typeof init?.body !== 'string') {
+          throw new Error('Expected a JSON request body');
+        }
+        const body = JSON.parse(init.body) as {
+          model?: string;
+          temperature?: number;
+          messages?: Array<{ role?: string; content?: string }>;
+          response_format?: { json_schema?: { name?: string } };
+        };
+        requests.push({
+          url,
+          model: body.model,
+          schemaName: body.response_format?.json_schema?.name,
+          temperature: body.temperature,
+          userPrompt: body.messages?.find(({ role }) => role === 'user')?.content ?? '',
+        });
+        return Promise.resolve(
+          Response.json({
+            choices: [{ message: { content: JSON.stringify({ seeds }) } }],
+          }),
+        );
+      }),
+    );
+    const provider = new OpenAiCompatibleProvider(
+      'writer-model',
+      'http://writer.test/v1',
+      'writer',
+      null,
+      {
+        model: 'proposal-model',
+        baseUrl: 'http://proposal.test/v1',
+        apiKey: 'proposal',
+      },
+    );
+
+    await expect(
+      provider.generateMechanismSeeds({
+        systemPrompt: 'Invent bare mechanisms.',
+        userPrompt: 'Return two mechanisms for each story mode.',
+      }),
+    ).resolves.toEqual(seeds);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      url: 'http://proposal.test/v1/chat/completions',
+      model: 'proposal-model',
+      schemaName: 'elsewhere_mechanism_seeds',
+      temperature: 1,
+    });
+    expect(requests[0]?.userPrompt).toContain('Return two mechanisms for each story mode.');
   });
 
   it('uses the critic endpoint to reject proposals with unearned endings', async () => {

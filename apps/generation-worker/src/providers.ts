@@ -43,6 +43,29 @@ const proposalCritiqueSchema = z.object({
 
 export type ProposalCritique = z.infer<typeof proposalCritiqueSchema>;
 
+const mechanismSeedBatchSchema = z.object({
+  seeds: z
+    .array(
+      z.object({
+        storyMode: z.enum([
+          'social_protocol',
+          'service_mismatch',
+          'status_transfer',
+          'format_literalism',
+          'object_agency',
+          'product_consequence',
+          'semantic_contract',
+          'visual_physics',
+        ]),
+        mechanism: z.string().min(24).max(220),
+      }),
+    )
+    .min(8)
+    .max(32),
+});
+
+export type MechanismSeed = z.infer<typeof mechanismSeedBatchSchema>['seeds'][number];
+
 export interface OpenAiCompatibleEndpoint {
   model: string;
   baseUrl: string;
@@ -52,6 +75,7 @@ export interface OpenAiCompatibleEndpoint {
 export interface LlmProvider {
   readonly id: string;
   readonly model: string;
+  generateMechanismSeeds?(request: StructuredGenerationRequest): Promise<MechanismSeed[]>;
   generateProposal?(request: StructuredGenerationRequest): Promise<GeneratedSegmentProposal>;
   critiqueProposal?(proposal: GeneratedSegmentProposal): Promise<ProposalCritique>;
   generateStructured(request: StructuredGenerationRequest): Promise<GeneratedSegmentDraft>;
@@ -350,6 +374,10 @@ export class OpenAiCompatibleProvider implements LlmProvider {
       baseUrl: this.baseUrl,
       apiKey: this.apiKey,
     },
+    structuralGuidance = `The JSON below demonstrates required keys, value types and the mechanical premise
+shape. It includes the assigned setting and enum coordinates; preserve those.
+Replace every placeholder role, goal, consequence, name, character, line and ending
+with original programme content. Do not reuse its generic mechanism wording:`,
   ): Promise<T> {
     let repairInstruction = '';
     let lastError: unknown = null;
@@ -368,10 +396,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
               role: 'user',
               content: `${request.userPrompt}
 
-The JSON below demonstrates required keys, value types and the mechanical premise
-shape. It includes the assigned setting and enum coordinates; preserve those.
-Replace every placeholder role, goal, consequence, name, character, line and ending
-with original programme content. Do not reuse its generic mechanism wording:
+${structuralGuidance}
 ${structuralExample}
 ${repairInstruction}`,
             },
@@ -456,6 +481,63 @@ ${repairInstruction}`,
       },
       this.proposalEndpoint ?? undefined,
     );
+  }
+
+  async generateMechanismSeeds(request: StructuredGenerationRequest): Promise<MechanismSeed[]> {
+    const result = await this.generateWithSchema(
+      request,
+      mechanismSeedBatchSchema,
+      'elsewhere_mechanism_seeds',
+      JSON.stringify({
+        seeds: [
+          {
+            storyMode: 'social_protocol',
+            mechanism: 'Replace with a new exact etiquette trigger and harmless social duty.',
+          },
+          {
+            storyMode: 'service_mismatch',
+            mechanism: 'Replace with a new exact service outcome that obstructs one ordinary want.',
+          },
+          {
+            storyMode: 'status_transfer',
+            mechanism: 'Replace with a new visible criterion that transfers one narrow privilege.',
+          },
+          {
+            storyMode: 'format_literalism',
+            mechanism: 'Replace with a new television convention governing one mundane choice.',
+          },
+          {
+            storyMode: 'object_agency',
+            mechanism: 'Replace with a new ordinary object demand tied to one practical benefit.',
+          },
+          {
+            storyMode: 'product_consequence',
+            mechanism:
+              'Replace with a new working product and one harmless relationship consequence.',
+          },
+          {
+            storyMode: 'semantic_contract',
+            mechanism: 'Replace with a new exact phrase assigning one concrete obligation.',
+          },
+          {
+            storyMode: 'visual_physics',
+            mechanism: 'Replace with a new visible trigger, transformation and social consequence.',
+          },
+        ],
+      }),
+      1_536,
+      {
+        temperature: 1,
+        topP: 0.97,
+        presencePenalty: 0.5,
+        frequencyPenalty: 0.2,
+      },
+      this.proposalEndpoint ?? undefined,
+      `The JSON below demonstrates only the required array envelope and storyMode enum labels.
+Return the full requested number of seeds. Replace every placeholder mechanism with a different
+bare causal rule. Do not add programme titles, settings, characters, dialogue or endings:`,
+    );
+    return result.seeds;
   }
 
   generateStructured(request: StructuredGenerationRequest): Promise<GeneratedSegmentDraft> {
