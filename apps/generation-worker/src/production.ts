@@ -1104,24 +1104,6 @@ export function sanitisedMechanismSeed(seed: MechanismSeed): MechanismSeed | nul
   ) {
     return null;
   }
-  const alignment: Record<MechanismSeed['storyMode'], RegExp> = {
-    social_protocol:
-      /\b(?:custom|duty|etiquette|expects?|may|must|obliges?|only|protocol|requires|ritual|rule|turn)\b/iu,
-    service_mismatch:
-      /\b(?:appointment|booking|delivery|operator|recipient|service|session|worker|customer|caller)\b/iu,
-    status_transfer:
-      /\b(?:authority|control|credit|decision|duty|privilege|right|status|vote|passes|transfers|belongs)\b/iu,
-    format_literalism:
-      /\b(?:applause|broadcast|camera|caption|credits|cutaway|lower third|replay|subtitle|title card)\b/iu,
-    object_agency: /\b(?:demands?|negotiates?|refuses?|requests?|wants?)\b/iu,
-    product_consequence: /./u,
-    semantic_contract: /\b(?:phrase|saying|word)\b/iu,
-    visual_physics:
-      /\b(?:bends?|changes?|closes?|detaches?|duplicates?|expands?|flattens?|folds?|freezes?|grows?|moves?|opens?|rotates?|shrinks?|slides?|stretches?|swaps?|tilts?|transforms?)\b/iu,
-  };
-  if (!alignment[seed.storyMode].test(mechanism)) {
-    return null;
-  }
   if (
     seed.storyMode !== 'visual_physics' &&
     /\b(?:body|bodies|detaches?|flattens?|grows?|shrinks?|transforms?)\b/iu.test(
