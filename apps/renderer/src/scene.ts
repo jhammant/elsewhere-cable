@@ -1,11 +1,5 @@
 import * as THREE from 'three';
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
-import {
-  directedCamera,
-  directionTreatment,
-  resolveDirectionProfile,
-  type DirectionProfile,
-} from './direction-profile.js';
 import { pacingMotionFrame, type PacingMode } from './motion-grammar.js';
 import {
   resolveProductionDesign,
@@ -769,7 +763,6 @@ export class BroadcastScene {
   private cameraTarget = new THREE.Vector3(0, 2.15, 0);
   private profile = 'public_access';
   private pacing: PacingMode = 'conversational';
-  private direction: DirectionProfile = 'formal_symmetry';
   private motionSeed = 0;
   private viewport: ProgrammeViewport = { ...defaultProgrammeViewport };
   private segmentStartedAt = 0;
@@ -858,10 +851,6 @@ export class BroadcastScene {
     this.segmentStartedAt = this.clock.getElapsedTime();
     this.profile = segment.programme.format;
     this.pacing = segment.pacing ?? 'conversational';
-    this.direction = resolveDirectionProfile({
-      ...segment,
-      visualMedium: productionDesign.visualMedium,
-    });
     this.motionSeed =
       (stableHash(`${segment.channel.id}:${segment.programme.id}:motion`) % 10_000) / 10_000;
     this.viewport = { ...defaultProgrammeViewport };
@@ -1045,19 +1034,9 @@ export class BroadcastScene {
     this.cutCamera('CAMERA_WIDE');
   }
 
-  cutCamera(requestedCamera: CameraName): void {
-    const camera = directedCamera(this.direction, requestedCamera);
+  cutCamera(camera: CameraName): void {
     this.currentCamera = camera;
-    if (this.direction === 'tiny_stage') {
-      this.cameraPosition.set(0, 5.4, 17.4);
-      this.cameraTarget.set(0, 2.35, -0.6);
-    } else if (this.direction === 'surveillance') {
-      this.cameraPosition.set(0, 10.2, 10.6);
-      this.cameraTarget.set(0, 1.65, -0.9);
-    } else if (this.direction === 'locked_tableau') {
-      this.cameraPosition.set(0, 4.15, 13.4);
-      this.cameraTarget.set(0, 2.15, 0);
-    } else if (this.profile === 'ident') {
+    if (this.profile === 'ident') {
       if (camera === 'CAMERA_GUEST') {
         this.cameraPosition.set(2.35, 3.25, 8.5);
         this.cameraTarget.set(2.85, 2.7, 0);
@@ -1069,18 +1048,10 @@ export class BroadcastScene {
         this.cameraTarget.set(0, 2.9, -0.8);
       }
     } else if (camera === 'CAMERA_HOST') {
-      this.cameraPosition.set(
-        -2.4,
-        3.7,
-        this.direction === 'crash_zoom' || this.direction === 'product_macro' ? 7.15 : 8,
-      );
+      this.cameraPosition.set(-2.4, 3.7, 8);
       this.cameraTarget.set(-2.15, 2.5, 0);
     } else if (camera === 'CAMERA_GUEST') {
-      this.cameraPosition.set(
-        2.4,
-        3.7,
-        this.direction === 'crash_zoom' || this.direction === 'product_macro' ? 7.15 : 8,
-      );
+      this.cameraPosition.set(2.4, 3.7, 8);
       this.cameraTarget.set(2.15, 2.5, 0);
     } else {
       this.cameraPosition.set(0, 4.2, 12.8);
@@ -1102,14 +1073,10 @@ export class BroadcastScene {
     }
     this.activeSpeaker = this.characterIds.get(characterId) ?? 0;
     this.activeSpeakerUntil = elapsed + durationMs / 1_000;
-    if (this.currentCamera !== 'CAMERA_WIDE' && this.direction !== 'reaction_cuts') {
+    if (this.currentCamera !== 'CAMERA_WIDE') {
       const character = this.characters[this.activeSpeaker];
       if (character !== undefined) {
-        this.cameraPosition.set(
-          character.group.position.x,
-          3.7,
-          this.direction === 'crash_zoom' || this.direction === 'product_macro' ? 7.15 : 8,
-        );
+        this.cameraPosition.set(character.group.position.x, 3.7, 8);
         this.cameraTarget.set(character.group.position.x, 2.5, character.group.position.z);
         this.camera.position.copy(this.cameraPosition);
         this.camera.lookAt(this.cameraTarget);
@@ -1195,12 +1162,6 @@ export class BroadcastScene {
     const elapsed = this.clock.getElapsedTime();
     const segmentElapsed = Math.max(0, elapsed - this.segmentStartedAt);
     const motion = pacingMotionFrame(this.pacing, segmentElapsed, this.motionSeed);
-    const treatment = directionTreatment(
-      this.direction,
-      this.currentCamera,
-      segmentElapsed,
-      this.motionSeed,
-    );
 
     this.characters.forEach((character, index) => {
       const speech =
@@ -1273,12 +1234,10 @@ export class BroadcastScene {
     this.camera.position.copy(this.cameraPosition);
     this.camera.position.x +=
       Math.sin(elapsed * 0.13) * (this.currentCamera === 'CAMERA_WIDE' ? 0.08 : 0.025) +
-      motion.cameraX * 0.012 +
-      treatment.drift * 0.72;
-    this.camera.position.y += motion.cameraY * 0.008 + treatment.drift * 0.16;
-    this.camera.position.z -= (motion.zoom - 1) * 24 + (treatment.zoom - 1) * 8;
+      motion.cameraX * 0.012;
+    this.camera.position.y += motion.cameraY * 0.008;
+    this.camera.position.z -= (motion.zoom - 1) * 24;
     this.camera.lookAt(this.cameraTarget);
-    this.camera.rotateZ(treatment.roll);
 
     this.renderer.setScissorTest(false);
     this.renderer.setClearColor(0x030708, 1);

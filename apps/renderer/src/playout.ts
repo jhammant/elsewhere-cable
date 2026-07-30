@@ -7,7 +7,6 @@ import {
   type SegmentPackage,
 } from '@elsewhere-cable/schemas';
 import { continuityCopyForSegment, type ContinuityCopy } from './continuity-copy.js';
-import { resolveDirectionProfile } from './direction-profile.js';
 import { resolveBroadcastPackage } from './broadcast-package.js';
 import { resolveProductionDesign } from './production-design.js';
 
@@ -414,10 +413,6 @@ export class PlayoutEngine {
     this.ui.broadcast.dataset.cast = productionDesign.castArchetype;
     this.ui.broadcast.dataset.pacing = segment.pacing ?? 'conversational';
     this.ui.broadcast.dataset.package = resolveBroadcastPackage({
-      ...segment,
-      visualMedium: productionDesign.visualMedium,
-    });
-    this.ui.broadcast.dataset.direction = resolveDirectionProfile({
       ...segment,
       visualMedium: productionDesign.visualMedium,
     });

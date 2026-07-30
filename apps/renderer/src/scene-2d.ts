@@ -1,11 +1,5 @@
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import type { PlayoutVisuals } from './playout.js';
-import {
-  directedCamera,
-  directionTreatment,
-  resolveDirectionProfile,
-  type DirectionProfile,
-} from './direction-profile.js';
 import { pacingMotionFrame, type PacingMode, type PacingMotionFrame } from './motion-grammar.js';
 import { resolveProductionDesign, type CastArchetype } from './production-design.js';
 import { flatVisualMedia, isFlatVisualMedium, type FlatVisualMedium } from './style-grammar.js';
@@ -373,7 +367,6 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private camera: CameraName = 'CAMERA_WIDE';
   private composition: TwoDimensionalComposition = 'wide_tableau';
   private pacing: PacingMode = 'conversational';
-  private direction: DirectionProfile = 'formal_symmetry';
   private motionSeed = 0;
   private startedAt = 0;
 
@@ -402,10 +395,6 @@ export class Broadcast2DScene implements PlayoutVisuals {
     this.medium = isFlatVisualMedium(visualMedium) ? visualMedium : 'paper_cutout';
     this.castArchetype = productionDesign.castArchetype;
     this.pacing = segment.pacing ?? 'conversational';
-    this.direction = resolveDirectionProfile({
-      ...segment,
-      visualMedium: productionDesign.visualMedium,
-    });
     this.motionSeed =
       (stableHash(`${segment.channel.id}:${segment.programme.id}:motion`) % 10_000) / 10_000;
     this.startedAt = performance.now();
@@ -425,14 +414,6 @@ export class Broadcast2DScene implements PlayoutVisuals {
         stableHash(`${segment.programme.id}:${id}`),
         index,
       );
-      const directionScale =
-        this.direction === 'tiny_stage'
-          ? 0.56
-          : this.direction === 'surveillance'
-            ? 0.74
-            : this.direction === 'product_macro'
-              ? 1.08
-              : 1;
       return {
         id,
         name,
@@ -442,8 +423,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
         design: {
           ...design,
           baselineOffset: design.baselineOffset + placement.baselineOffset,
-          scaleX: design.scaleX * placement.scale * directionScale,
-          scaleY: design.scaleY * placement.scale * directionScale,
+          scaleX: design.scaleX * placement.scale,
+          scaleY: design.scaleY * placement.scale,
         },
         action: 'IDLE' as const,
         actionUntil: 0,
@@ -455,7 +436,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
   }
 
   cutCamera(camera: CameraName): void {
-    this.camera = directedCamera(this.direction, camera);
+    this.camera = camera;
   }
 
   speak(characterId: string, durationMs: number): void {
@@ -480,26 +461,17 @@ export class Broadcast2DScene implements PlayoutVisuals {
     const now = performance.now();
     const elapsed = (now - this.startedAt) / 1_000;
     const motion = pacingMotionFrame(this.pacing, elapsed, this.motionSeed);
-    const treatment = directionTreatment(this.direction, this.camera, elapsed, this.motionSeed);
     const context = this.context;
-    const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
-    const focusCharacter = focusIndex < 0 ? undefined : this.characters[focusIndex];
-    const stageCentre = this.stageCentre();
-    const focusX = focusCharacter?.x ?? stageCentre;
-    const cameraScale = Math.max(1, treatment.zoom);
     context.save();
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    context.translate(
-      stageCentre + motion.cameraX + treatment.drift * 34,
-      360 + motion.cameraY + treatment.drift * 6,
-    );
-    context.rotate(treatment.roll);
-    context.scale(motion.zoom * cameraScale, motion.zoom * cameraScale);
-    context.translate(-focusX, -360);
+    context.translate(640 + motion.cameraX, 360 + motion.cameraY);
+    context.scale(motion.zoom, motion.zoom);
+    context.translate(-640, -360);
     context.drawImage(this.staticCanvas, 0, 0);
     this.drawCompositionFrame(elapsed);
     this.drawPremiseProp(segment.programme.premise.toLowerCase(), elapsed, motion);
 
+    const focusIndex = this.camera === 'CAMERA_HOST' ? 0 : this.camera === 'CAMERA_GUEST' ? 1 : -1;
     this.characters.forEach((character, index) => {
       const focused = focusIndex === -1 || focusIndex === index;
       context.save();
@@ -517,91 +489,6 @@ export class Broadcast2DScene implements PlayoutVisuals {
     });
     this.drawPacingGraphic(motion, elapsed);
     this.drawMediumTexture(elapsed);
-    context.restore();
-    this.drawDirectionOverlay(elapsed);
-  }
-
-  private drawDirectionOverlay(elapsed: number): void {
-    const context = this.context;
-    context.save();
-    if (this.direction === 'surveillance') {
-      context.strokeStyle = 'rgba(182, 255, 224, 0.68)';
-      context.fillStyle = 'rgba(182, 255, 224, 0.86)';
-      context.lineWidth = 2;
-      context.font = '18px monospace';
-      context.fillText(`REC ${String(Math.floor(elapsed)).padStart(4, '0')}`, 58, 74);
-      context.strokeRect(48, 48, 1_184, 624);
-      context.beginPath();
-      context.moveTo(640, 48);
-      context.lineTo(640, 672);
-      context.moveTo(48, 360);
-      context.lineTo(1_232, 360);
-      context.stroke();
-    } else if (this.direction === 'product_macro') {
-      const pulse = 1 + Math.max(0, Math.sin(elapsed * 4)) * 0.08;
-      context.translate(1_068, 132);
-      context.scale(pulse, pulse);
-      context.rotate(-0.09);
-      context.fillStyle = '#ffe34e';
-      context.strokeStyle = '#161019';
-      context.lineWidth = 6;
-      context.beginPath();
-      for (let index = 0; index < 24; index += 1) {
-        const radius = index % 2 === 0 ? 92 : 70;
-        const angle = (index / 24) * Math.PI * 2;
-        const x = Math.cos(angle) * radius;
-        const y = Math.sin(angle) * radius;
-        if (index === 0) {
-          context.moveTo(x, y);
-        } else {
-          context.lineTo(x, y);
-        }
-      }
-      context.closePath();
-      context.fill();
-      context.stroke();
-      context.fillStyle = '#161019';
-      context.textAlign = 'center';
-      context.font = '900 21px sans-serif';
-      context.fillText('LIVE', 0, 7);
-    } else if (this.direction === 'rostrum_pan') {
-      context.strokeStyle = 'rgba(248, 239, 205, 0.72)';
-      context.lineWidth = 3;
-      const crop = 34;
-      for (const [x, y, horizontal, vertical] of [
-        [48, 48, 1, 1],
-        [1_232, 48, -1, 1],
-        [48, 672, 1, -1],
-        [1_232, 672, -1, -1],
-      ] as const) {
-        context.beginPath();
-        context.moveTo(x, y + vertical * crop);
-        context.lineTo(x, y);
-        context.lineTo(x + horizontal * crop, y);
-        context.stroke();
-      }
-    } else if (this.direction === 'tiny_stage') {
-      context.fillStyle = 'rgba(4, 4, 7, 0.78)';
-      context.fillRect(0, 0, 1_280, 82);
-      context.fillRect(0, 638, 1_280, 82);
-      context.strokeStyle = 'rgba(255, 224, 160, 0.5)';
-      context.lineWidth = 3;
-      context.strokeRect(132, 96, 1_016, 524);
-    } else if (this.direction === 'handheld') {
-      context.fillStyle = 'rgba(255, 63, 81, 0.84)';
-      context.beginPath();
-      context.arc(70, 66, 8, 0, Math.PI * 2);
-      context.fill();
-      context.fillStyle = 'rgba(255, 255, 255, 0.84)';
-      context.font = '16px monospace';
-      context.fillText('CAM A', 88, 72);
-    } else if (this.direction === 'crash_zoom') {
-      context.strokeStyle = `rgba(255, 255, 255, ${
-        0.08 + Math.max(0, Math.sin(elapsed * 6)) * 0.12
-      })`;
-      context.lineWidth = 12;
-      context.strokeRect(18, 18, 1_244, 684);
-    }
     context.restore();
   }
 
