@@ -3,7 +3,6 @@ import { appendFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'nod
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { promisify } from 'node:util';
 import {
   optimisationBriefSchema,
   segmentPackageSchema,
@@ -16,8 +15,46 @@ import {
   pacingModes,
 } from '../../apps/generation-worker/src/optimisation-policy.js';
 
-const execFileAsync = promisify(execFile);
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
+
+interface CommandResult {
+  stdout: string;
+  stderr: string;
+}
+
+function execFileAsync(
+  command: string,
+  args: readonly string[],
+  options: { timeout: number; maxBuffer: number },
+): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    let timedOut = false;
+    const child = execFile(
+      command,
+      [...args],
+      {
+        encoding: 'utf8',
+        maxBuffer: options.maxBuffer,
+      },
+      (error, stdout, stderr) => {
+        clearTimeout(deadline);
+        if (timedOut) {
+          reject(new Error(`${command} exceeded its ${options.timeout}ms hard deadline`));
+          return;
+        }
+        if (error !== null) {
+          reject(new Error(`${command} failed: ${error.message}`, { cause: error }));
+          return;
+        }
+        resolve({ stdout, stderr });
+      },
+    );
+    const deadline = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGKILL');
+    }, options.timeout);
+  });
+}
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -684,11 +721,14 @@ async function runSafely(): Promise<void> {
 
 await runSafely();
 if (!process.argv.includes('--once')) {
-  const scheduleNext = (): void => {
-    setTimeout(() => {
-      void runSafely().finally(scheduleNext);
-    }, intervalMinutes * 60_000);
-  };
-  scheduleNext();
-  await new Promise<void>(() => undefined);
+  const intervalMs = intervalMinutes * 60_000;
+  while (true) {
+    process.stdout.write(
+      `Optimisation cycle complete; next observation in ${intervalMinutes} minutes.\n`,
+    );
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, intervalMs);
+    });
+    await runSafely();
+  }
 }

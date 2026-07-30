@@ -325,7 +325,7 @@ export function proposalQualityIssues(proposal: GeneratedSegmentProposal): strin
   if (
     proposal.storyMode !== undefined &&
     proposal.storyMode !== 'visual_physics' &&
-    /\b(?:becom(?:e|es|ing)|detach(?:es|ed|ing)?|dimension|disappear(?:s|ed|ing)?|dissolv(?:e|es|ed|ing)|expand(?:s|ed|ing)?|flatten(?:s|ed|ing)?|freez(?:e|es|ing)|frozen|grow(?:s|ing)?|incinerat(?:e|es|ed|ing)|melt(?:s|ed|ing)?|physically|replac(?:e|es|ed|ing)\s+(?:their|his|her|its)?\s*(?:body|face|head)|rippl(?:e|es|ed|ing)|shrink(?:s|ing)?|split(?:s|ting)?|swap(?:s|ped|ping)?|transform(?:s|ed|ing)?|turn(?:s|ed|ing)?\s+into|vanish(?:es|ed|ing)?)\b/iu.test(
+    /\b(?:becom(?:e|es|ing)|detach(?:es|ed|ing)?|dimension|disappear(?:s|ed|ing)?|dissolv(?:e|es|ed|ing)|expand(?:s|ed|ing)?|flatten(?:s|ed|ing)?|freez(?:e|es|ing)|frozen|grow(?:s|ing)?|identit(?:y|ies)\s+(?:change|shift|swap|transfer)|incinerat(?:e|es|ed|ing)|melt(?:s|ed|ing)?|physically|replac(?:e|es|ed|ing)\s+(?:their|his|her|its)?\s*(?:body|face|head)|rippl(?:e|es|ed|ing)|shift(?:s|ed|ing)?\s+(?:the\s+)?(?:subject\s+)?identit(?:y|ies)|shrink(?:s|ing)?|split(?:s|ting)?|swap(?:s|ped|ping)?|transform(?:s|ed|ing)?|turn(?:s|ed|ing)?\s+into|vanish(?:es|ed|ing)?)\b/iu.test(
       `${proposal.premise} ${proposal.endingBeat}`,
     )
   ) {

@@ -12,6 +12,8 @@ const crueltyShortcutPattern =
   /\b(?:aggression|cruel game|laugh(?:ing)? at (?:your|their) panic|mock(?:s|ed|ing)? (?:you|them)|pyramid of shame|weak lungs?|profit(?:s|ed|ing)? from (?:your|their|the) (?:chaos|fear|panic)|humiliat(?:e|es|ed|ing))\b/iu;
 const coercedBodyPattern =
   /\b(?:(?:I am|I'm|you are|you're|we are|we're|they are|they're|the (?:host|guest|contestant|customer))\s+.{0,28}\b(?:buried|caged|locked|pinned|tied|trapped)|(?:buried|caged|locked|pinned|tied|trapped)\s+.{0,28}\b(?:arms?|ankles?|body|feet|head|knees?|legs?|me|us|you))\b/iu;
+const arbitraryBodyTransformationPattern =
+  /\b(?:(?:identit(?:y|ies)|subject identity)\b.{0,28}\b(?:change|shift|swap|transfer)|(?:change|shift|swap|transfer)(?:s|ed|ing)?\b.{0,28}\b(?:identit(?:y|ies)|subject identity)|(?:I am|I'm|you are|you're|we are|we're|they are|they're|the (?:anchor|host|guest|presenter|contestant|customer))\s+now\s+(?:an?\s+)?(?:animal|bear|chair|decoration|object|statue|trophy|wall))\b/iu;
 const narratedGraphicActionPattern =
   /^\s*(?:the|an?)\s+.{0,72}\b(?:freeze(?:s|ing)?|is\s+(?:permanently\s+)?(?:accelerated|fused|locked)|stands?|rotates?|lifts?|slams?|collides?|falls?)\b.{0,160}\b(?:as|while|into|inside)\b/iu;
 
@@ -60,6 +62,9 @@ export function legacyPackageQualityIssues(segment: SegmentPackage): string[] {
   }
   if (coercedBodyPattern.test(dialogue)) {
     issues.push('dialogue uses bodily entrapment instead of a harmless comic consequence');
+  }
+  if (arbitraryBodyTransformationPattern.test(`${segment.programme.premise} ${dialogue}`)) {
+    issues.push('characters arbitrarily transform instead of pursuing a coherent comic goal');
   }
   const unrelatedMechanisms = unearnedEndingMechanisms(segment.programme.premise, dialogue);
   if (unrelatedMechanisms.length >= 2) {

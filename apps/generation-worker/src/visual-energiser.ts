@@ -52,9 +52,39 @@ function graphicForFormat(
   }
 }
 
-function quoteText(speech: Extract<SegmentEvent, { type: 'speech.play' }>): string {
-  const text = `${speech.characterName.toUpperCase()} — ${speech.subtitle}`.replace(/\s+/gu, ' ');
-  return text.length <= 112 ? text : `${text.slice(0, 109).trimEnd()}…`;
+const graphicLabels: Record<SegmentPackage['programme']['format'], readonly string[]> = {
+  advert: ['PRODUCT CLAIM', 'FINE PRINT', 'TESTIMONIAL'],
+  emergency: ['INSTRUCTION', 'STATUS REVISION', 'REMAIN CALM'],
+  ident: ['TRANSMISSION', 'HANDOVER', 'SIGN-OFF'],
+  news: ['ON RECORD', 'LIVE CORRECTION', 'DEVELOPING'],
+  public_access: ['CASE FILE', 'CALLER RECORD', 'DECISION'],
+  shopping: ['LIVE DEMO', 'OFFER STATUS', 'DEMO RESULT'],
+  sitcom: ['IN THIS ROOM', 'AFTER THAT', 'HOUSEHOLD UPDATE'],
+};
+
+function excerpt(text: string, maximumLength: number): string {
+  const normalised = text.replace(/\s+/gu, ' ').trim();
+  if (normalised.length <= maximumLength) {
+    return normalised;
+  }
+  const candidate = normalised.slice(0, maximumLength);
+  const lastSpace = candidate.lastIndexOf(' ');
+  const boundary = lastSpace >= maximumLength * 0.7 ? lastSpace : candidate.length;
+  return `${candidate.slice(0, boundary).trimEnd()}…`;
+}
+
+export function editorialGraphicText(
+  segment: SegmentPackage,
+  speech: Extract<SegmentEvent, { type: 'speech.play' }>,
+  speechIndex: number,
+): string {
+  const labels = graphicLabels[segment.programme.format];
+  const label = labels[speechIndex % labels.length]!;
+  const sequence = String(speechIndex + 1).padStart(2, '0');
+  return `${label} ${sequence} · ${excerpt(speech.characterName.toUpperCase(), 32)} / ${excerpt(
+    speech.subtitle,
+    78,
+  )}`;
 }
 
 function closestPrecedingSpeech(
@@ -125,7 +155,10 @@ export function energiseVisualTimeline(
     if (precedingSpeech === undefined) {
       return event;
     }
-    const nextText = options.repairGraphics === true ? quoteText(precedingSpeech) : event.text;
+    const nextText =
+      options.repairGraphics === true
+        ? editorialGraphicText(segment, precedingSpeech, speech.indexOf(precedingSpeech))
+        : event.text;
     if (event.graphic === desiredGraphic && event.text === nextText) {
       return event;
     }
@@ -168,7 +201,7 @@ export function energiseVisualTimeline(
       atMs,
       type: 'graphic.show',
       graphic: desiredGraphic,
-      text: quoteText(line),
+      text: editorialGraphicText(segment, line, speech.indexOf(line)),
     });
     staticAdditions.push({
       atMs: Math.max(0, atMs - 180),

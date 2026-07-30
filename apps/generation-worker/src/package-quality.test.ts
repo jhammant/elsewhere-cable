@@ -173,4 +173,30 @@ describe('legacy package quality', () => {
       ]),
     );
   });
+
+  it('rejects arbitrary character transformations while preserving social status changes', () => {
+    const transformed = packageWithDialogue(
+      'During a sports bulletin, every correction shifts the subject identity onto the speaker.',
+      [
+        'The Silver Bears actually won this game.',
+        'Correction: you are now a clumsy bear yourself.',
+        'I am the anchor, not a bear.',
+        'Correction: the anchor is now a silver trophy.',
+      ],
+    );
+    const promoted = packageWithDialogue(
+      'During a sports bulletin, the quiet witness receives authority whenever the anchor guesses.',
+      [
+        'The Silver Bears actually won this game.',
+        'That correction gives you the final decision.',
+        'I accept the promotion with professional reluctance.',
+        'Then please finish the bulletin from my chair.',
+      ],
+    );
+
+    expect(legacyPackageQualityIssues(transformed)).toContain(
+      'characters arbitrarily transform instead of pursuing a coherent comic goal',
+    );
+    expect(legacyPackageQualityIssues(promoted)).toEqual([]);
+  });
 });

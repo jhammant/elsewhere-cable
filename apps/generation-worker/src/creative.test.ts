@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assignedDialogueShape,
+  assignedDialogueShapeForCoordinates,
   assignedPacing,
   assignedStoryMode,
   demoDraft,
@@ -57,6 +59,68 @@ describe('generation prompts', () => {
     expect(assignedPacing(483_021)).toBe(first);
     expect(userPrompt(483_021, [])).toContain(`Pacing: ${first}.`);
     expect(userPrompt(483_021, [])).toContain(`Story mode: ${storyMode}.`);
+  });
+
+  it('varies dialogue architecture instead of defaulting to equal two-person exchanges', () => {
+    const shapes = Array.from({ length: 120 }, (_, serial) =>
+      assignedDialogueShape(800_000_000 + serial * 104_729),
+    );
+
+    expect(new Set(shapes).size).toBe(12);
+    expect(assignedDialogueShape(847_291_035)).toBe(assignedDialogueShape(847_291_035));
+    const draft = demoDraft(0);
+    const coordinateShape = assignedDialogueShapeForCoordinates(draft);
+    expect(userPrompt(483_021, [])).toContain('Dialogue architecture:');
+    expect(scriptPrompt(draft)).toContain(`Dialogue architecture: ${coordinateShape}`);
+    expect(shapes.some((shape) => shape.includes('never use rigid ABAB'))).toBe(true);
+    expect(shapes.some((shape) => shape.includes('four to six lines'))).toBe(true);
+  });
+
+  it('covers every dialogue architecture across proposal coordinates', () => {
+    const formats = [
+      'advert',
+      'public_access',
+      'news',
+      'shopping',
+      'sitcom',
+      'emergency',
+      'ident',
+    ] as const;
+    const media = [
+      'cel_shaded',
+      'paper_cutout',
+      'pixel_broadcast',
+      'archive_film',
+      'neon_wireframe',
+      'public_access_vhs',
+      'signal_corruption',
+      'stop_motion',
+      'collage_zine',
+      'ink_monochrome',
+      'miniature_diorama',
+      'corporate_vector',
+      'claymation',
+      'shadow_theatre',
+      'hand_drawn',
+      'thermal_camera',
+      'ascii_terminal',
+      'blueprint_schematic',
+      'stained_glass',
+      'xerox_punk',
+      'storybook_wash',
+      'isometric_manual',
+    ] as const;
+    const shapes = formats.flatMap((format) =>
+      media.map((visualMedium) =>
+        assignedDialogueShapeForCoordinates({
+          format,
+          visualMedium,
+          storyMode: 'status_transfer',
+        }),
+      ),
+    );
+
+    expect(new Set(shapes).size).toBe(12);
   });
 
   it('fully applies corrective pacing while the delivered feed is too silent', () => {

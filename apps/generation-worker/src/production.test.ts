@@ -170,6 +170,22 @@ describe('produceBatch', () => {
     );
   });
 
+  it('rejects identity transformations outside the visual-physics story mode', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      ...universallyAlignedProposal(demoDraft(0)),
+      format: 'news',
+      storyMode: 'format_literalism',
+      programmeTitle: 'The Silver Cup Bulletin',
+      premise:
+        'During a sports news bulletin, an anchor wants to name a winner, but every correction shifts the subject identity onto the speaker.',
+      endingBeat: 'The anchor stops correcting while their image remains a silver trophy.',
+    });
+
+    expect(proposalQualityIssues(proposal)).toContain(
+      'non-visual story mode introduces an automatic body or set transformation',
+    );
+  });
+
   it('rejects cruel or graphic harm before preparing speech', () => {
     const draft = demoDraft(0);
     draft.dialogue[0]!.text = 'The harness is choking the contestant until they drop dead.';

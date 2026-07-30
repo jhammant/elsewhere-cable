@@ -463,6 +463,21 @@ const performanceDynamics = [
   'a minor confession creates an unexpected but fragile alliance',
 ] as const;
 
+const dialogueShapes = [
+  'Cold open: begin halfway through the disagreement with no greeting or premise recital; reveal the practical stakes through the second and third replies.',
+  'Unequal exchange: the character with most to lose speaks twice in succession on two occasions, while the other role answers with terse corrections; never use rigid ABAB alternation.',
+  'Three-step demonstration: perform the same established test three times; each result changes social leverage, and the technically successful final test costs its advocate status.',
+  'Cross-examination: one role asks short, increasingly specific questions; the other evades until one concrete answer reverses who appears competent.',
+  'False ending: make two sincere attempts to conclude the broadcast, each interrupted by an already-established consequence; finish on a small negotiated concession.',
+  'Confession pivot: one role conceals an ordinary motive in the first half, admits it at the midpoint, and forces both roles to pursue a different version of the same goal.',
+  'Broken relay: let every role already named in the premise speak before anyone repeats, then break that order exactly once when status changes hands.',
+  'Sparse reaction scene: use four to six lines, two held PAUSE or FREEZE reactions and one delayed answer; the silence must be visually active rather than empty.',
+  'Rapid corrections: use eight to twelve lines mostly under nine words, with each correction becoming more specific; avoid speeches and explanatory summaries.',
+  'Testimonial cutaway: one role makes a confident claim, another gives one precise personal example, and the claimant repeatedly misreads what that example proves.',
+  'Status interview: one role conducts a formal interview, but every answer quietly transfers authority to the interviewee until the interviewer must request permission to continue.',
+  'Detail handoff: each reply must pick up one concrete noun or claim from the previous line and redirect it toward a new social objective, ending with the opening detail reinterpreted.',
+] as const;
+
 const formatStoryModes: Record<
   GeneratedSegmentProposal['format'],
   readonly NonNullable<GeneratedSegmentProposal['storyMode']>[]
@@ -805,6 +820,22 @@ export function assignedPacing(
   ]!;
 }
 
+export function assignedDialogueShape(serial: number): string {
+  return dialogueShapes[axisIndex(serial, 0x5da7c91, dialogueShapes.length)]!;
+}
+
+type DialogueCoordinates = Pick<GeneratedSegmentProposal, 'format' | 'visualMedium' | 'storyMode'>;
+
+export function assignedDialogueShapeForCoordinates(coordinates: DialogueCoordinates): string {
+  const key = `${coordinates.format}:${coordinates.visualMedium}:${coordinates.storyMode ?? 'none'}`;
+  let hash = 2_166_136_261;
+  for (const character of key) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16_777_619) >>> 0;
+  }
+  return assignedDialogueShape(hash);
+}
+
 export function assignedStoryMode(
   serial: number,
   optimisationBrief: OptimisationBrief | null = null,
@@ -863,6 +894,11 @@ export function userPrompt(
   const performanceDynamic =
     performanceDynamics[axisIndex(serial, 0x6f922b3, performanceDynamics.length)]!;
   const visualMedium = requestedMediums[axisIndex(serial, 0x7c4bf89, requestedMediums.length)]!;
+  const dialogueShape = assignedDialogueShapeForCoordinates({
+    format,
+    visualMedium,
+    storyMode,
+  });
   const pacing = assignedPacing(serial, optimisationBrief);
   const affectedSetElement =
     affectedSetElements[axisIndex(serial, 0xa12f683, affectedSetElements.length)]!;
@@ -935,10 +971,11 @@ Mandatory creative coordinates for this attempt:
 ${physicalMechanismBlock}
 - Cast structure: ${cast}.
 - Performance dynamic: ${performanceDynamic}. This shapes the acting and relationship beats, not the surreal mechanism.
+- Dialogue architecture: ${dialogueShape}
 - Visual medium: ${visualMedium}.
 - Visual production grammar: ${visualDirection}.
 - Pacing: ${pacing}.
-Use the format-specific frame as the whole story. Apply the story mode inside that frame; it is not permission to add a second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
+Use the format-specific frame as the whole story. Apply the story mode inside that frame; it is not permission to add a second mechanism. Make the premise, cast and ending concretely support the assigned dialogue architecture so the script can perform it without adding a narrator, unseen speaker, new participant or second mechanism. If visual physics is assigned, use exactly the specified trigger, affected element and transformation. Use the visual production grammar literally in staging and visualStyle, never as additional story physics.
 The rendering medium changes only how viewers see the scene. Thermal camera does not transfer heat, archive film does not silence speech, paper cutouts do not flatten bodies, and signal corruption does not damage characters unless visual_physics explicitly assigns that exact mechanism.
 The premise must clearly say which role wants what, which other role or rule blocks them, and what social consequence follows. A conflict need not be another refusal: use concealment, temptation, rivalry, loyalty, embarrassment, a fragile alliance or a change of mind where the assigned frame permits it. Keep the problem specific to the assigned location and grounded in an understandable want. Intimate and ordinary scenes must remain intimate; do not force every premise into a race, rescue, competition, altitude hazard or large moving spectacle. One surprising rule is enough.
 Do not default to clerks, permits, waivers, penalties, policies, employee benefits or customer-satisfaction scores unless the assigned coordinates specifically require one. continuityFact will appear as a mid-programme broadcast graphic: make it a unique 5–16 word in-world fact, never an action, direction or generic slogan.
@@ -969,10 +1006,13 @@ export function scriptPrompt(
       .join('')
       .slice(0, 180),
   );
+  const dialogueShape = assignedDialogueShapeForCoordinates(proposal);
   return `Turn this already approved proposal into a complete comedy segment:
 ${JSON.stringify(proposal)}
 
 Preserve every proposal field exactly, including title, channel, premise, medium, cast, story mode and pacing. Preserve the trigger and consequence of its comic rule exactly: for example, if correct answers trigger it, wrong answers or refusals cannot suddenly trigger it too. For ${proposal.pacing ?? 'conversational'} pacing, write ${pacingRange}. Every line.text must contain only words the character actually says aloud: never put stage directions, visual labels, bracketed actions, parenthetical actions or asterisks in dialogue text. Put each physical performance in that line's supported action field instead. Every line must contain 3–22 spoken words, respond to the preceding beat and use a supported action. At least three quarters of lines must use a non-IDLE action. Escalate only the approved comic rule and cause the approved ending beat.
+Dialogue architecture: ${dialogueShape}
+Follow that architecture exactly using only roles already present in the premise. Do not invent a narrator, unseen speaker or new participant merely to satisfy the architecture.
 Characters must never say "the rule forces", "the law takes effect" or narrate a visible transformation merely to explain it. Let them bargain, conceal, accuse, boast, misunderstand and change decisions while the renderer shows physical action. Visual medium is a rendering style, not permission to invent new story physics. Do not introduce tragedy, trauma, dead relatives or an unrelated spectacle. Never include word counts, drafting notes or model commentary in programme fields. The ending may only use characters, objects and mechanisms already established by the approved premise. Never end with somebody screaming, trembling or staring in horror; end on a comic decision, loss of status, reluctant agreement or earned visual consequence.
 ${
   rejectionReasons.length === 0
