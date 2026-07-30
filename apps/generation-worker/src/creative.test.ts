@@ -146,6 +146,41 @@ describe('generation prompts', () => {
     ]).toContain(afterThreeDimensional);
   });
 
+  it('prioritises catalogue-new renderers without repeating the immediately recent look', () => {
+    const establishedMedia = [
+      'cel_shaded',
+      'paper_cutout',
+      'pixel_broadcast',
+      'archive_film',
+      'neon_wireframe',
+      'public_access_vhs',
+      'signal_corruption',
+      'stop_motion',
+      'collage_zine',
+      'ink_monochrome',
+      'miniature_diorama',
+      'corporate_vector',
+      'claymation',
+      'shadow_theatre',
+      'hand_drawn',
+      'thermal_camera',
+    ] as const;
+    const assigned = assignedVisualMedium(
+      483_021,
+      ['cel_shaded'],
+      establishedMedia.flatMap((medium) => Array.from({ length: 4 }, () => medium)),
+    );
+
+    expect([
+      'ascii_terminal',
+      'blueprint_schematic',
+      'stained_glass',
+      'xerox_punk',
+      'storybook_wash',
+      'isometric_manual',
+    ]).toContain(assigned);
+  });
+
   it('rotates cast body families away from recent segments', () => {
     const allArchetypes = Array.from({ length: 500 }, (_, serial) => assignedCastArchetype(serial));
     expect(new Set(allArchetypes).size).toBe(6);
@@ -407,6 +442,35 @@ describe('generation prompts', () => {
       dialogue: Array.from({ length: 6 }, (_, index) => ({
         speaker: index % 2 === 0 ? 'Host' : 'Guest',
         text: `This deliberately detailed response number ${index + 1} changes the negotiation today.`,
+        action: 'REACTION_NEUTRAL' as const,
+      })),
+    };
+    const spokenWords = rigid.dialogue.flatMap((line) =>
+      line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu),
+    );
+
+    const repaired = repairDialogueArchitecture(rigid);
+
+    expect(repaired.dialogue).toHaveLength(8);
+    expect(dialogueArchitectureIssues(repaired)).toEqual([]);
+    expect(
+      repaired.dialogue.flatMap((line) => line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)),
+    ).toEqual(spokenWords);
+  });
+
+  it('repairs an unequal exchange when only one turn is long enough to divide', () => {
+    const base = Array.from({ length: 5_000 }, (_, serial) => demoDraft(serial)).find((draft) =>
+      assignedDialogueShapeForCoordinates(draft).startsWith('Unequal exchange:'),
+    );
+    expect(base).toBeDefined();
+    const rigid = {
+      ...base!,
+      dialogue: Array.from({ length: 6 }, (_, index) => ({
+        speaker: index % 2 === 0 ? 'Host' : 'Guest',
+        text:
+          index === 0
+            ? 'This single detailed response contains enough existing words to become three deliberate performance beats.'
+            : `Short reply ${index}.`,
         action: 'REACTION_NEUTRAL' as const,
       })),
     };

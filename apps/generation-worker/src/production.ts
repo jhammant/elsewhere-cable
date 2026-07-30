@@ -1178,11 +1178,14 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
           const rejectedAttemptHistory: CreativeRecord[] = [];
           const semanticRejectedAttemptHistory: CreativeRecord[] = [];
           const rejectedAttemptEmbeddings: number[][] = [];
+          let creativeCoordinateAttempt = 0;
+          let structuralRetryUsed = false;
           // A mature catalogue occupies much more of the obvious premise space than a fresh
           // installation. Search longer rather than weakening the semantic novelty gate.
           const maximumProposalAttempts = 16;
           for (let attempt = 0; attempt < maximumProposalAttempts; attempt += 1) {
-            const creativeSerial = creativeSerialBase + index + attempt * options.count;
+            const creativeSerial =
+              creativeSerialBase + index + creativeCoordinateAttempt * options.count;
             const recent = creativeHistory.slice(-24);
             const recentMediums = recent
               .map((record) => record.visualMedium)
@@ -1194,6 +1197,11 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               .filter(
                 (archetype): archetype is GeneratedSegmentDraft['castArchetype'] =>
                   archetype !== undefined,
+              );
+            const catalogueMediums = creativeHistory
+              .map((record) => record.visualMedium)
+              .filter(
+                (medium): medium is GeneratedSegmentDraft['visualMedium'] => medium !== undefined,
               );
             const prompt = userPrompt(
               creativeSerial,
@@ -1223,7 +1231,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
               format: assignedFormat(creativeSerial, options.optimisationBrief ?? null),
               pacing: assignedPacing(creativeSerial, options.optimisationBrief ?? null),
               storyMode: assignedStoryMode(creativeSerial, options.optimisationBrief ?? null),
-              visualMedium: assignedVisualMedium(creativeSerial, recentMediums),
+              visualMedium: assignedVisualMedium(creativeSerial, recentMediums, catalogueMediums),
               castArchetype: assignedCastArchetype(creativeSerial, recentCastArchetypes),
             });
             const candidateEmbedding =
@@ -1300,6 +1308,19 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             });
             if (accepted) {
               break;
+            }
+            const rejectedForNovelty = rejectionReasons.some((reason) => {
+              const category = proposalRejectionCategory(reason);
+              return category === 'semantic-novelty' || category === 'concept-novelty';
+            });
+            if (rejectedForNovelty || structuralRetryUsed) {
+              creativeCoordinateAttempt += 1;
+              structuralRetryUsed = false;
+            } else {
+              // Give a mechanical correction one attempt against the same brief. Changing the
+              // coordinates here would contradict the retry instructions and make the provider
+              // solve a different format, story mode and visual grammar at the same time.
+              structuralRetryUsed = true;
             }
           }
           if (proposals[index] === undefined && drafts[index] === undefined) {

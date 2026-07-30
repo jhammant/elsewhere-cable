@@ -1113,6 +1113,7 @@ export function assignedPacing(
 export function assignedVisualMedium(
   serial: number,
   recentMediums: readonly GeneratedSegmentDraft['visualMedium'][] = [],
+  catalogueMediums: readonly GeneratedSegmentDraft['visualMedium'][] = recentMediums,
 ): (typeof requestedMediums)[number] {
   const recent = recentMediums.slice(-4);
   const latest = recent.at(-1);
@@ -1125,7 +1126,17 @@ export function assignedVisualMedium(
           (medium) => threeDimensionalMediums.has(medium) !== latestIsThreeDimensional,
         );
   const freshPool = contrastPool.filter((medium) => !recent.includes(medium));
-  const pool = freshPool.length > 0 ? freshPool : contrastPool;
+  const candidatePool = freshPool.length > 0 ? freshPool : contrastPool;
+  const usage = new Map<(typeof requestedMediums)[number], number>(
+    requestedMediums.map((medium) => [medium, 0]),
+  );
+  for (const medium of catalogueMediums) {
+    if (medium !== undefined && usage.has(medium)) {
+      usage.set(medium, (usage.get(medium) ?? 0) + 1);
+    }
+  }
+  const minimumUsage = Math.min(...candidatePool.map((medium) => usage.get(medium) ?? 0));
+  const pool = candidatePool.filter((medium) => (usage.get(medium) ?? 0) === minimumUsage);
   return pool[axisIndex(serial, 0x7c4bf89, pool.length)]!;
 }
 
@@ -1272,6 +1283,35 @@ function splitDialogueTurn(
   ];
 }
 
+function splitDialogueTurnIntoThree(
+  line: GeneratedSegmentDraft['dialogue'][number],
+):
+  | [
+      GeneratedSegmentDraft['dialogue'][number],
+      GeneratedSegmentDraft['dialogue'][number],
+      GeneratedSegmentDraft['dialogue'][number],
+    ]
+  | null {
+  const words = line.text.trim().split(/\s+/u).filter(Boolean);
+  if (words.length < 9) {
+    return null;
+  }
+  const firstSplit = Math.max(3, Math.floor(words.length / 3));
+  const secondSplit = Math.min(words.length - 3, Math.ceil((words.length * 2) / 3));
+  if (secondSplit - firstSplit < 3) {
+    return null;
+  }
+  const text = (from: number, to: number, continues: boolean): string => {
+    const value = words.slice(from, to).join(' ');
+    return continues && !/[.!?…,:;—–-]$/u.test(value) ? `${value}…` : value;
+  };
+  return [
+    { ...line, text: text(0, firstSplit, true) },
+    { ...line, text: text(firstSplit, secondSplit, true) },
+    { ...line, text: text(secondSplit, words.length, false) },
+  ];
+}
+
 /**
  * Production conversion for a common local-model failure: a good script arrives
  * as a rigid two-person relay even though its assigned architecture needs held or
@@ -1301,6 +1341,35 @@ export function repairDialogueArchitecture(draft: GeneratedSegmentDraft): Genera
   const requiredSplits = unequalExchangeDeficit > 0 ? unequalExchangeDeficit : 1;
   if (draft.dialogue.length + requiredSplits > 12) {
     return draft;
+  }
+  if (requiredSplits === 2) {
+    const tripleSplit = draft.dialogue
+      .map((line, index) => ({ index, split: splitDialogueTurnIntoThree(line) }))
+      .filter(
+        (
+          candidate,
+        ): candidate is {
+          index: number;
+          split: [
+            GeneratedSegmentDraft['dialogue'][number],
+            GeneratedSegmentDraft['dialogue'][number],
+            GeneratedSegmentDraft['dialogue'][number],
+          ];
+        } => candidate.split !== null,
+      )
+      .sort((left, right) => {
+        const leftWords = draft.dialogue[left.index]!.text.trim().split(/\s+/u).length;
+        const rightWords = draft.dialogue[right.index]!.text.trim().split(/\s+/u).length;
+        return rightWords - leftWords || left.index - right.index;
+      })[0];
+    if (tripleSplit !== undefined) {
+      return {
+        ...draft,
+        dialogue: draft.dialogue.flatMap((line, index) =>
+          index === tripleSplit.index ? tripleSplit.split : [line],
+        ),
+      };
+    }
   }
   const splittable = draft.dialogue
     .map((line, index) => ({ index, split: splitDialogueTurn(line) }))

@@ -1033,11 +1033,13 @@ describe('produceBatch', () => {
     });
     let proposalCalls = 0;
     let scriptCalls = 0;
+    const proposalPrompts: string[] = [];
     const llm: LlmProvider = {
       id: 'rejected-attempt-history-test-llm',
       model: 'test-model',
-      generateProposal() {
+      generateProposal(request) {
         proposalCalls += 1;
+        proposalPrompts.push(request.userPrompt);
         if (proposalCalls === 1) {
           return Promise.resolve({
             ...repeated,
@@ -1074,6 +1076,13 @@ describe('produceBatch', () => {
     expect(result.preparedScriptCount).toBe(1);
     expect(proposalCalls).toBeGreaterThanOrEqual(3);
     expect(scriptCalls).toBe(1);
+    const coordinates = proposalPrompts.map(
+      (prompt) =>
+        prompt.match(/Mandatory creative coordinates[\s\S]*?Use the format-specific frame/u)?.[0] ??
+        '',
+    );
+    expect(coordinates[1]).toBe(coordinates[0]);
+    expect(coordinates[2]).not.toBe(coordinates[1]);
   });
 
   it('prepares dialogue with bounded TTS endpoint parallelism', async () => {
