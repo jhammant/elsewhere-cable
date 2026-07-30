@@ -589,7 +589,7 @@ export function speechAudioQualityIssue(quality: SpeechAudioQuality): string | n
 
 export function maximumPlausibleSpeechDurationMs(text: string): number {
   const wordCount = text.trim().split(/\s+/u).filter(Boolean).length;
-  return Math.min(15_000, Math.max(5_000, wordCount * 600 + 1_500));
+  return Math.min(15_000, Math.max(3_000, wordCount * 550 + 1_000));
 }
 
 export function minimumPlausibleSpeechDurationMs(text: string, speakingRate = 1): number {

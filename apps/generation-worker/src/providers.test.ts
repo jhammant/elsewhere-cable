@@ -243,17 +243,17 @@ describe('OpenAiCompatibleTtsProvider', () => {
   });
 
   it('rejects rambling audio while allowing deliberate broadcast pacing', () => {
-    expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(5_000);
+    expect(maximumPlausibleSpeechDurationMs('A short line.')).toBe(3_000);
     expect(
       maximumPlausibleSpeechDurationMs(
         'The municipal staircase has requested a private meeting after lunch.',
       ),
-    ).toBe(7_500);
+    ).toBe(6_500);
     expect(
       maximumPlausibleSpeechDurationMs(
         'This intentionally long continuity announcement contains enough words to reach the hard broadcast ceiling without ever allowing an unbounded speech file onto the channel.',
       ),
-    ).toBe(15_000);
+    ).toBe(14_200);
   });
 
   it('rejects clipped speech using word count and requested delivery speed', () => {
@@ -265,9 +265,14 @@ describe('OpenAiCompatibleTtsProvider', () => {
 
   it('tempo-corrects a near miss but rejects severely rambling speech', () => {
     const text = 'One two three four five six seven eight';
-    expect(maximumPlausibleSpeechDurationMs(text)).toBe(6_300);
-    expect(speechTempoCorrection(text, 6_680)).toBeCloseTo(1.132, 3);
+    expect(maximumPlausibleSpeechDurationMs(text)).toBe(5_400);
+    expect(speechTempoCorrection(text, 6_680)).toBeCloseTo(1.336, 3);
     expect(speechTempoCorrection(text, 20_000)).toBeNull();
+  });
+
+  it('compresses a drawn-out interjection instead of accepting four seconds for one word', () => {
+    expect(maximumPlausibleSpeechDurationMs('Stop!')).toBe(3_000);
+    expect(speechTempoCorrection('Stop!', 4_600)).toBeCloseTo(1.769, 3);
   });
 
   it('rejects long internal dead air while allowing a short natural pause', () => {
