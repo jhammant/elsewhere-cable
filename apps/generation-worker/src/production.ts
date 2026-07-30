@@ -609,18 +609,35 @@ async function readCreativeHistory(
   root: string,
   manifest: PlayoutManifest,
 ): Promise<CreativeRecord[]> {
-  const records: CreativeRecord[] = [];
-  for (const entry of manifest.segments) {
+  const records: {
+    record: CreativeRecord;
+    generatedAt: string;
+    manifestIndex: number;
+  }[] = [];
+  for (const [manifestIndex, entry] of manifest.segments.entries()) {
     try {
       const segment = segmentPackageSchema.parse(
         JSON.parse(await readFile(path.join(root, entry.packagePath), 'utf8')),
       );
-      records.push(recordFromSegment(segment));
+      records.push({
+        record: recordFromSegment(segment),
+        generatedAt: segment.production.generatedAt,
+        manifestIndex,
+      });
     } catch {
       // A missing or obsolete package must not prevent new material from being prepared.
     }
   }
-  return records;
+  // Live priority deliberately reshuffles the manifest around Endor's current cursor.
+  // Creative contrast must follow creation order, otherwise every unattended batch sees
+  // whichever recovery alias happens to be last and can repeatedly choose the same medium.
+  return records
+    .sort(
+      (left, right) =>
+        left.generatedAt.localeCompare(right.generatedAt) ||
+        left.manifestIndex - right.manifestIndex,
+    )
+    .map(({ record }) => record);
 }
 
 async function writeManifest(root: string, manifest: PlayoutManifest): Promise<void> {
