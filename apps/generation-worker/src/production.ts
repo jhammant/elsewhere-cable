@@ -1541,18 +1541,56 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
       options.llm?.generateMechanismSeeds !== undefined
     ) {
       try {
-        dynamicMechanismSeeds = (
-          await options.llm.generateMechanismSeeds({
-            systemPrompt: mechanismSeedSystemPrompt,
-            userPrompt: mechanismSeedPrompt(
-              creativeHistory.length,
-              options.optimisationBrief?.avoidMotifs ?? [],
-            ),
-          })
-        )
+        const generatedMechanismSeeds = await options.llm.generateMechanismSeeds({
+          systemPrompt: mechanismSeedSystemPrompt,
+          userPrompt: mechanismSeedPrompt(
+            creativeHistory.length,
+            options.optimisationBrief?.avoidMotifs ?? [],
+          ),
+        });
+        const seenMechanisms = new Set<string>();
+        dynamicMechanismSeeds = generatedMechanismSeeds
           .map(sanitisedMechanismSeed)
-          .filter((seed): seed is MechanismSeed => seed !== null);
-      } catch {
+          .filter((seed): seed is MechanismSeed => {
+            if (seed === null) {
+              return false;
+            }
+            const key = `${seed.storyMode}:${seed.mechanism.toLocaleLowerCase('en-GB')}`;
+            if (seenMechanisms.has(key)) {
+              return false;
+            }
+            seenMechanisms.add(key);
+            return true;
+          });
+        const modeCounts = Object.fromEntries(
+          [...new Set(dynamicMechanismSeeds.map(({ storyMode }) => storyMode))]
+            .sort()
+            .map((storyMode) => [
+              storyMode,
+              dynamicMechanismSeeds.filter((seed) => seed.storyMode === storyMode).length,
+            ]),
+        );
+        process.stderr.write(
+          `${JSON.stringify({
+            timestamp: new Date().toISOString(),
+            service: 'generation-worker',
+            level: 'info',
+            event: 'mechanism_seed_batch',
+            generatedCount: generatedMechanismSeeds.length,
+            acceptedCount: dynamicMechanismSeeds.length,
+            modeCounts,
+          })}\n`,
+        );
+      } catch (error) {
+        process.stderr.write(
+          `${JSON.stringify({
+            timestamp: new Date().toISOString(),
+            service: 'generation-worker',
+            level: 'warn',
+            event: 'mechanism_seed_fallback',
+            errorType: error instanceof Error ? error.name : 'UnknownError',
+          })}\n`,
+        );
         // Seed generation is an optimisation layer. The fixed, validated mechanism
         // catalogue remains available if the auxiliary model or its schema fails.
       }
