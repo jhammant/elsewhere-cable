@@ -17,6 +17,7 @@ llm_model=${ELSEWHERE_LLM_MODEL:-qwen3.5-35b-a3b}
 embedding_base_url=${ELSEWHERE_EMBEDDING_BASE_URL:-http://127.0.0.1:11434}
 embedding_model=${ELSEWHERE_EMBEDDING_MODEL:-nomic-embed-text:latest}
 optimisation_brief=${ELSEWHERE_OPTIMISATION_BRIEF:-data/optimisation/current-brief.json}
+generation_history=${ELSEWHERE_GENERATION_HISTORY:-data/optimisation/generation-history.ndjson}
 
 if [ "$mode" != "once" ] && [ "$mode" != "loop" ]; then
   echo "Usage: $0 [once|loop]" >&2
@@ -47,7 +48,7 @@ if [ "$script_target_count" -lt 1 ]; then
   exit 64
 fi
 
-mkdir -p "$script_queue/pending" "$script_queue/completed"
+mkdir -p "$script_queue/pending" "$script_queue/completed" "$(dirname "$generation_history")"
 
 while :; do
   pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
@@ -77,7 +78,30 @@ while :; do
     set -- "$@" --optimisation-brief "$optimisation_brief"
   fi
 
-  if ! pnpm generate:batch -- "$@"; then
+  batch_started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+  batch_started_epoch=$(date '+%s')
+  pending_before=$pending_count
+  completed_before=$completed_count
+  if pnpm generate:batch -- "$@"; then
+    batch_status=approved
+  else
+    batch_status=rejected
+  fi
+  batch_finished_epoch=$(date '+%s')
+  pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
+  completed_count=$(find "$script_queue/completed" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
+  printf '{"generatedAt":"%s","status":"%s","requestedScripts":%s,"proposalAttempts":%s,"durationSeconds":%s,"pendingDelta":%s,"completedDelta":%s,"pendingScripts":%s,"completedScripts":%s}\n' \
+    "$batch_started_at" \
+    "$batch_status" \
+    "$batch_count" \
+    "$proposal_attempts" \
+    "$((batch_finished_epoch - batch_started_epoch))" \
+    "$((pending_count - pending_before))" \
+    "$((completed_count - completed_before))" \
+    "$pending_count" \
+    "$completed_count" >>"$generation_history"
+
+  if [ "$batch_status" = "rejected" ]; then
     if [ "$mode" = "once" ]; then
       exit 1
     fi
@@ -86,8 +110,6 @@ while :; do
     continue
   fi
 
-  pending_count=$(find "$script_queue/pending" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
-  completed_count=$(find "$script_queue/completed" -maxdepth 1 -type f -name 'draft_*.json' | wc -l | tr -d ' ')
   printf '{"pendingScripts":%s,"completedScripts":%s,"targetScripts":%s,"status":"growing"}\n' \
     "$pending_count" "$completed_count" "$script_target_count"
   if [ "$mode" = "once" ]; then

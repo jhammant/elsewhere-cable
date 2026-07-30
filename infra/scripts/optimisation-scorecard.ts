@@ -39,6 +39,18 @@ interface RunwayProbe {
   idUnseen?: { hours?: number };
 }
 
+interface GenerationObservation {
+  generatedAt: string;
+  status: 'approved' | 'rejected';
+  requestedScripts: number;
+  proposalAttempts: number;
+  durationSeconds: number;
+  pendingDelta: number;
+  completedDelta: number;
+  pendingScripts: number;
+  completedScripts: number;
+}
+
 async function readNdjson<T>(filePath: string, parse: (value: unknown) => T): Promise<T[]> {
   try {
     return (await readFile(filePath, 'utf8'))
@@ -96,6 +108,24 @@ function parseExperiment(value: unknown): ExperimentRecord {
     throw new Error('Invalid experiment record');
   }
   return record as ExperimentRecord;
+}
+
+function parseGenerationObservation(value: unknown): GenerationObservation {
+  const record = value as Partial<GenerationObservation>;
+  if (
+    typeof record.generatedAt !== 'string' ||
+    !['approved', 'rejected'].includes(record.status ?? '') ||
+    !Number.isInteger(record.requestedScripts) ||
+    !Number.isInteger(record.proposalAttempts) ||
+    !Number.isInteger(record.durationSeconds) ||
+    !Number.isInteger(record.pendingDelta) ||
+    !Number.isInteger(record.completedDelta) ||
+    !Number.isInteger(record.pendingScripts) ||
+    !Number.isInteger(record.completedScripts)
+  ) {
+    throw new Error('Invalid generation observation');
+  }
+  return record as GenerationObservation;
 }
 
 async function runwayProbe(
@@ -216,6 +246,10 @@ const audienceResearchPath = path.resolve(
   workspaceRoot,
   argument('audience-research') ?? 'data/research/latest.json',
 );
+const generationHistoryPath = path.resolve(
+  workspaceRoot,
+  argument('generation-history') ?? 'data/optimisation/generation-history.ndjson',
+);
 
 const briefs = await readNdjson(historyPath, (value) => optimisationBriefSchema.parse(value));
 if (briefs.length === 0) {
@@ -240,6 +274,19 @@ const evaluation = experimentEvaluation(activeExperiment, briefs, scores);
 const latest = scores.at(-1)!;
 const recommendedArms = rankExperimentArms(latest).slice(0, 6);
 const audienceResearch = await readAudienceResearch(audienceResearchPath);
+const generationHistory = await readNdjson(generationHistoryPath, parseGenerationObservation);
+const recentGeneration = generationHistory.slice(-24);
+const approvedGeneration = recentGeneration.filter(
+  (observation) => observation.status === 'approved',
+);
+const generatedScriptCount = approvedGeneration.reduce(
+  (total, observation) => total + Math.max(0, observation.pendingDelta),
+  0,
+);
+const generationWallSeconds = recentGeneration.reduce(
+  (total, observation) => total + observation.durationSeconds,
+  0,
+);
 const previous = scores.at(-2) ?? null;
 const comparableScores = scores.filter(
   (score) => score.novelty !== null && score.evidenceCoverage >= 80,
@@ -278,6 +325,21 @@ const report = {
     note: 'Public metadata exposes concurrent viewers. Watch time and retention require authenticated YouTube Analytics.',
   },
   audienceResearch,
+  generation: {
+    observedBatches: recentGeneration.length,
+    approvedBatches: approvedGeneration.length,
+    approvalRate:
+      recentGeneration.length === 0
+        ? null
+        : Number(((approvedGeneration.length / recentGeneration.length) * 100).toFixed(1)),
+    approvedScripts: generatedScriptCount,
+    scriptsPerGenerationHour:
+      generationWallSeconds === 0
+        ? null
+        : Number((generatedScriptCount / (generationWallSeconds / 3_600)).toFixed(2)),
+    latestStatus: recentGeneration.at(-1)?.status ?? null,
+    latestAt: recentGeneration.at(-1)?.generatedAt ?? null,
+  },
   recommendedArms,
   history: scores,
 };
@@ -321,6 +383,14 @@ reported separately so a tiny early audience cannot distort the quality evaluato
 - Genuinely fresh: ${report.runway.freshHours?.toFixed(2) ?? 'unknown'} hours
 - Repeat reserve: ${report.runway.repeatReserveHours?.toFixed(2) ?? 'unknown'} hours
 - ID-unseen total: ${report.runway.idUnseenHours?.toFixed(2) ?? 'unknown'} hours
+
+## Script generation
+
+- Recent batches observed: ${report.generation.observedBatches}
+- Batch approval rate: ${report.generation.approvalRate?.toFixed(1) ?? 'unknown'}%
+- New approved scripts: ${report.generation.approvedScripts}
+- Generation throughput: ${report.generation.scriptsPerGenerationHour?.toFixed(2) ?? 'unknown'} scripts per compute-hour
+- Latest batch: ${report.generation.latestStatus ?? 'unknown'}
 
 ## Active experiment
 
