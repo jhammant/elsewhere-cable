@@ -25,10 +25,30 @@ const workspaceRoot = path.resolve(import.meta.dirname, '../..');
 const segmentsRoot = path.resolve(workspaceRoot, argument('segments') ?? 'data/segments-live');
 const manifestPath = path.join(segmentsRoot, 'manifest.json');
 const newerThanValue = argument('newer-than');
-if (newerThanValue === undefined || !Number.isFinite(Date.parse(newerThanValue))) {
-  throw new Error('--newer-than must be an ISO timestamp');
+const selectedIdsValue = argument('segment-ids');
+if (newerThanValue !== undefined && selectedIdsValue !== undefined) {
+  throw new Error('Use either --newer-than or --segment-ids, not both');
 }
-const newerThanMs = Date.parse(newerThanValue);
+const selectedIds =
+  selectedIdsValue === undefined
+    ? []
+    : selectedIdsValue
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+if (
+  selectedIds.some((segmentId) => !/^seg_[a-z0-9_]+$/u.test(segmentId)) ||
+  new Set(selectedIds).size !== selectedIds.length
+) {
+  throw new Error('--segment-ids must contain unique, comma-separated segment IDs');
+}
+if (
+  selectedIds.length === 0 &&
+  (newerThanValue === undefined || !Number.isFinite(Date.parse(newerThanValue)))
+) {
+  throw new Error('Provide --newer-than as an ISO timestamp or valid --segment-ids');
+}
+const newerThanMs = newerThanValue === undefined ? null : Date.parse(newerThanValue);
 const lookahead = Number(argument('lookahead') ?? 3);
 if (!Number.isInteger(lookahead) || lookahead < 1 || lookahead > 12) {
   throw new Error('--lookahead must be an integer from 1 to 12');
@@ -47,20 +67,33 @@ async function readSegment(packagePath: string): Promise<SegmentPackage | null> 
   }
 }
 
-const recentEntries = manifest.segments.slice(-200);
+const selectedIdSet = new Set(selectedIds);
+const candidateEntries =
+  selectedIds.length === 0
+    ? manifest.segments
+    : manifest.segments.filter((entry) => selectedIdSet.has(entry.segmentId));
+if (selectedIds.length > 0 && candidateEntries.length !== selectedIds.length) {
+  throw new Error('One or more priority segment IDs are absent from the manifest');
+}
 const newOriginalIds: string[] = [];
-for (const entry of recentEntries) {
+for (const entry of candidateEntries) {
   const segment = await readSegment(entry.packagePath);
   if (
     segment !== null &&
     segment.production.generator !== 'emergency-recovery-alias' &&
-    Date.parse(segment.production.generatedAt) >= newerThanMs
+    (selectedIds.length > 0 ||
+      (newerThanMs !== null && Date.parse(segment.production.generatedAt) >= newerThanMs))
   ) {
     newOriginalIds.push(entry.segmentId);
   }
 }
 if (newOriginalIds.length === 0) {
-  log({ reordered: false, reason: 'no-new-originals', newerThan: newerThanValue });
+  log({
+    reordered: false,
+    reason: 'no-new-originals',
+    newerThan: newerThanValue ?? null,
+    selectedIds,
+  });
   process.exit(0);
 }
 

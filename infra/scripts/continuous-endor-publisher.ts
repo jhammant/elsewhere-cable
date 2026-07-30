@@ -40,11 +40,22 @@ const initialAuditCount = Number.parseInt(
   argument('initial-audit-count') ?? process.env.ELSEWHERE_INITIAL_AUDIT_COUNT ?? '4',
   10,
 );
+const livePriorityLookahead = Number.parseInt(
+  argument('live-priority-lookahead') ?? process.env.ELSEWHERE_LIVE_PRIORITY_LOOKAHEAD ?? '3',
+  10,
+);
 if (!Number.isInteger(pollIntervalMs) || pollIntervalMs < 5_000) {
   throw new Error('--poll-ms must be an integer of at least 5000');
 }
 if (!Number.isInteger(initialAuditCount) || initialAuditCount < 1 || initialAuditCount > 100) {
   throw new Error('--initial-audit-count must be an integer from 1 to 100');
+}
+if (
+  !Number.isInteger(livePriorityLookahead) ||
+  livePriorityLookahead < 1 ||
+  livePriorityLookahead > 12
+) {
+  throw new Error('--live-priority-lookahead must be an integer from 1 to 12');
 }
 
 function log(event: string, fields: Record<string, unknown> = {}): void {
@@ -211,7 +222,7 @@ async function publishOnce(): Promise<void> {
     ]);
   }
 
-  const auditedSnapshot = await readStableSnapshot();
+  let auditedSnapshot = await readStableSnapshot();
   if (auditedSnapshot === null) {
     log('manifest_changed_during_audit', { action: 'postpone' });
     return;
@@ -220,6 +231,26 @@ async function publishOnce(): Promise<void> {
   const rejectedIds = newIds.filter((segmentId) => !retainedIds.has(segmentId));
   if (rejectedIds.length > 0) {
     log('segments_quarantined', { segmentIds: rejectedIds });
+  }
+  const retainedNewIds = newIds.filter((segmentId) => retainedIds.has(segmentId));
+  if (retainedNewIds.length > 0) {
+    const pnpm = process.env.ELSEWHERE_PNPM_BIN ?? 'pnpm';
+    await run(pnpm, [
+      'reservoir:prioritise-live',
+      '--',
+      '--segments',
+      segmentsRoot,
+      '--segment-ids',
+      retainedNewIds.join(','),
+      '--lookahead',
+      String(livePriorityLookahead),
+    ]);
+    const prioritisedSnapshot = await readStableSnapshot();
+    if (prioritisedSnapshot === null) {
+      log('manifest_changed_during_live_priority', { action: 'postpone' });
+      return;
+    }
+    auditedSnapshot = prioritisedSnapshot;
   }
 
   if (auditedSnapshot.hash !== state.lastPublishedManifestHash) {
