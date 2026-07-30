@@ -1888,6 +1888,26 @@ export function userPrompt(
     transformationVerbs[axisIndex(serial, 0xb37c1d9, transformationVerbs.length)]!;
   const escalation = escalationCadences[axisIndex(serial, 0xc9e8047, escalationCadences.length)]!;
   const visualDirection = visualDirections[visualMedium];
+  const storyModeAcceptanceContract: Record<
+    NonNullable<GeneratedSegmentProposal['storyMode']>,
+    string
+  > = {
+    social_protocol:
+      'literally use allowed, etiquette, permission, protocol or social, then state who may do one ordinary thing and why',
+    service_mismatch:
+      'literally name the worker or service and its customer, then state how correct delivery obstructs the customer’s ordinary goal',
+    status_transfer:
+      'literally use authority, control, credit, decision, privilege, status or veto together with passes or transfers, then name the criterion and recipient',
+    format_literalism:
+      'literally name the exact television convention and say it assigns, grants or transfers one mundane duty inside the programme',
+    object_agency:
+      'literally name the ordinary object and say it demands, negotiates, refuses, requests or wants one scene-specific privilege',
+    product_consequence:
+      'literally name the product, device, service or tool, state that it works, then name the single harmless relationship consequence',
+    semantic_contract:
+      'quote the exact phrase and state that saying it assigns, commits, schedules or transfers one concrete harmless obligation',
+    visual_physics: `write the causal chain explicitly: when ${comicTrigger}, the ${affectedSetElement} ${transformation}, which produces only the assigned social-status consequence`,
+  };
   const physicalMechanismBlock = usesVisualPhysics
     ? `- Comic trigger: ${comicTrigger}.
 - Affected set element: ${affectedSetElement}.
@@ -1944,9 +1964,18 @@ export function userPrompt(
       ? ''
       : `Correct these mechanical defects from the previous attempt:
 ${retryDefects.map((defect) => `- ${defect}.`).join('\n')}`;
+  const rejectedForNovelty = rejectionReasons.some((reason) =>
+    /(?:semantically repeats|repeats|resembles|reuses|mechanism repeats)/u.test(reason),
+  );
+  const retryStrategy =
+    rejectionReasons.length === 0
+      ? ''
+      : rejectedForNovelty
+        ? 'The previous attempt failed a novelty gate, so this attempt has different mandatory coordinates. Follow only the new coordinates below and do not paraphrase the rejected concept.'
+        : 'The previous attempt failed a mechanical or editorial gate. Preserve the mandatory coordinates below and correct only the listed defects; do not replace the assigned mechanism with another one.';
   return `Create batch segment ${index + 1} using the ${format} format.
 This proposal will be compared semantically with ${recentTitles.length} recent programme titles, ${recentPremises.length} recent premises and the complete broadcast catalogue. Do not rely on familiar Elsewhere Cable motifs.
-${rejectionReasons.length > 0 ? 'The previous attempt failed an editorial gate. Keep the assigned format but change the character objective and single comic mechanism completely; do not paraphrase that attempt.' : ''}
+${retryStrategy}
 ${retryBlock}
 ${optimisationBlock}
 Mandatory creative coordinates for this attempt:
@@ -1957,6 +1986,7 @@ Mandatory creative coordinates for this attempt:
 - Story mode: ${storyMode}.
 - Comedy mechanism family: ${mechanismFamily.direction}.
 - Mechanism variant: ${mechanismVariant}. Treat this as the exact subtype of the comedy mechanism, not as a second rule.
+- Story-mode acceptance contract: ${storyModeAcceptanceContract[storyMode]}.
 - Mechanism ownership: keep the participant named by the mechanism as its subject from premise through endingBeat. Do not make another role inherit its consequence unless this exact variant explicitly transfers it.
 - Relationship pressure: ${relationshipPressure}. Apply this only to the roles already present in the scene frame.
 - Tactic progression: ${tacticProgression}. These are changes of conversational strategy, never extra rules, tests or powers.

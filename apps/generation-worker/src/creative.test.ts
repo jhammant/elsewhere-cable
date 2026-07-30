@@ -45,6 +45,7 @@ describe('generation prompts', () => {
       expect(prompt).toContain('Scope ceiling:');
       expect(prompt).toContain('Comedy mechanism family:');
       expect(prompt).toContain('Mechanism variant:');
+      expect(prompt).toContain('Story-mode acceptance contract:');
       expect(prompt).toContain('Mechanism ownership:');
       expect(prompt).toContain('Relationship pressure:');
       expect(prompt).toContain('Tactic progression:');
@@ -727,7 +728,40 @@ describe('generation prompts', () => {
       'repeat the programme title’s distinctive subject noun literally inside the premise',
     );
     expect(prompt).toContain('catalogue-novel objective, mechanism and consequence');
+    expect(prompt).toContain('failed a novelty gate');
+    expect(prompt).toContain('different mandatory coordinates');
     expect(prompt).not.toContain('untrusted previous output');
+  });
+
+  it('preserves mandatory coordinates for a structural retry', () => {
+    const prompt = userPrompt(
+      12,
+      [],
+      [],
+      ['premise does not realise its assigned status_transfer story mode'],
+    );
+
+    expect(prompt).toContain('failed a mechanical or editorial gate');
+    expect(prompt).toContain('Preserve the mandatory coordinates below');
+    expect(prompt).toContain('do not replace the assigned mechanism');
+    expect(prompt).not.toContain('change the character objective and single comic mechanism completely');
+  });
+
+  it('gives every story mode a literal acceptance contract', () => {
+    const contracts = new Map<string, string>();
+    for (let serial = 0; serial < 500; serial += 1) {
+      const prompt = userPrompt(serial, []);
+      const storyMode = prompt.match(/Story mode: ([a-z_]+)\./u)?.[1];
+      const contract = prompt.match(/Story-mode acceptance contract: (.+)\.\n/u)?.[1];
+      if (storyMode !== undefined && contract !== undefined) {
+        contracts.set(storyMode, contract);
+      }
+    }
+
+    expect(contracts.size).toBe(8);
+    expect(contracts.get('status_transfer')).toMatch(/\b(?:authority|control|credit)\b/u);
+    expect(contracts.get('format_literalism')).toContain('television convention');
+    expect(contracts.get('visual_physics')).toContain('write the causal chain explicitly');
   });
 
   it('turns script-review defects into trusted targeted rewrite instructions', () => {
