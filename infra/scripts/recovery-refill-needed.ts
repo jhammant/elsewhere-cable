@@ -20,11 +20,7 @@ function log(fields: Record<string, unknown>): void {
 const workspaceRoot = path.resolve(import.meta.dirname, '../..');
 const segmentsRoot = path.resolve(workspaceRoot, argument('segments') ?? 'data/segments-live');
 const minimumAheadMinutes = Number(argument('minimum-ahead-minutes') ?? 30);
-if (
-  !Number.isFinite(minimumAheadMinutes) ||
-  minimumAheadMinutes < 5 ||
-  minimumAheadMinutes > 360
-) {
+if (!Number.isFinite(minimumAheadMinutes) || minimumAheadMinutes < 5 || minimumAheadMinutes > 360) {
   throw new Error('--minimum-ahead-minutes must be between 5 and 360');
 }
 const endorHost = argument('endor-host') ?? process.env.ELSEWHERE_ENDOR_HOST ?? 'endor';
@@ -46,11 +42,11 @@ try {
   output = `${result.stdout}\n${result.stderr}`;
 } catch (error) {
   log({
-    needed: true,
+    needed: false,
     reason: 'endor-observation-failed',
     error: error instanceof Error ? error.message : String(error),
   });
-  process.exit(0);
+  process.exit(1);
 }
 
 let latestRequest: { segmentId: string; atMs: number } | null = null;
@@ -76,8 +72,8 @@ for (const line of output.split(/[\r\n]+/u)) {
 }
 
 if (latestRequest === null) {
-  log({ needed: true, reason: 'no-recent-live-segment' });
-  process.exit(0);
+  log({ needed: false, reason: 'no-recent-live-segment' });
+  process.exit(1);
 }
 
 const currentEntry = manifest.segments.find(
@@ -88,11 +84,11 @@ if (
   Date.now() - latestRequest.atMs > currentEntry.durationMs + 20_000
 ) {
   log({
-    needed: true,
+    needed: false,
     reason: currentEntry === undefined ? 'observed-segment-absent' : 'observation-stale',
     observedSegmentId: latestRequest.segmentId,
   });
-  process.exit(0);
+  process.exit(1);
 }
 
 const decision = recoveryRunwayDecision(

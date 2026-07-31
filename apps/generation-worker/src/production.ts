@@ -23,6 +23,7 @@ import type {
   ProposalCritique,
   TtsProvider,
 } from './providers.js';
+import { comedyKernelFromMechanism } from './providers.js';
 import {
   assignedCastArchetype,
   assignedFormat,
@@ -1202,6 +1203,14 @@ export function preferGeneratedMechanismVariants(variants: readonly string[]): s
   return interleaved;
 }
 
+export function restoreExactKernelPayoff(
+  proposal: GeneratedSegmentProposal,
+  mechanismVariant: string,
+): GeneratedSegmentProposal {
+  const kernel = comedyKernelFromMechanism(mechanismVariant);
+  return kernel === null ? proposal : { ...proposal, endingBeat: kernel.earnedPayoff };
+}
+
 function cosineSimilarity(left: readonly number[], right: readonly number[]): number {
   if (left.length === 0 || left.length !== right.length) {
     return 0;
@@ -1907,7 +1916,7 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
             if (mechanismVariant === undefined) {
               const storyModeCoordinateCount = storyModeCoordinateCounts.get(storyMode) ?? 0;
               mechanismVariant =
-                mechanismCandidates[(storyModeCoordinateCount + index) % mechanismCandidateCount];
+                mechanismCandidates[storyModeCoordinateCount % mechanismCandidateCount];
               if (mechanismVariant !== undefined) {
                 mechanismVariantByCoordinate.set(creativeCoordinateAttempt, mechanismVariant);
                 storyModeCoordinateCounts.set(storyMode, storyModeCoordinateCount + 1);
@@ -1955,14 +1964,17 @@ export async function produceBatch(options: ProduceOptions): Promise<BatchResult
                     systemPrompt,
                     userPrompt: prompt,
                   });
-            const generated = repairNetworkIdentityCollision({
-              ...rawGenerated,
-              format: assignedFormat(creativeSerial, options.optimisationBrief ?? null),
-              pacing: assignedPacing(creativeSerial, options.optimisationBrief ?? null),
-              storyMode: assignedStoryMode(creativeSerial, options.optimisationBrief ?? null),
-              visualMedium: assignedVisualMedium(creativeSerial, recentMediums, catalogueMediums),
-              castArchetype: assignedCastArchetype(creativeSerial, recentCastArchetypes),
-            });
+            const generated = restoreExactKernelPayoff(
+              repairNetworkIdentityCollision({
+                ...rawGenerated,
+                format: assignedFormat(creativeSerial, options.optimisationBrief ?? null),
+                pacing: assignedPacing(creativeSerial, options.optimisationBrief ?? null),
+                storyMode: assignedStoryMode(creativeSerial, options.optimisationBrief ?? null),
+                visualMedium: assignedVisualMedium(creativeSerial, recentMediums, catalogueMediums),
+                castArchetype: assignedCastArchetype(creativeSerial, recentCastArchetypes),
+              }),
+              mechanismVariant,
+            );
             generated.visualStyle = visualStyleForMedium(generated.visualMedium);
             const candidateEmbedding =
               options.embeddingProvider === null

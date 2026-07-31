@@ -167,14 +167,14 @@ function generatedCoordinate(
   return candidate !== undefined && values.includes(candidate) ? candidate : fallback;
 }
 
-interface ComedyKernel {
+export interface ComedyKernel {
   rule: string;
   protagonistGoal: string;
   opposingGoal: string;
   earnedPayoff: string;
 }
 
-function comedyKernelFromMechanism(value: string | null): ComedyKernel | null {
+export function comedyKernelFromMechanism(value: string | null): ComedyKernel | null {
   if (value === null) {
     return null;
   }

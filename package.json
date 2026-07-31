@@ -24,6 +24,7 @@
     "generate:live:bootstrap": "tsx infra/scripts/bootstrap-live-queue.ts",
     "reservoir:status": "tsx infra/scripts/reservoir-status.ts",
     "reservoir:audit": "tsx infra/scripts/audit-reservoir.ts",
+    "reservoir:deduplicate-content": "tsx infra/scripts/deduplicate-reservoir-content.ts",
     "reservoir:revoice": "tsx infra/scripts/revoice-reservoir.ts",
     "reservoir:emergency-refill": "tsx infra/scripts/emergency-refill.ts",
     "reservoir:prioritise-recent": "tsx infra/scripts/prioritise-recent-segments.ts",

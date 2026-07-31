@@ -21,6 +21,7 @@ import {
   proposalQualityIssues,
   mechanismVariantsWithSeeds,
   preferGeneratedMechanismVariants,
+  restoreExactKernelPayoff,
   proposalRejectionCategory,
   rankMechanismVariantsByNovelty,
   repairNetworkIdentityCollision,
@@ -1575,6 +1576,35 @@ describe('produceBatch', () => {
       'fixed one',
       'fixed two',
     ]);
+  });
+
+  it('restores the exact earned payoff before a generated-kernel proposal is criticised', () => {
+    const proposal = generatedSegmentProposalSchema.parse({
+      channelNumber: 7_000_000_001,
+      channelName: 'Quiet Hall',
+      programmeTitle: 'The Brass Key',
+      format: 'public_access',
+      realityId: 'HALL-7',
+      visualStyle: 'hinged_construction_paper_tabletop',
+      visualMedium: 'paper_cutout',
+      castArchetype: 'paper_puppets',
+      pacing: 'slow_burn',
+      storyMode: 'social_protocol',
+      premise:
+        'At a community hall, a caretaker wants the brass key while a volunteer must preserve its speaking duty.',
+      tone: ['dry'],
+      continuityFact: 'The brass key introduces the final silence.',
+      endingBeat: 'A new clipboard arrives and changes the procedure.',
+    });
+    const mechanism =
+      'Rule: Touching the brass key requires its holder to introduce the next silence. | Protagonist goal: The caretaker wants to lock the hall. | Opposing goal: The volunteer wants the key left out. | Earned payoff: The caretaker introduces the silence and leaves the key with the volunteer.';
+
+    expect(restoreExactKernelPayoff(proposal, mechanism).endingBeat).toBe(
+      'The caretaker introduces the silence and leaves the key with the volunteer.',
+    );
+    expect(restoreExactKernelPayoff(proposal, 'fixed mechanism').endingBeat).toBe(
+      proposal.endingBeat,
+    );
   });
 
   it('attributes premise and critic failures to actionable optimisation categories', () => {
