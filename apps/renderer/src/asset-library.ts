@@ -50,7 +50,10 @@ function backgroundRelevance(entry: AssetLibraryEntry, segment: SegmentPackage):
     'television',
   ]);
   return entry.tags.reduce((score, tag) => {
-    const token = tag.toLowerCase().replace(/[^a-z0-9]+/gu, ' ').trim();
+    const token = tag
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gu, ' ')
+      .trim();
     return token.length >= 3 && !genericTags.has(token) && haystack.includes(token)
       ? score + 1
       : score;
@@ -123,17 +126,52 @@ export function matchingPropAsset(
   manifest: AssetLibraryManifest,
   segment: SegmentPackage,
 ): AssetLibraryEntry | null {
-  const words = new Set(segment.programme.premise.toLowerCase().match(/[a-z0-9-]+/gu) ?? []);
-  const genericTags = new Set(['photo', 'cutout', 'device', 'product', 'prop']);
-  return (
-    manifest.assets.find(
+  const premise = segment.programme.premise
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, ' ')
+    .trim();
+  const words = new Set(premise.split(/\s+/u).filter(Boolean));
+  const genericTags = new Set([
+    'appliance',
+    'cutout',
+    'device',
+    'item',
+    'object',
+    'photo',
+    'product',
+    'prop',
+  ]);
+  const candidates = manifest.assets
+    .filter(
       (entry) =>
-        entry.kind === 'image_2d' &&
-        entry.role === 'prop_cutout' &&
-        isCompatible(entry, segment) &&
-        entry.tags.some((tag) => !genericTags.has(tag) && words.has(tag)),
-    ) ?? null
-  );
+        entry.kind === 'image_2d' && entry.role === 'prop_cutout' && isCompatible(entry, segment),
+    )
+    .map((entry) => {
+      const score = entry.tags.reduce((total, tag) => {
+        const phrase = tag
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/gu, ' ')
+          .trim();
+        if (phrase.length === 0 || genericTags.has(phrase)) {
+          return total;
+        }
+        const tokens = phrase.split(/\s+/u).filter((token) => !genericTags.has(token));
+        return (
+          total +
+          (phrase.includes(' ') && premise.includes(phrase) ? 3 : 0) +
+          tokens.filter((token) => words.has(token)).length
+        );
+      }, 0);
+      return { entry, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        stableHash(`${segment.programme.id}:${left.entry.id}`) -
+          stableHash(`${segment.programme.id}:${right.entry.id}`),
+    );
+  return candidates[0]?.entry ?? null;
 }
 
 function characterIdentityTokens(name: string): Set<string> {

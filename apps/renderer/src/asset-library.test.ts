@@ -113,6 +113,20 @@ const manifest: AssetLibraryManifest = assetLibraryManifestSchema.parse({
       compatibleVisualMedia: ['collage_zine'],
       provenance,
     },
+    {
+      id: 'asset_prop_test_queue',
+      kind: 'image_2d',
+      role: 'prop_cutout',
+      version: 1,
+      status: 'ready',
+      uri: '/assets/test/queue.png',
+      sha256: 'e'.repeat(64),
+      bytes: 10,
+      tags: ['queue-number', 'dispenser'],
+      programmeIds: [],
+      compatibleVisualMedia: ['collage_zine'],
+      provenance,
+    },
   ],
 });
 
@@ -149,5 +163,14 @@ describe('asset library selection', () => {
         segment('any_programme', 'A new product requests an itemised receipt.'),
       ),
     ).toBeNull();
+  });
+
+  it('matches a compound prop tag against natural premise words', () => {
+    expect(
+      matchingPropAsset(
+        manifest,
+        segment('any_programme', 'A queue number dispenser continues through the ceiling.'),
+      )?.id,
+    ).toBe('asset_prop_test_queue');
   });
 });

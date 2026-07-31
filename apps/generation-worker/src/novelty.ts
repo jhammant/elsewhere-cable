@@ -202,18 +202,38 @@ export function dialogueNoveltyIssues(
   history: readonly CreativeRecord[],
 ): string[] {
   const issues: string[] = [];
-  const lines = dialogue.map((line) => normalise(line.text));
+  const lines = dialogue.map((line) => ({
+    raw: line.text,
+    normalised: normalise(line.text),
+  }));
+
+  for (const [index, line] of lines.entries()) {
+    const wordCount = line.normalised.split(' ').filter(Boolean).length;
+    if (
+      wordCount >= 3 &&
+      lines.slice(0, index).some((previous) => previous.normalised === line.normalised)
+    ) {
+      issues.push(`dialogue repeats within segment "${line.raw}"`);
+    }
+  }
 
   for (const previous of history) {
     for (const line of lines) {
-      const lineWordCount = line.split(' ').filter(Boolean).length;
+      const lineWordCount = line.normalised.split(' ').filter(Boolean).length;
       for (const previousLine of previous.dialogue) {
         const normalisedPreviousLine = normalise(previousLine);
+        const previousWordCount = normalisedPreviousLine.split(' ').filter(Boolean).length;
         if (
-          (lineWordCount >= 4 && line === normalisedPreviousLine) ||
-          (lineWordCount >= 6 && similarity(line, normalisedPreviousLine) >= 0.76)
+          (lineWordCount >= 3 && line.normalised === normalisedPreviousLine) ||
+          (lineWordCount >= 6 && similarity(line.normalised, normalisedPreviousLine) >= 0.76)
         ) {
           issues.push(`dialogue resembles "${previousLine}"`);
+        }
+        if (lineWordCount >= 7 && previousWordCount >= 7) {
+          const repeatedPhrase = sharedPhrase(line.normalised, normalisedPreviousLine, 7);
+          if (repeatedPhrase !== null) {
+            issues.push(`dialogue reuses the phrase "${repeatedPhrase}"`);
+          }
         }
       }
     }

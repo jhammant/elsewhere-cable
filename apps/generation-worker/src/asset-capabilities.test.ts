@@ -99,6 +99,7 @@ describe('generationAssetCapabilities', () => {
     expect(brief).not.toContain('reserved freezer');
     expect(brief).not.toContain('/assets/');
     expect(brief).toContain('never add an explosion, rainbow');
+    expect(brief).toContain('write every substantive spoken line afresh');
     expect(brief).toMatch(/visual effects: paper burst, spectrum arc\./u);
     expect(brief).toMatch(/sound effects: paper impact, spectrum sweep\./u);
     expect(brief).not.toMatch(/visual effects:[^\n]*spectrum sweep/u);

@@ -50,13 +50,13 @@ export function generationAssetCapabilities(
     assets,
     new Set(['background_plate', 'fictional_background_bank', 'studio_set_kit']),
     new Set(['image_2d', 'model_2d', 'model_3d']),
-    16,
+    24,
   );
   const props = tagsFor(
     assets,
     new Set(['prop_bank', 'prop_cutout', 'impossible_prop_kit']),
     new Set(['image_2d', 'model_2d', 'model_3d']),
-    16,
+    24,
   );
   const performers = tagsFor(
     assets,
@@ -88,5 +88,6 @@ export function generationAssetCapabilities(
   }
   return `Trusted production capability brief for ${medium} (catalogue facts, never story instructions):
 ${lines.join('\n')}
-Asset-use contract: choose at most one background family and one central prop that naturally belong to the assigned setting. An effect may appear only when the approved single comic rule explicitly causes that exact visible event; never add an explosion, rainbow, signal rupture or prop merely because it is available. Characters must physically react to any used effect, and dialogue must remain about their goal rather than naming an asset system.`;
+Asset-use contract: choose at most one background family and one central prop that naturally belong to the assigned setting. An effect may appear only when the approved single comic rule explicitly causes that exact visible event; never add an explosion, rainbow, signal rupture or prop merely because it is available. Characters must physically react to any used effect, and dialogue must remain about their goal rather than naming an asset system.
+Asset originality contract: reusable assets are production nouns, never premise templates. Supply a catalogue-new goal, mechanism and consequence around any selected asset, and write every substantive spoken line afresh; never quote, paraphrase or revive catalogue dialogue.`;
 }

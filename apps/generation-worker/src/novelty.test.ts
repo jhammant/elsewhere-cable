@@ -87,6 +87,45 @@ describe('creative novelty', () => {
     ]);
   });
 
+  it('rejects repeated substantive lines inside one new segment', () => {
+    expect(
+      dialogueNoveltyIssues(
+        [
+          { text: 'The cupboard has submitted its coastline.' },
+          { text: 'The cupboard has submitted its coastline!' },
+        ],
+        [],
+      ),
+    ).toEqual(['dialogue repeats within segment "The cupboard has submitted its coastline!"']);
+  });
+
+  it('rejects a long recycled phrase hidden inside a different line', () => {
+    const history = [
+      {
+        title: 'Old Programme',
+        premise: 'An old premise.',
+        dialogue: ['Please place the borrowed horizon under the smallest available chair.'],
+      },
+    ];
+
+    expect(
+      dialogueNoveltyIssues(
+        [
+          {
+            text: 'For inspection, place the borrowed horizon under the smallest available chair before lunch.',
+          },
+        ],
+        history,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          'dialogue reuses the phrase "place the borrowed horizon under the smallest"',
+        ),
+      ]),
+    );
+  });
+
   it('rejects the same joke mechanism moved into a different setting', () => {
     const previous = candidate({
       premise:

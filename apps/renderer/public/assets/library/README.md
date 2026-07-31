@@ -124,3 +124,15 @@ remain above the effect plane.
   URLs.
 - Keep live playback independent from asset generation and use procedural fallbacks for
   missing or corrupt files.
+
+Reviewed file-backed batches are registered with:
+
+```bash
+pnpm assets:register -- --batch apps/renderer/public/assets/library/<version>/batch.json
+pnpm assets:status
+```
+
+Registration hydrates local PNG metadata, rejects duplicate IDs, URIs and file content,
+validates the complete catalogue and atomically replaces `catalog.json`. The renderer
+loads only the active collection and keeps a bounded decoded-image cache, so catalogue
+growth does not turn into unbounded Endor memory use.

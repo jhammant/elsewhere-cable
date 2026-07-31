@@ -46,6 +46,8 @@
     "research:audience:loop": "tsx infra/scripts/audience-research.ts",
     "assets:audit": "tsx infra/scripts/audit-asset-library.ts",
     "assets:plan": "tsx infra/scripts/plan-asset-library-growth.ts",
+    "assets:register": "tsx infra/scripts/register-asset-batch.ts",
+    "assets:qa:visual": "tsx infra/scripts/qa-asset-library-visuals.ts",
     "assets:status": "tsx infra/scripts/audit-asset-library.ts",
     "generate:live": "sh infra/scripts/generate-ghost-live.sh once",
     "generate:live:loop": "sh infra/scripts/generate-ghost-live.sh loop",

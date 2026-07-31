@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SegmentPackage } from '@elsewhere-cable/schemas';
 import {
+  fittedPropDimensions,
   premisePropKind,
   resolve2DCharacterDesign,
   resolve2DStageBounds,
@@ -109,6 +110,12 @@ describe('2D cast construction', () => {
 });
 
 describe('2D premise props', () => {
+  it('bounds tall and wide cutout props so they cannot dominate the cast plane', () => {
+    expect(fittedPropDimensions(1_024, 1_536, 4)).toEqual({ width: 200, height: 300 });
+    expect(fittedPropDimensions(1_536, 1_024, 4)).toEqual({ width: 240, height: 160 });
+    expect(fittedPropDimensions(1_024, 1_536, 0)).toEqual({ width: 253, height: 380 });
+  });
+
   it('matches programme nouns to visibly distinct props', () => {
     const premises = [
       ['A refrigerator wants an introduction.', 'fridge'],

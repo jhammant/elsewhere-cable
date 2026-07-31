@@ -97,6 +97,20 @@ export function usesTwoDimensionalRenderer(segment: SegmentPackage): boolean {
   return isFlatVisualMedium(resolveProductionDesign(segment).visualMedium);
 }
 
+export function fittedPropDimensions(
+  naturalWidth: number,
+  naturalHeight: number,
+  castCount: number,
+): { width: number; height: number } {
+  const maximumWidth = castCount >= 3 ? 240 : 300;
+  const maximumHeight = castCount >= 3 ? 300 : 380;
+  const scale = Math.min(maximumWidth / naturalWidth, maximumHeight / naturalHeight);
+  return {
+    width: Math.round(naturalWidth * scale),
+    height: Math.round(naturalHeight * scale),
+  };
+}
+
 function stableHash(value: string): number {
   let hash = 2_166_136_261;
   for (const character of value) {
@@ -403,6 +417,7 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private assetCollection: VisualAssetCollection | null = null;
   private activePropAsset: AssetLibraryEntry | null = null;
   private readonly assetImages = new Map<string, HTMLImageElement>();
+  private readonly assetImageCacheLimit = 12;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d');
@@ -423,11 +438,9 @@ export class Broadcast2DScene implements PlayoutVisuals {
     void loadAssetLibrary()
       .then((manifest) => {
         this.assetLibrary = manifest;
-        for (const entry of manifest.assets) {
-          if (entry.kind === 'image_2d' && entry.status === 'ready') {
-            this.loadImageAsset(entry);
-          }
-        }
+        // File-backed art is decoded on first use. Eagerly loading an append-only
+        // catalogue makes renderer memory grow with the library even though a segment
+        // displays only one collection and, at most, one reusable prop.
         if (this.segment !== null) {
           this.applyAssetLibrary(this.segment);
           this.cacheStaticScene(this.segment);
@@ -442,6 +455,8 @@ export class Broadcast2DScene implements PlayoutVisuals {
   private loadImageAsset(entry: AssetLibraryEntry): HTMLImageElement {
     const existing = this.assetImages.get(entry.id);
     if (existing !== undefined) {
+      this.assetImages.delete(entry.id);
+      this.assetImages.set(entry.id, existing);
       return existing;
     }
     const image = new Image();
@@ -454,7 +469,31 @@ export class Broadcast2DScene implements PlayoutVisuals {
     });
     image.src = entry.uri;
     this.assetImages.set(entry.id, image);
+    this.evictUnusedAssetImages(entry.id);
     return image;
+  }
+
+  private evictUnusedAssetImages(retainId: string): void {
+    const protectedIds = new Set([
+      retainId,
+      ...(this.assetCollection?.background === null ||
+      this.assetCollection?.background === undefined
+        ? []
+        : [this.assetCollection.background.id]),
+      ...(this.assetCollection?.characters.map((entry) => entry.id) ?? []),
+      ...(this.activePropAsset === null ? [] : [this.activePropAsset.id]),
+    ]);
+    while (this.assetImages.size > this.assetImageCacheLimit) {
+      const eviction = [...this.assetImages.entries()].find(
+        ([assetId]) => !protectedIds.has(assetId),
+      );
+      if (eviction === undefined) {
+        return;
+      }
+      const [assetId, image] = eviction;
+      this.assetImages.delete(assetId);
+      image.src = '';
+    }
   }
 
   private imageFor(entry: AssetLibraryEntry | null | undefined): HTMLImageElement | null {
@@ -1336,8 +1375,11 @@ export class Broadcast2DScene implements PlayoutVisuals {
 
     const propImage = this.imageFor(this.activePropAsset);
     if (propImage !== null && propImage.complete && propImage.naturalWidth > 0) {
-      const width = 360;
-      const height = width * (propImage.naturalHeight / propImage.naturalWidth);
+      const { width, height } = fittedPropDimensions(
+        propImage.naturalWidth,
+        propImage.naturalHeight,
+        this.characters.length,
+      );
       context.shadowColor = 'rgba(0, 0, 0, 0.34)';
       context.shadowBlur = 12;
       context.shadowOffsetY = 10;

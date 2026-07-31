@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-30T15:55:00.000Z",
+  "generatedAt": "2026-07-31T19:23:36.000Z",
   "libraryId": "elsewhere-cable",
   "appendOnly": true,
   "assets": [
@@ -15,7 +15,10 @@
       "mimeType": "image/png",
       "sha256": "52d5f5cf7a143ac268218540bc20beb3dca9dc33b24b9462655d5039ecacc039",
       "bytes": 2260645,
-      "dimensions": { "width": 1672, "height": 941 },
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
       "tags": ["photo", "public-access", "laundromat", "studio"],
       "programmeIds": ["the_least_attached_roommate"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -40,7 +43,10 @@
       "mimeType": "image/png",
       "sha256": "729f8014a689b9e7b22f1494ff5b1ed0657aec54651f34a095cbd2b242015f99",
       "bytes": 707133,
-      "dimensions": { "width": 1024, "height": 1536 },
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
       "tags": ["photo", "fictional-person", "presenter", "cutout", "bex"],
       "programmeIds": ["the_least_attached_roommate"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -65,7 +71,10 @@
       "mimeType": "image/png",
       "sha256": "766bd6b27bca7bdb8139391851a341f7cebfe2cf5b49f835df0968e5fcc403f5",
       "bytes": 1179109,
-      "dimensions": { "width": 864, "height": 1821 },
+      "dimensions": {
+        "width": 864,
+        "height": 1821
+      },
       "tags": ["photo", "fictional-person", "caller", "cutout", "rilo"],
       "programmeIds": ["the_least_attached_roommate"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -90,7 +99,10 @@
       "mimeType": "image/png",
       "sha256": "216738e6c38cade59cc52638e30ac72a78462bbae2478b9eadb0de1918851fb7",
       "bytes": 2259591,
-      "dimensions": { "width": 1672, "height": 941 },
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
       "tags": ["photo", "public-access", "freezer", "municipal", "studio"],
       "programmeIds": ["the_complaint_must_stay_frozen"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -115,7 +127,10 @@
       "mimeType": "image/png",
       "sha256": "8a9ec46df2cc41a6037bd5e0f1ce9c04624af810843ab8e055f4550a3c8c2bf4",
       "bytes": 856693,
-      "dimensions": { "width": 1024, "height": 1536 },
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
       "tags": ["photo", "fictional-person", "presenter", "cutout", "mara"],
       "programmeIds": ["the_complaint_must_stay_frozen"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -140,7 +155,10 @@
       "mimeType": "image/png",
       "sha256": "f198315e05f3fc120dd08cd81282ccc9f03af09887b26ee0e0b184a7c091992a",
       "bytes": 777116,
-      "dimensions": { "width": 1024, "height": 1536 },
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
       "tags": ["photo", "fictional-person", "archivist", "cutout", "ilo"],
       "programmeIds": ["the_complaint_must_stay_frozen"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -165,7 +183,10 @@
       "mimeType": "image/png",
       "sha256": "09a5fbd0da036f0533f5b7ca1927c962e0a002024a9f8c37cab9bb6e14753138",
       "bytes": 1804843,
-      "dimensions": { "width": 1672, "height": 941 },
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
       "tags": ["stylized-3d", "weather", "plastic", "studio", "background"],
       "programmeIds": ["cloud_three_is_off_duty"],
       "compatibleVisualMedia": ["collage_zine"],
@@ -190,7 +211,10 @@
       "mimeType": "image/png",
       "sha256": "6e298b010666d57698aaf0a0efb81bca4e83c5fe5b31a75a66cafc115816fffe",
       "bytes": 840646,
-      "dimensions": { "width": 1536, "height": 1024 },
+      "dimensions": {
+        "width": 1536,
+        "height": 1024
+      },
       "tags": ["photo", "doorbell", "device", "product", "cutout"],
       "programmeIds": [],
       "compatibleVisualMedia": ["collage_zine", "xerox_punk"],
@@ -215,7 +239,10 @@
       "mimeType": "image/png",
       "sha256": "40947356231144c4b3ecc3f5f997411626baa577dfc0fd4e29a2ba5e5b1a28d6",
       "bytes": 2528051,
-      "dimensions": { "width": 1672, "height": 941 },
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
       "tags": [
         "newsroom",
         "railway",
@@ -248,16 +275,11 @@
       "mimeType": "image/png",
       "sha256": "cb757620eebf38a3ecb93a27af9c807f7b5951c81a0024299b9ed48af0f00af5",
       "bytes": 2108270,
-      "dimensions": { "width": 1672, "height": 941 },
-      "tags": [
-        "community-hall",
-        "committee",
-        "meeting",
-        "tea",
-        "chairs",
-        "domestic",
-        "slow"
-      ],
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["community-hall", "committee", "meeting", "tea", "chairs", "domestic", "slow"],
       "programmeIds": [],
       "compatibleVisualMedia": ["hand_drawn", "storybook_wash", "archive_film"],
       "provenance": {
@@ -281,16 +303,11 @@
       "mimeType": "image/png",
       "sha256": "a5b5906b59585976f7523d3efda4d83fcd69a098e5aeb4f25a118899988d3bc9",
       "bytes": 2256122,
-      "dimensions": { "width": 1672, "height": 941 },
-      "tags": [
-        "kitchen",
-        "culinary",
-        "moon",
-        "cosmic",
-        "space",
-        "bright",
-        "surreal"
-      ],
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["kitchen", "culinary", "moon", "cosmic", "space", "bright", "surreal"],
       "programmeIds": [],
       "compatibleVisualMedia": ["hand_drawn", "storybook_wash", "paper_cutout"],
       "provenance": {
@@ -314,16 +331,11 @@
       "mimeType": "image/png",
       "sha256": "b682ba8882f186bf12a442103ff6306cffba3ccbbd098bf481e141e4b2f734ee",
       "bytes": 3463005,
-      "dimensions": { "width": 1672, "height": 941 },
-      "tags": [
-        "aquarium",
-        "shopping",
-        "showroom",
-        "product",
-        "fish",
-        "discount",
-        "xerox"
-      ],
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["aquarium", "shopping", "showroom", "product", "fish", "discount", "xerox"],
       "programmeIds": [],
       "compatibleVisualMedia": ["xerox_punk", "collage_zine"],
       "provenance": {
@@ -779,6 +791,510 @@
         "createdAt": "2026-07-30T14:45:00.000Z",
         "generator": "web-audio-sound-designer",
         "rights": "original-project-code",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_paper_bus_stop_kitchen_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/paper-bus-stop-kitchen.png",
+      "collectionId": "paper-bus-stop-kitchen-v1",
+      "mimeType": "image/png",
+      "sha256": "d7cb7d21ba5e8107db47a3571eca26fad808e16c886ebd5615d1c56712f64afd",
+      "bytes": 2393767,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["kitchen", "domestic", "bus-stop", "suburb", "paper", "sitcom"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "collage_zine"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#paper-bus-stop-kitchen",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_indoor_rain_weather_studio_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/indoor-rain-weather-studio.png",
+      "collectionId": "indoor-rain-weather-studio-v1",
+      "mimeType": "image/png",
+      "sha256": "02790af3c5f2e2b8fb59409f086b3ca82cd71ff9ef8e8a50c91a000448cead14",
+      "bytes": 2402555,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["weather", "rain", "miniature", "forecast", "filing-cabinet", "public-access"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["archive_film", "collage_zine", "storybook_wash"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#indoor-rain-weather-studio",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_pixel_railway_courtroom_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/pixel-railway-courtroom.png",
+      "collectionId": "pixel-railway-courtroom-v1",
+      "mimeType": "image/png",
+      "sha256": "ecff610fa86fafc038603ae1450a87798df9659a68bbe32d39f623ea01b28e24",
+      "bytes": 1429200,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["railway", "courtroom", "station", "luggage", "pixel", "trial"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["pixel_broadcast"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#pixel-railway-courtroom",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_shadow_cavern_newsroom_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/shadow-cavern-newsroom.png",
+      "collectionId": "shadow-cavern-newsroom-v1",
+      "mimeType": "image/png",
+      "sha256": "6c8227fea6c927d7099c7ca40659d5de0732d606a14e8ee0c11a8c8f256eac96",
+      "bytes": 2576573,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["cavern", "newsroom", "geology", "underground", "shadow", "bulletin"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["shadow_theatre", "archive_film"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#shadow-cavern-newsroom",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_watercolour_aquarium_council_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/watercolour-aquarium-council.png",
+      "collectionId": "watercolour-aquarium-council-v1",
+      "mimeType": "image/png",
+      "sha256": "d491bca63eb55400bac8042f724f864c6f398280346866c0cbfdc176c521ac20",
+      "bytes": 3130110,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["aquarium", "council", "underwater", "civic", "watercolour", "shells"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["storybook_wash", "hand_drawn"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#watercolour-aquarium-council",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_fluorescent_dental_gameshow_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/fluorescent-dental-gameshow.png",
+      "collectionId": "fluorescent-dental-gameshow-v1",
+      "mimeType": "image/png",
+      "sha256": "4ff05ed6862cac3b0081f5fcf80f7198df0e122a92ce32d89a55c5f26108552d",
+      "bytes": 2035101,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["dental", "game-show", "teeth", "studio", "contest", "fluorescent"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["corporate_vector", "collage_zine"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#fluorescent-dental-gameshow",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_xerox_shadow_union_office_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/xerox-shadow-union-office.png",
+      "collectionId": "xerox-shadow-union-office-v1",
+      "mimeType": "image/png",
+      "sha256": "13820441a3271464afa46335b01670c774b95d087cdceb667654bb1a7d795f39",
+      "bytes": 3071900,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["union", "office", "shadows", "xerox", "photocopier", "labour"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["xerox_punk", "ink_monochrome"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#xerox-shadow-union-office",
+        "containsFictionalPeople": true,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_stained_glass_receipt_shop_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/stained-glass-receipt-shop.png",
+      "collectionId": "stained-glass-receipt-shop-v1",
+      "mimeType": "image/png",
+      "sha256": "5a8c6b5a6be63fcfe3f7948da7b14042cda21ce25e2330a35b28c69794f3ed65",
+      "bytes": 2905503,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["stained-glass", "shopping", "receipt", "appliance", "showroom", "late-night"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["stained_glass"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#stained-glass-receipt-shop",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_thermal_night_bakery_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/thermal-night-bakery.png",
+      "collectionId": "thermal-night-bakery-v1",
+      "mimeType": "image/png",
+      "sha256": "b656920a3b9c2103c10d2fbf3bb92d9a8c13aa5769b2364712de0d55f669b892",
+      "bytes": 2066317,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["thermal", "bakery", "oven", "pastry", "inspection", "night"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["thermal_camera"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#thermal-night-bakery",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_isometric_rotary_call_centre_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/isometric-rotary-call-centre.png",
+      "collectionId": "isometric-rotary-call-centre-v1",
+      "mimeType": "image/png",
+      "sha256": "70f4c3d7dc5343ad0000394a5e5b371c549c388dec021ba203b09ffb348c1f1a",
+      "bytes": 2625884,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["isometric", "call-centre", "telephone", "cubicle", "service", "manual"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["isometric_manual", "blueprint_schematic"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#isometric-rotary-call-centre",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_clay_roundabout_newsdesk_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/clay-roundabout-newsdesk.png",
+      "collectionId": "clay-roundabout-newsdesk-v1",
+      "mimeType": "image/png",
+      "sha256": "8c3830ee3e523ed96ca73e0e487809ec6cf0c10c101f87243cccc89377089467",
+      "bytes": 2127224,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["roundabout", "news", "traffic", "clay", "local", "roads"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["collage_zine", "storybook_wash"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#clay-roundabout-newsdesk",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_bg_ink_clock_break_room_v1",
+      "kind": "image_2d",
+      "role": "background_plate",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/backgrounds/ink-clock-break-room.png",
+      "collectionId": "ink-clock-break-room-v1",
+      "mimeType": "image/png",
+      "sha256": "fea9820f0c289ca7f830daa9d9c18b07ee58e283da4aa6d738c6ad432270caa2",
+      "bytes": 3049289,
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "tags": ["clock", "break-room", "gears", "night", "ink", "watchman"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["ink_monochrome", "hand_drawn"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#ink-clock-break-room",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_prop_indoor_weather_umbrella_v1",
+      "kind": "image_2d",
+      "role": "prop_cutout",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/props/indoor-weather-umbrella.png",
+      "collectionId": "impossible-props-v2",
+      "mimeType": "image/png",
+      "sha256": "d26d9124ad5dc8207d1bb8bf1a3cc972e0ab674f3e543ca85f3f227bb69c3270",
+      "bytes": 755803,
+      "dimensions": {
+        "width": 1122,
+        "height": 1402
+      },
+      "tags": ["umbrella", "weather", "rain", "pressure", "indoor"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "collage_zine", "archive_film", "storybook_wash"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen-chroma-removal",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#indoor-weather-umbrella",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_prop_witness_box_suitcase_v1",
+      "kind": "image_2d",
+      "role": "prop_cutout",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/props/witness-box-suitcase.png",
+      "collectionId": "impossible-props-v2",
+      "mimeType": "image/png",
+      "sha256": "1046b59c2afa0c4f83be5358537b4f12e1f09f4c9df87262b9e0f3011776c242",
+      "bytes": 1285005,
+      "dimensions": {
+        "width": 1536,
+        "height": 1024
+      },
+      "tags": ["suitcase", "witness", "courtroom", "luggage", "evidence"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "pixel_broadcast", "collage_zine", "xerox_punk"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen-chroma-removal",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#witness-box-suitcase",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_prop_tooth_answer_buzzer_v1",
+      "kind": "image_2d",
+      "role": "prop_cutout",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/props/tooth-answer-buzzer.png",
+      "collectionId": "impossible-props-v2",
+      "mimeType": "image/png",
+      "sha256": "fb722e2552f9c4d3bdc60554d3cde58c01d6805bbc6c399f821b8fcdeec170b9",
+      "bytes": 1272945,
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "tags": ["tooth", "buzzer", "dental", "game-show", "contest"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "collage_zine", "corporate_vector"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen-chroma-removal",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#tooth-answer-buzzer",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_prop_mechanical_weather_jar_v1",
+      "kind": "image_2d",
+      "role": "prop_cutout",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/props/mechanical-weather-jar.png",
+      "collectionId": "impossible-props-v2",
+      "mimeType": "image/png",
+      "sha256": "1ef6f5569e618ab94fb8a3ebeba86a0d9c4d983d86cee213376c61555586e40a",
+      "bytes": 1159579,
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "tags": ["weather", "jar", "storm", "cloud", "lightning", "automaton"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "collage_zine", "storybook_wash", "stained_glass"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen-chroma-removal",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#mechanical-weather-jar",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_prop_endless_queue_dispenser_v1",
+      "kind": "image_2d",
+      "role": "prop_cutout",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/props/endless-queue-dispenser.png",
+      "collectionId": "impossible-props-v2",
+      "mimeType": "image/png",
+      "sha256": "2b4d4b32c3d0fea0b3dd5c4b0b29613d3da58d7ad55be9cbec9584bb109f41e4",
+      "bytes": 1192344,
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "tags": ["queue", "ticket", "dispenser", "paper", "municipal", "number"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "collage_zine", "xerox_punk", "isometric_manual"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen-chroma-removal",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#endless-queue-dispenser",
+        "containsFictionalPeople": false,
+        "containsRealPeople": false
+      }
+    },
+    {
+      "id": "asset_prop_exhausted_moon_clock_v1",
+      "kind": "image_2d",
+      "role": "prop_cutout",
+      "version": 1,
+      "status": "ready",
+      "uri": "/assets/library/v2/props/exhausted-moon-clock.png",
+      "collectionId": "impossible-props-v2",
+      "mimeType": "image/png",
+      "sha256": "950a0a07aa7d3725faa79f9e568bd4a616784c4a53392dab844665038e23abf2",
+      "bytes": 1388394,
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "tags": ["moon", "clock", "alarm", "night", "sleep", "celestial"],
+      "programmeIds": [],
+      "compatibleVisualMedia": ["paper_cutout", "collage_zine", "storybook_wash", "shadow_theatre"],
+      "provenance": {
+        "source": "generated_original",
+        "createdAt": "2026-07-31T19:23:36.000Z",
+        "generator": "openai-imagegen-chroma-removal",
+        "rights": "original-project-generation",
+        "promptRef": "/assets/library/v2/README.md#exhausted-moon-clock",
         "containsFictionalPeople": false,
         "containsRealPeople": false
       }
