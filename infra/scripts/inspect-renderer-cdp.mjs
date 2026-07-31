@@ -1,3 +1,7 @@
+/* global WebSocket, clearTimeout, fetch, setTimeout */
+
+import process from 'node:process';
+
 const pages = await fetch('http://127.0.0.1:9222/json').then((response) => response.json());
 const page = pages.find(({ type }) => type === 'page');
 

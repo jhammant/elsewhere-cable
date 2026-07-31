@@ -121,7 +121,10 @@ const visionBaseUrl =
   'http://127.0.0.1:1234/v1';
 const visionModel =
   argument('vision-model') ?? process.env.ELSEWHERE_VISION_MODEL ?? 'qwen/qwen3-vl-8b';
-const youtubeUrl = argument('youtube-url') ?? process.env.ELSEWHERE_YOUTUBE_WATCH_URL;
+const youtubeUrl =
+  argument('youtube-url') ??
+  process.env.ELSEWHERE_YOUTUBE_WATCH_URL ??
+  'https://www.youtube.com/@jhammant/live';
 const deliverySampleSeconds = Number(
   argument('sample-seconds') ?? process.env.ELSEWHERE_DELIVERY_SAMPLE_SECONDS ?? 60,
 );

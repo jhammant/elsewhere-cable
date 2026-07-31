@@ -8,7 +8,7 @@ cd "$workspace_root"
 mode=${1:-once}
 batch_count=${ELSEWHERE_SCRIPT_BATCH_COUNT:-16}
 generation_concurrency=${ELSEWHERE_GENERATION_CONCURRENCY:-4}
-proposal_attempts=${ELSEWHERE_PROPOSAL_ATTEMPTS:-16}
+proposal_attempts=${ELSEWHERE_PROPOSAL_ATTEMPTS:-64}
 output_root=${ELSEWHERE_LIVE_SEGMENTS_DIR:-data/segments-live}
 script_queue=${ELSEWHERE_SCRIPT_QUEUE_DIR:-data/script-reservoir}
 script_target_count=${ELSEWHERE_SCRIPT_TARGET_COUNT:-5400}
