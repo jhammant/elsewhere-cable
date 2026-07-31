@@ -3,6 +3,7 @@ import type { PlayoutManifest, SegmentPackage } from '@elsewhere-cable/schemas';
 import {
   applyVisualEvent,
   nextUnplayedIndex,
+  playedIdsForNextCycle,
   segmentObservation,
   type PlayoutVisuals,
 } from './playout.js';
@@ -111,6 +112,12 @@ describe('single-use playout selection', () => {
 
   it('does not wrap to the beginning after every segment has aired', () => {
     expect(nextUnplayedIndex(manifest, 3, new Set(['one', 'two', 'three']))).toBeNull();
+  });
+
+  it('reopens only the active manifest while retaining older archive history', () => {
+    expect(
+      [...playedIdsForNextCycle(manifest, new Set(['retired', 'one', 'two', 'three']))],
+    ).toEqual(['retired']);
   });
 });
 

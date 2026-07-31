@@ -143,6 +143,14 @@ export function nextUnplayedIndex(
   return null;
 }
 
+export function playedIdsForNextCycle(
+  manifest: PlayoutManifest,
+  playedSegmentIds: ReadonlySet<string>,
+): Set<string> {
+  const activeSegmentIds = new Set(manifest.segments.map(({ segmentId }) => segmentId));
+  return new Set([...playedSegmentIds].filter((segmentId) => !activeSegmentIds.has(segmentId)));
+}
+
 export function segmentObservation(
   event: 'segment.started' | 'segment.completed',
   occurrenceId: string,
@@ -296,7 +304,18 @@ export class PlayoutEngine {
     const nextIndex = nextUnplayedIndex(manifest, this.index, this.playedSegmentIds);
     const entry = nextIndex === null ? undefined : manifest.segments[nextIndex];
     if (nextIndex === null || entry === undefined) {
-      this.enterFallback('All prepared segments have aired once · awaiting new material');
+      const retainedHistory = playedIdsForNextCycle(manifest, this.playedSegmentIds);
+      this.playedSegmentIds.clear();
+      for (const segmentId of retainedHistory) {
+        this.playedSegmentIds.add(segmentId);
+      }
+      this.persistPlaybackHistoryState();
+      this.index = 0;
+      this.ui.status.textContent = 'Archive cycle authorised';
+      this.ui.mode.textContent = 'Every prepared segment has aired · reopening the archive';
+      this.ui.subtitle.textContent = 'Previous transmissions may now recur until new material arrives.';
+      this.staticBurst(1_200);
+      this.timer(() => void this.playCurrent(), 1_250);
       return;
     }
     this.index = nextIndex;
@@ -370,6 +389,10 @@ export class PlayoutEngine {
 
   private markPlayed(segmentId: string): void {
     this.playedSegmentIds.add(segmentId);
+    this.persistPlaybackHistoryState();
+  }
+
+  private persistPlaybackHistoryState(): void {
     if (!this.persistPlaybackHistory) {
       return;
     }
