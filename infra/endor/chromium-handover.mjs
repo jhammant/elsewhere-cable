@@ -447,9 +447,10 @@ switch (command) {
         }
         const manifest = await manifestResponse.json();
         const played = new Set(JSON.parse(localStorage.getItem(${JSON.stringify(playbackHistoryKey)}) ?? '[]'));
-        const entry = manifest.segments.find((candidate) => !played.has(candidate.segmentId));
+        const unplayedEntry = manifest.segments.find((candidate) => !played.has(candidate.segmentId));
+        const entry = unplayedEntry ?? manifest.segments[0];
         if (entry === undefined) {
-          throw new Error('No unplayed segment is available to probe');
+          throw new Error('No segment is available to probe');
         }
         const segmentResponse = await fetch('/api/playout/segments/' + encodeURIComponent(entry.segmentId), { cache: 'no-store' });
         if (!segmentResponse.ok) {
@@ -459,7 +460,8 @@ switch (command) {
         return {
           segmentCount: manifest.segments.length,
           segmentId: segment.segmentId,
-          eventCount: Array.isArray(segment.events) ? segment.events.length : 0
+          eventCount: Array.isArray(segment.events) ? segment.events.length : 0,
+          replayCycle: unplayedEntry === undefined
         };
       })()`,
       true,
